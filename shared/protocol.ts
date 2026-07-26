@@ -1,0 +1,200 @@
+// Shared protocol types — used by the relay server and both client roles.
+// The server never inspects game payloads (dumb relay, spec 05); these types
+// exist so the host engine and player UI agree on shapes.
+
+export type Tier = "easy" | "medium" | "hard";
+
+export interface Question {
+  text: string;
+  options: [string, string, string, string]; // pre-shuffled
+  correctIdx: 0 | 1 | 2 | 3;
+  tier: Tier;
+  subject: string; // school subject, e.g. "Math"
+  subjectEmoji: string; // e.g. "📐"
+  source: "opentdb" | "local";
+}
+
+/** School subjects — each of a match's 10 questions gets a different one.
+ *  `cat` is the OpenTDB category id. */
+export const SUBJECTS = [
+  { label: "Math", emoji: "📐", cat: 19 },
+  { label: "Science", emoji: "🧪", cat: 17 },
+  { label: "History", emoji: "🏛️", cat: 23 },
+  { label: "Geography", emoji: "🗺️", cat: 22 },
+  { label: "Art", emoji: "🎨", cat: 25 },
+  { label: "Music", emoji: "🎵", cat: 12 },
+  { label: "Literature", emoji: "📚", cat: 10 },
+  { label: "Computer Class", emoji: "💻", cat: 18 },
+  { label: "P.E.", emoji: "⚽", cat: 21 },
+  { label: "Mythology", emoji: "🏺", cat: 20 },
+  { label: "Civics", emoji: "🗳️", cat: 24 },
+  { label: "Film Studies", emoji: "🎬", cat: 11 },
+] as const;
+
+export const AVATARS = ["🎒", "📚", "✏️", "🧪", "🔬", "📐", "🎨", "🎧", "⚽", "🍎", "🧮", "🗺️", "🖍️", "🏀", "🎺", "💻"];
+
+export interface Settings {
+  questionTimerMs: number; // default 15000
+  revealMinMs: number; // default 8000
+  voteWindowMs: number; // default 20000
+  threshold: number; // default 1400
+  thresholdDrop: number; // default 200
+  tierPoints: Record<Tier, number>; // 100 / 200 / 400
+}
+
+export const DEFAULT_SETTINGS: Settings = {
+  questionTimerMs: 15000,
+  revealMinMs: 8000,
+  voteWindowMs: 20000,
+  threshold: 1400,
+  thresholdDrop: 200,
+  tierPoints: { easy: 100, medium: 200, hard: 400 },
+};
+
+// Session point values (spec 04 — proposed defaults, hardcoded in v1 but
+// kept as a single table so a lobby-settings editor can slot in later).
+export const SESSION_POINTS = {
+  votedForCheaterInBanishingVote: 2,
+  triggeredBanishingVote: 1,
+  cheaterHitThreshold: 3,
+  topScoreAtQ10: 2,
+  cheaterSurvivedToQ10: 1,
+  votedToBanishInnocent: -1,
+} as const;
+
+export type Phase =
+  | "lobby"
+  | "role"
+  | "question"
+  | "reveal"
+  | "vote"
+  | "voteResult"
+  | "matchEnd"
+  | "sessionEnd";
+
+export type MatchEndReason = "cheater_banished" | "cheater_threshold" | "top_score";
+
+export interface PublicPlayer {
+  id: string;
+  name: string;
+  avatar: string; // school-themed emoji
+  connected: boolean;
+  isHost: boolean;
+  isBot: boolean;
+  // per-match
+  score: number;
+  tokenUsed: boolean;
+  banished: boolean;
+  votingRights: boolean;
+  answeredCurrent: boolean;
+  votedCurrent: boolean;
+}
+
+export interface RevealRow {
+  playerId: string;
+  pick: number; // -1 = no answer
+  correct: boolean;
+  timeMs: number;
+  pointsGained: number;
+}
+
+export interface PublicState {
+  phase: Phase;
+  roomCode: string;
+  players: PublicPlayer[];
+  settings: Settings;
+  sessionBoard: Record<string, number>; // playerId -> session points
+  matchNumber: number; // 1-based, 0 = none played yet
+  offlineQuestions: boolean; // fallback pack active this match (spec 06)
+  loadingQuestions: boolean; // host is fetching questions at match start
+  match: null | {
+    questionIdx: number; // 0-based
+    questionCount: number;
+    threshold: number; // current (drops on wrong banishments)
+    question: null | {
+      text: string;
+      options: string[];
+      tier: Tier;
+      subject: string;
+      subjectEmoji: string;
+      points: number;
+      deadline: number; // host-issued epoch ms
+    };
+    reveal: null | {
+      correctIdx: number;
+      rows: RevealRow[];
+      minNextAt: number; // epoch ms; host Next enabled after this
+    };
+    vote: null | {
+      accuserId: string;
+      deadline: number;
+    };
+    voteResult: null | {
+      accuserId: string;
+      votes: Record<string, string>; // voterId -> targetId (revealed simultaneously)
+      tallies: Record<string, number>; // targetId -> count
+      banishedId: string | null;
+      wasCheater: boolean;
+      newThreshold: number | null; // set when an innocent was banished
+      tie: boolean;
+    };
+    end: null | {
+      reason: MatchEndReason;
+      cheaterId: string;
+      winnerIds: string[];
+      sessionDelta: Record<string, number>; // playerId -> points earned this match
+    };
+  };
+}
+
+/** Private per-socket payload. Sent to EVERY player with identical shape
+ *  (padding, spec 05) — only the cheater's copy carries real data. */
+export interface SecretState {
+  isCheater: boolean;
+  correctIdx: number; // real index for cheater during a question, -1 otherwise
+}
+
+// ---- Client -> host intents (relayed) ----
+export type Intent =
+  | { kind: "answer"; questionIdx: number; optionIdx: number; clientElapsedMs: number }
+  | { kind: "burnToken" }
+  | { kind: "castVote"; targetPlayerId: string }
+  | { kind: "requestFullState" };
+
+// ---- Relay wire events (the only things the server understands) ----
+// client -> server:  createRoom(cb) · join {code, name} · intent {payload}
+// host   -> server:  toAll {event, payload} · toPlayer {socketId, event, payload}
+// server -> host:    joinRequest {socketId, name} · intent {fromSocket, payload} · peerDisconnected {socketId}
+// server -> client:  roomClosed
+export interface JoinRequestMsg {
+  socketId: string;
+  name: string;
+  avatar: string;
+}
+export interface RelayedIntent {
+  fromSocket: string;
+  payload: Intent;
+}
+
+/** Events the host emits to players (via toAll / toPlayer). */
+export interface StateEvent {
+  state: PublicState;
+}
+export interface JoinedMsg {
+  playerId: string;
+  state: PublicState;
+  secret: SecretState;
+}
+export interface JoinRejectedMsg {
+  reason: string;
+}
+
+export const ROOM_CODE_LEN = 5;
+export const MIN_PLAYERS = 3;
+export const MAX_PLAYERS = 10;
+export const QUESTIONS_PER_MATCH = 10;
+export const TIER_PLAN: Tier[] = [
+  "easy", "easy", "easy",
+  "medium", "medium", "medium", "medium",
+  "hard", "hard", "hard",
+];
