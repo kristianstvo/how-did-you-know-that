@@ -31,7 +31,7 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.5.0 | Point at a suspect: free, public, changeable, before spending your accusation | shipped |
 | v0.6.0 | Game-show sound: synthesized, synced to the beats, one switch | shipped |
 | v0.7.0 | First game night: Teacher's notes, the hallway for late arrivals, Practice with bots | shipped |
-| v0.8.0 | Yearbook superlatives at the end of every period | planned |
+| v0.8.0 | The yearbook: superlatives every period, the day's yearbook, Share the day | shipped |
 | v0.9.0 | (the hallway moved into v0.7.0) | — |
 | later | Lobby presets instead of raw numbers; day awards; bot difficulty | ideas |
 
@@ -60,3 +60,6 @@ Later versions take the best of what playtests and audits turn up.
 | v0.7.0 | ✅ Late arrivals watch from the hallway instead of being turned away | Someone is always late; watching a period teaches them the game, and they can never be the cheater mid-period |
 | v0.7.0 | ✅ One-tap Practice with bots | Solo tryouts were five taps of setup; bots were already there |
 | v0.7.0 | ❌ Seating late arrivals mid-period | They'd miss the role and start behind; a fresh seat next period is fair |
+| v0.8.0 | ✅ Awards computed by the host and published with the result | Every phone shows the same yearbook (parity), and only the host has the full answer history |
+| v0.8.0 | ✅ At most 4, one per person | More would be noise; spreading them lets more people feel seen |
+| v0.8.0 | ❌ Harsh awards | Party games roast lightly; "Last pencil down" is as mean as it gets |

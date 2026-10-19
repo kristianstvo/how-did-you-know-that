@@ -160,7 +160,7 @@
   transition: opacity var(--t-scene) var(--e-standard);
   animation: hd-fade-in var(--t-scene) var(--e-standard) 260ms backwards;
 }
-.b-scores .me-rc, .b-caseFile .me-cf, .b-session .me-sem { opacity: 1; }
+.b-scores .me-rc, .b-caseFile .me-cf, .b-caseFile .me-aw, .b-session .me-sem { opacity: 1; }
 .me-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 .me-h > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .me-aside { flex: none; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 0.72rem; font-weight: 700; color: var(--dim); white-space: nowrap; }
@@ -261,3 +261,20 @@
   .b-done .me-sem-row { animation: me-refade var(--t-drama) var(--e-standard) both; }
 }
 @keyframes me-refade { from { opacity: 0; } }
+
+/* Yearbook superlatives (v0.8): fixed-height rows, reserved from frame 0. */
+.me-aw-list { position: relative; height: calc(var(--n) * 52px); }
+.me-aw-row {
+  display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; column-gap: 8px;
+  height: 52px; border-bottom: 1px solid rgba(244, 241, 232, 0.07);
+  animation: hd-enter-up var(--t-base) var(--e-enter) both; animation-delay: calc(var(--i) * var(--stagger-info));
+}
+.me-aw-row:last-child { border-bottom: none; }
+.me-aw-ic { font-size: 1.35rem; text-align: center; }
+.me-aw-main { display: flex; flex-direction: column; min-width: 0; line-height: 1.2; }
+.me-aw-t { font-family: var(--hand); font-weight: 900; font-size: 0.98rem; color: var(--accent2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.me-aw-why { font-size: 0.78rem; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.me-aw-who { max-width: 40vw; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (prefers-reduced-motion: reduce) {
+  .me-aw-row { animation-name: hd-fade-in; }
+}

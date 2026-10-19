@@ -109,3 +109,7 @@
   .se-fig { transform: none; }
   .b-rise3 .se-p3 .se-block, .b-rise2 .se-p2 .se-block, .b-rise1 .se-p1 .se-block { transform: none; opacity: 1; }
 }
+
+/* The day's yearbook (v0.8); rows reuse the period superlatives (.me-aw-*). */
+.se-yearbook { margin-top: 12px; }
+.se-yearbook h2 { font-family: var(--hand); margin-bottom: 4px; }

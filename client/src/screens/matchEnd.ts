@@ -275,6 +275,31 @@ function caseFileRecap(ctx: RenderCtx, b: Set<MatchEndBeat>): string {
   </section>`;
 }
 
+/** Yearbook superlatives (v0.8): up to four, computed by the host. Built at
+ *  the caseFile beat (after the unmask: the cheater's award names them); the
+ *  box is reserved from frame 0 (rows × fixed height). */
+function superlatives(ctx: RenderCtx, b: Set<MatchEndBeat>): string {
+  const { s } = ctx;
+  const list = s.match!.end!.awards ?? [];
+  if (!list.length) return "";
+  const rows = b.has("caseFile")
+    ? list
+        .map((a, i) => {
+          const p = s.players.find((x) => x.id === a.playerId);
+          return `<div class="me-aw-row" id="me-aw-${i}" role="listitem" style="--i:${i}">
+            <span class="me-aw-ic" aria-hidden="true">${a.icon}</span>
+            <span class="me-aw-main"><span class="me-aw-t">${esc(a.title)}</span><span class="me-aw-why">${esc(a.why)}</span></span>
+            <span class="me-aw-who">${p ? `<span aria-hidden="true">${p.avatar}</span> <b title="${esc(p.name)}">${esc(p.name)}</b>` : ""}</span>
+          </div>`;
+        })
+        .join("")
+    : "";
+  return `<section class="card me-sec me-aw" id="me-aw" aria-labelledby="me-aw-h">
+    <h2 class="me-h" id="me-aw-h"><span>🏅 Yearbook superlatives</span><span class="me-aside">period ${s.matchNumber}</span></h2>
+    <div class="me-aw-list" role="list" style="--n:${list.length}">${rows}</div>
+  </section>`;
+}
+
 /** Semester standings: rows land in the pre-match order with this match's
  *  deltas popping in (session beat), then slide to the new order with
  *  translateY (done beat). DOM order stays in seat order so morphing never
@@ -348,6 +373,7 @@ export const matchEnd: Screen = {
       ${hero(ctx, v, b, drum)}
       ${reportCard(ctx, b)}
       ${caseFileRecap(ctx, b)}
+      ${superlatives(ctx, b)}
       ${semester(ctx, b)}
       ${dock(ctx, b)}
     </section>`;

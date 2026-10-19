@@ -25,6 +25,7 @@ import {
   QUESTIONS_PER_MATCH,
   SESSION_POINTS,
   TIER_PLAN,
+  type Award,
   type CaseEntry,
   type Intent,
   type MatchEndReason,
@@ -139,6 +140,13 @@ export class HostEngine {
   private usedFallback = false;
   private questionDeadline = 0;
   private answers: Record<string, AnswerRecord>[] = []; // per question: playerId -> record
+  // v0.8 superlatives: every vote this match, and the most 👉 anyone drew at once.
+  private voteLog: { q: number; votes: Record<string, string>; banishedId: string | null }[] = [];
+  private peakPointers: Record<string, number> = {};
+  private firstPointAtCheater: Record<string, number> = {}; // playerId -> question index
+  /** v0.8: across the session, for the day's yearbook. */
+  private sessionStats: Record<string, { awards: number; cheaterVotes: number; cheaterWins: number; detentions: number }> = {};
+  private dayAwards: Award[] = [];
   private reveal: RevealState | null = null;
   private revealMinFrom = 0; // original reveal start (spec 01 minimum counts from here)
   private evidence = new EvidenceTracker(DEFAULT_EVIDENCE);
@@ -517,6 +525,9 @@ export class HostEngine {
     this.matchDelta = {};
     this.evidence = new EvidenceTracker(DEFAULT_EVIDENCE);
     this.caseFile = [];
+    this.voteLog = [];
+    this.peakPointers = {};
+    this.firstPointAtCheater = {};
     for (const p of this.players) {
       p.score = 0;
       p.tokenUsed = false;
@@ -581,6 +592,7 @@ export class HostEngine {
 
   endSession(): void {
     if ((this.phase !== "lobby" && this.phase !== "matchEnd") || this.loadingQuestions) return;
+    this.dayAwards = this.computeDayAwards();
     this.setPhase("sessionEnd");
     this.broadcast();
   }
@@ -688,6 +700,11 @@ export class HostEngine {
     const next = target ? target.id : null;
     if (player.pointingAt === next) return;
     player.pointingAt = next;
+    if (next) {
+      const n = this.players.filter((p) => p.pointingAt === next).length;
+      this.peakPointers[next] = Math.max(this.peakPointers[next] ?? 0, n);
+      if (next === this.cheaterId && this.firstPointAtCheater[player.id] === undefined) this.firstPointAtCheater[player.id] = this.qIdx;
+    }
     player.pointedAt = now;
     this.broadcast();
   }
@@ -789,6 +806,7 @@ export class HostEngine {
     }
 
     this.voteResult = { accuserId, votes, tallies, banishedId, wasCheater, newThreshold, tie };
+    this.voteLog.push({ q: this.qIdx, votes: { ...votes }, banishedId });
     this.vote = null;
     this.setPhase("voteResult");
     this.broadcast();
@@ -851,10 +869,122 @@ export class HostEngine {
       for (const id of winnerIds) this.addSessionPoints(id, SESSION_POINTS.topScoreAtQ10);
       this.addSessionPoints(this.cheaterId, SESSION_POINTS.cheaterSurvivedToQ10);
     }
-    this.end = { reason, ...(struckOut ? { struckOut: true } : {}), cheaterId: this.cheaterId, winnerIds, sessionDelta: { ...this.matchDelta } };
+    const awards = this.computeAwards(reason, struckOut, winnerIds);
+    this.tallySession(awards, winnerIds);
+    this.end = { reason, ...(struckOut ? { struckOut: true } : {}), cheaterId: this.cheaterId, winnerIds, sessionDelta: { ...this.matchDelta }, awards };
     this.setPhase("matchEnd");
     this.broadcast();
     this.sendSecrets();
+  }
+
+  /** Yearbook superlatives (v0.8): one for the cheater, then the detective,
+   *  the most-suspected innocent, and quiz awards — at most 4, one per player.
+   *  Public data the host already holds; computed once, the same everywhere. */
+  private computeAwards(reason: MatchEndReason, struckOut: boolean, winnerIds: string[]): Award[] {
+    const out: Award[] = [];
+    const used = new Set<string>();
+    const give = (a: Award | null) => {
+      if (a && !used.has(a.playerId) && out.length < 4) {
+        out.push(a);
+        used.add(a.playerId);
+      }
+    };
+    const secs = (ms: number) => `${(ms / 1000).toFixed(1)}s`;
+    const qn = this.qIdx + 1;
+    const cheater = this.players.find((p) => p.id === this.cheaterId);
+    const innocents = this.players.filter((p) => p.id !== this.cheaterId);
+
+    // The cheater's own line in the yearbook.
+    if (cheater) {
+      if (reason === "cheater_banished") give({ icon: "🚨", title: "Caught red-handed", playerId: cheater.id, why: `Sent to the principal at Q${qn}` });
+      else if (reason === "cheater_threshold")
+        give(
+          struckOut
+            ? { icon: "🎭", title: "Let them dig", playerId: cheater.id, why: "Watched two innocents go to detention" }
+            : { icon: "🎓", title: "Graduated early", playerId: cheater.id, why: `Crossed the line at Q${qn}` },
+        );
+      else give({ icon: "🎭", title: winnerIds.includes(cheater.id) ? "Master of disguise" : "Hid in plain sight", playerId: cheater.id, why: "Never caught" });
+    }
+
+    // Detective: the most votes for the cheater, then the earliest 👉 at them.
+    const forCheater = (id: string) => this.voteLog.filter((v) => v.votes[id] === this.cheaterId).length;
+    const detective = innocents
+      .map((p) => ({ p, n: forCheater(p.id), first: this.firstPointAtCheater[p.id] ?? Infinity }))
+      .filter((x) => x.n > 0 || x.first !== Infinity)
+      .sort((a, b) => b.n - a.n || a.first - b.first)[0];
+    if (detective)
+      give({
+        icon: "🕵️",
+        title: "Detective",
+        playerId: detective.p.id,
+        why: detective.n > 0 ? `${detective.n} vote${detective.n === 1 ? "" : "s"} for the cheater` : `Pointed at the cheater from Q${detective.first + 1}`,
+      });
+
+    // The innocent who took the heat: sent to detention first, else most suspected.
+    const firstWrong = this.voteLog.find((v) => v.banishedId && v.banishedId !== this.cheaterId);
+    if (firstWrong?.banishedId) give({ icon: "😇", title: "Wrongly accused", playerId: firstWrong.banishedId, why: `Sent to detention at Q${firstWrong.q + 1}` });
+    const votesAgainst = (id: string) => this.voteLog.reduce((n, v) => n + Object.values(v.votes).filter((t) => t === id).length, 0);
+    const herring = innocents
+      .map((p) => ({ p, heat: votesAgainst(p.id) + (this.peakPointers[p.id] ?? 0) }))
+      .sort((a, b) => b.heat - a.heat)[0];
+    if (herring && herring.heat >= 2)
+      give({ icon: "🙈", title: "Red herring", playerId: herring.p.id, why: `${this.peakPointers[herring.p.id] ?? 0} 👉 at once, ${votesAgainst(herring.p.id)} votes` });
+
+    // Quiz awards.
+    const med = (xs: number[]) => (xs.length ? [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)] : Infinity);
+    const stats = this.players.map((p) => {
+      const recs = this.answers
+        .slice(0, this.qIdx + 1)
+        .map((a, q) => ({ q, r: a[p.id] }))
+        .filter((x) => x.r && x.r.pick >= 0);
+      const right = recs.filter((x) => x.r!.pick === this.questions[x.q].correctIdx);
+      return { p, answered: recs.length, right: right.length, rightMed: med(right.map((x) => x.r!.timeMs)), allMed: med(recs.map((x) => x.r!.timeMs)) };
+    });
+    const top = [...stats].filter((x) => x.right > 0).sort((a, b) => b.right - a.right || a.rightMed - b.rightMed)[0];
+    if (top) give({ icon: "🧠", title: "Top marks", playerId: top.p.id, why: `${top.right} of ${this.qIdx + 1} right` });
+    const fast = [...stats].filter((x) => x.right >= 3 && !used.has(x.p.id)).sort((a, b) => a.rightMed - b.rightMed)[0];
+    if (fast) give({ icon: "⚡", title: "Fastest pencil", playerId: fast.p.id, why: `${secs(fast.rightMed)} per right answer` });
+    const slow = [...stats].filter((x) => x.answered >= 3 && !used.has(x.p.id)).sort((a, b) => b.allMed - a.allMed)[0];
+    if (slow) give({ icon: "🐢", title: "Last pencil down", playerId: slow.p.id, why: `${secs(slow.allMed)} per answer` });
+    return out;
+  }
+
+  private statsOf(id: string) {
+    return (this.sessionStats[id] ??= { awards: 0, cheaterVotes: 0, cheaterWins: 0, detentions: 0 });
+  }
+
+  /** Fold this period into the session tallies (for the day's yearbook). */
+  private tallySession(awards: Award[], winnerIds: string[]): void {
+    for (const a of awards) this.statsOf(a.playerId).awards++;
+    for (const v of this.voteLog) {
+      for (const [voter, target] of Object.entries(v.votes)) if (target === this.cheaterId) this.statsOf(voter).cheaterVotes++;
+      if (v.banishedId && v.banishedId !== this.cheaterId) this.statsOf(v.banishedId).detentions++;
+    }
+    if (winnerIds.includes(this.cheaterId)) this.statsOf(this.cheaterId).cheaterWins++;
+  }
+
+  /** The day's yearbook (v0.8): at most 4, one per player, only for things
+   *  that actually happened. */
+  private computeDayAwards(): Award[] {
+    type Key = "awards" | "cheaterVotes" | "cheaterWins" | "detentions";
+    const out: Award[] = [];
+    const used = new Set<string>();
+    const best = (key: Key, min: number) =>
+      this.players
+        .map((p) => ({ p, n: this.sessionStats[p.id]?.[key] ?? 0 }))
+        .filter((x) => x.n >= min && !used.has(x.p.id))
+        .sort((a, b) => b.n - a.n)[0];
+    const give = (x: { p: InternalPlayer; n: number } | undefined, icon: string, title: string, why: (n: number) => string) => {
+      if (!x || out.length >= 4) return;
+      out.push({ icon, title, playerId: x.p.id, why: why(x.n) });
+      used.add(x.p.id);
+    };
+    const times = (n: number) => (n === 1 ? "once" : n === 2 ? "twice" : `${n} times`);
+    give(best("cheaterWins", 1), "🎭", "Best actor", (n) => `Got away with it ${times(n)}`);
+    give(best("cheaterVotes", 1), "🕵️", "Head detective", (n) => `${n} vote${n === 1 ? "" : "s"} for the cheater`);
+    give(best("awards", 2), "🏅", "Most decorated", (n) => `${n} superlatives`);
+    give(best("detentions", 1), "😇", "Most wrongly accused", (n) => `Sent to detention ${times(n)}`);
+    return out;
   }
 
   private addSessionPoints(playerId: string, pts: number): void {
@@ -905,6 +1035,7 @@ export class HostEngine {
       players,
       settings: this.settings,
       sessionBoard: { ...this.sessionBoard },
+      dayAwards: this.phase === "sessionEnd" ? this.dayAwards : undefined,
       matchNumber: this.matchNumber,
       offlineQuestions: this.usedFallback,
       match: inMatch

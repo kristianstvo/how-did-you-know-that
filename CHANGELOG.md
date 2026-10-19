@@ -19,6 +19,40 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.8.0 — The yearbook · 2026-10-20 02:13
+
+**Why:** endings are where a party game earns the next round. The report card
+said who won, but nothing said who was sharp, sneaky or unlucky: the stories
+people retell on the way home.
+
+**Added**
+- **Yearbook superlatives** at the end of every period: up to 4, one per
+  classmate.
+  - The cheater's own: 🚨 Caught red-handed, 🎓 Graduated early, 🎭 Let them
+    dig (won on strikes), or 🎭 Master of disguise.
+  - 🕵️ Detective: the most votes for the cheater, otherwise the earliest 👉
+    at them.
+  - The innocent who took the heat: 😇 Wrongly accused or 🙈 Red herring.
+  - Quiz awards: 🧠 Top marks, ⚡ Fastest pencil, 🐢 Last pencil down.
+
+  The host computes them once from what everyone saw, so every phone shows the
+  same.
+- **The yearbook of the day** at session end: 🎭 Best actor, 🕵️ Head
+  detective, 🏅 Most decorated, 😇 Most wrongly accused, each only for
+  something that actually happened.
+- **📤 Share the day:** one line for the group chat, through the share sheet or
+  copied.
+- `tools/full-session.mjs` plays a whole session in a phone browser
+  (Practice, 10 questions, End the day) and fails on any console error.
+- `sim/yearbook-check.ts` (engine) runs in `test:e2e`.
+
+**Evidence**
+- yearbook-check: two bot periods give 1–4 superlatives, one per player, the
+  cheater's first; the day's yearbook is well formed.
+- The full-session smoke test passes in 197s, through every screen from lobby
+  to the day's yearbook. Its only console errors were the online question
+  API's rate limits, which the game survives by using its own question pack.
+
 ## v0.7.0 — First game night · 2026-10-20 01:58
 
 **Why:** the first real session decides whether a group comes back, and three

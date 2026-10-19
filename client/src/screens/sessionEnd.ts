@@ -111,8 +111,31 @@ export const sessionEnd: Screen = {
           .join("")
       : "";
 
+    // The day's yearbook (v0.8): computed by the host, the same for everyone.
+    const day = s.dayAwards ?? [];
+    const yearbook = day.length
+      ? `<section class="card se-yearbook" id="se-yearbook" aria-labelledby="se-yb-h">
+          <h2 id="se-yb-h">🏅 The yearbook</h2>
+          <div class="me-aw-list" role="list" style="--n:${day.length}">${
+            b.has("list")
+              ? day
+                  .map((a, i) => {
+                    const p = s.players.find((x) => x.id === a.playerId);
+                    return `<div class="me-aw-row" id="se-aw-${i}" role="listitem" style="--i:${i + sorted.length}">
+                      <span class="me-aw-ic" aria-hidden="true">${a.icon}</span>
+                      <span class="me-aw-main"><span class="me-aw-t">${esc(a.title)}</span><span class="me-aw-why">${esc(a.why)}</span></span>
+                      <span class="me-aw-who">${p ? `<span aria-hidden="true">${p.avatar}</span> <b title="${esc(p.name)}">${esc(p.name)}</b>` : ""}</span>
+                    </div>`;
+                  })
+                  .join("")
+              : ""
+          }</div>
+        </section>`
+      : "";
+
     const dock = b.has("done")
       ? `<button class="btn" data-action="home" id="se-home">🏫 Back to school</button>
+         <button class="btn secondary" data-action="shareDay" id="se-share">📤 Share the day</button>
          ${app.isHost ? `<button class="btn ghost" data-action="downloadLog" id="se-log">⬇ Download session log</button>` : ""}`
       : "";
 
@@ -131,6 +154,7 @@ export const sessionEnd: Screen = {
         <h2 id="se-standings-h">📊 Final standings</h2>
         <div class="se-list" role="list" style="--n:${sorted.length}">${rows}</div>
       </section>
+      ${yearbook}
       <div class="se-dock${app.isHost ? " host" : ""}">${dock}</div>
     </section>`;
   },

@@ -350,6 +350,26 @@ async function shareLink(url: string): Promise<void> {
   }
 }
 
+/** One line about the day for the group chat (v0.8). Public results only. */
+async function shareDay(): Promise<void> {
+  const s = app.state;
+  if (!s) return;
+  const name = (id: string) => s.players.find((p) => p.id === id)?.name ?? "";
+  const top = Math.max(0, ...s.players.map((p) => s.sessionBoard[p.id] ?? 0));
+  const champs = s.players.filter((p) => (s.sessionBoard[p.id] ?? 0) === top).map((p) => p.name);
+  const award = s.dayAwards?.[0];
+  const text = `🎓 Class of ${s.roomCode}: ${champs.join(" & ")} finished top of the class after ${s.matchNumber} period${s.matchNumber === 1 ? "" : "s"}.${award ? ` ${award.icon} ${award.title}: ${name(award.playerId)}.` : ""} How Did You Know That?!`;
+  try {
+    if (navigator.share) await navigator.share({ title: "How Did You Know That?!", text, url: `${location.origin}${location.pathname}` });
+    else {
+      await navigator.clipboard.writeText(`${text} ${location.origin}${location.pathname}`);
+      toast("Copied. Paste it in the group chat!");
+    }
+  } catch {
+    /* share sheet dismissed */
+  }
+}
+
 function downloadLog(): void {
   if (session?.kind !== "host") return;
   const blob = new Blob([session.eventLog()], { type: "application/x-ndjson" });
@@ -468,6 +488,9 @@ root.addEventListener("click", (ev) => {
     case "toggleSound":
       setSound(!soundOn());
       render();
+      break;
+    case "shareDay":
+      void shareDay();
       break;
     case "toggleQr":
       app.ui.qrOpen = !app.ui.qrOpen;

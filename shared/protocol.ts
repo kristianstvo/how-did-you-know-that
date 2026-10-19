@@ -106,6 +106,15 @@ export interface RevealRow {
   pointsGained: number;
 }
 
+/** A yearbook superlative (v0.8): computed once by the host at match end,
+ *  the same for every phone. */
+export interface Award {
+  icon: string;
+  title: string;
+  playerId: string;
+  why: string;
+}
+
 /** One announced piece of evidence, kept for the rest of the match. */
 export interface CaseEntry {
   q: number; // question index it came from
@@ -122,6 +131,8 @@ export interface PublicState {
   players: PublicPlayer[];
   settings: Settings;
   sessionBoard: Record<string, number>; // playerId -> session points
+  /** v0.8: the day's yearbook, at session end only. */
+  dayAwards?: Award[];
   matchNumber: number; // 1-based, 0 = none played yet
   offlineQuestions: boolean; // fallback pack active this match (spec 06)
   loadingQuestions: boolean; // host is fetching questions at match start
@@ -171,6 +182,8 @@ export interface PublicState {
       reason: MatchEndReason;
       /** cheater_threshold reached by striking out (too many wrong detentions). */
       struckOut?: boolean;
+      /** Yearbook superlatives (v0.8), at most 4, one per player. */
+      awards?: Award[];
       cheaterId: string;
       winnerIds: string[];
       sessionDelta: Record<string, number>; // playerId -> points earned this match
