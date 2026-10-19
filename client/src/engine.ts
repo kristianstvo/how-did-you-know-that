@@ -1,6 +1,22 @@
 // Host-authoritative game engine (specs 01–04). Runs ONLY in the host's
 // browser. Receives validated intents, mutates state, broadcasts snapshots.
 // Known accepted limitation (spec 00): the host can inspect this state.
+//
+// Time: every timestamp in public state is on the SHARED clock (the relay
+// server's, see clock.ts) so all phones play reveal beats together. The beat
+// timelines themselves come from shared/choreo.ts and depend on public data
+// only, so the cheater's screen runs exactly the same show as everyone else's.
+import {
+  lastBellIds,
+  matchEndTimeline,
+  revealStakes,
+  revealTimeline,
+  ROLE_SCREEN_MS,
+  TALK_HOLD_MS,
+  voteResultTimeline,
+} from "../../shared/choreo";
+import { DEFAULT_EVIDENCE, EvidenceTracker, type CalloutKind } from "../../shared/evidence";
+import { DEFAULT_HUMAN, normal, sampleAnswer } from "../../shared/humanModel";
 import {
   AVATARS,
   DEFAULT_SETTINGS,
@@ -8,6 +24,8 @@ import {
   MIN_PLAYERS,
   QUESTIONS_PER_MATCH,
   SESSION_POINTS,
+  TIER_PLAN,
+  type CaseEntry,
   type Intent,
   type MatchEndReason,
   type Phase,
@@ -18,7 +36,7 @@ import {
   type SecretState,
   type Settings,
 } from "../../shared/protocol";
-import { getMatchQuestions, prefetchNextMatch } from "./providers";
+import { openTdbSource, type QuestionSource } from "./providers";
 
 interface InternalPlayer {
   id: string;
@@ -34,12 +52,19 @@ interface InternalPlayer {
   votingRights: boolean;
   answeredCurrent: boolean;
   votedCurrent: boolean;
+  // Bot personality (research-based human model; see shared/humanModel.ts).
+  ability: number;
+  speed: number;
+  /** Seat token: only the phone holding it may take this seat over mid-match. */
+  token: string;
 }
 
 interface AnswerRecord {
   pick: number; // -1 = no answer
   timeMs: number;
 }
+
+type RevealState = NonNullable<NonNullable<PublicState["match"]>["reveal"]>;
 
 export interface Transport {
   toAll(event: string, payload: unknown): void;
@@ -48,8 +73,42 @@ export interface Transport {
   local(event: string, payload: unknown): void;
 }
 
+export interface EngineOptions {
+  /** Shared-clock time source (host passes serverNow). Defaults to Date.now. */
+  now?: () => number;
+  /** Debug/test only: make the player with this name the cheater (flagged
+   *  publicly via debugForcedCheater so nobody is fooled). */
+  forceCheaterName?: string;
+  /** Phases start this far in the FUTURE on the shared clock, so the state
+   *  reaches every phone before beat 0 and all phones hit it together. */
+  beatLeadMs?: number;
+}
+
+/** Covers a typical one-way relay delay (Wi-Fi tens of ms, cellular 100–200). */
+export const BEAT_LEAD_MS = 250;
+
 let nextId = 1;
 const genId = () => `p${nextId++}_${Math.random().toString(36).slice(2, 8)}`;
+const genToken = () => Array.from({ length: 4 }, () => Math.random().toString(36).slice(2, 8)).join("");
+
+/** Phases in which a secret may say "you are the cheater". */
+const SECRET_PHASES = new Set<Phase>(["role", "question", "reveal", "vote", "voteResult"]);
+/** Every secret serializes to exactly this many characters. */
+const SECRET_JSON_LEN = 56;
+
+/** Bot accusation temperament, tuned in the simulator (sim/run.ts builtin)
+ *  so a room of bots catches a bot cheater about half the time. */
+export const BOT_TUNING = { lineHeat: 1, accuseAt: 2, minLead: 0.5, accuseChance: 0.4 };
+
+/** How much each announced callout raises a bot's suspicion of its subject. */
+const SUSPICION: Partial<Record<CalloutKind, number>> = {
+  lone_correct: 2,
+  hard_sweep: 2,
+  against_crowd: 1.5,
+  lightning: 1.5,
+  streak: 1,
+  near_line: 1,
+};
 
 export class HostEngine {
   players: InternalPlayer[] = [];
@@ -58,14 +117,23 @@ export class HostEngine {
   matchNumber = 0;
   phase: Phase = "lobby";
 
+  private now: () => number;
+  private lead: number;
+  private forceCheaterName?: string;
+  private botEpoch = 0; // invalidates scheduled bot accusations (host skip)
+  private phaseStartedAt = 0;
   private questions: Question[] = [];
   private cheaterId = "";
+  private botCheaterCareful = false;
   private qIdx = 0;
   private threshold = 0;
   private usedFallback = false;
   private questionDeadline = 0;
   private answers: Record<string, AnswerRecord>[] = []; // per question: playerId -> record
-  private reveal: { correctIdx: number; rows: RevealRow[]; minNextAt: number } | null = null;
+  private reveal: RevealState | null = null;
+  private revealMinFrom = 0; // original reveal start (spec 01 minimum counts from here)
+  private evidence = new EvidenceTracker(DEFAULT_EVIDENCE);
+  private caseFile: CaseEntry[] = [];
   private vote: { accuserId: string; deadline: number; votes: Record<string, string> } | null = null;
   private voteResult: NonNullable<NonNullable<PublicState["match"]>["voteResult"]> | null = null;
   private end: NonNullable<NonNullable<PublicState["match"]>["end"]> | null = null;
@@ -75,11 +143,22 @@ export class HostEngine {
   /** Bumped on every phase transition; stale timers check it and bail. */
   private epoch = 0;
 
-  constructor(public roomCode: string, hostName: string, hostAvatar: string, private transport: Transport) {
+  constructor(
+    public roomCode: string,
+    hostName: string,
+    hostAvatar: string,
+    private transport: Transport,
+    private source: QuestionSource = openTdbSource,
+    options: EngineOptions = {},
+  ) {
+    this.now = options.now ?? (() => Date.now());
+    this.lead = options.beatLeadMs ?? BEAT_LEAD_MS;
+    this.forceCheaterName = options.forceCheaterName;
+    this.phaseStartedAt = this.now();
     const host: InternalPlayer = this.newPlayer(hostName, hostAvatar, "local", true);
     this.players.push(host);
     this.sessionBoard[host.id] = 0;
-    prefetchNextMatch(); // warm the first match while people join the lobby
+    this.source.prefetch(); // warm the first match while people join the lobby
   }
 
   get hostPlayer(): InternalPlayer {
@@ -101,12 +180,15 @@ export class HostEngine {
       votingRights: true,
       answeredCurrent: false,
       votedCurrent: false,
+      ability: normal(Math.random) * DEFAULT_HUMAN.abilitySd,
+      speed: normal(Math.random) * DEFAULT_HUMAN.speedSd,
+      token: socketId === "bot" ? "" : genToken(),
     };
   }
 
   // ---------------- Joining (spec 05) ----------------
 
-  handleJoinRequest(socketId: string, rawName: string, avatar = ""): void {
+  handleJoinRequest(socketId: string, rawName: string, avatar = "", token = ""): void {
     const name = rawName.trim().slice(0, 20);
     if (!name) {
       this.transport.toPlayer(socketId, "joinRejected", { reason: "Pick a name first." });
@@ -114,29 +196,42 @@ export class HostEngine {
     }
     const existing = this.players.find((p) => p.name.toLowerCase() === name.toLowerCase());
     if (existing) {
-      if (existing.connected) {
-        // Duplicate names rejected with a friendly error (spec 05).
+      const owner = !!token && !existing.isBot && token === existing.token;
+      const between = this.phase === "lobby" || this.phase === "matchEnd";
+      // Rejoin (spec 05). The seat's own phone (token) may always take it back
+      // — even before the relay notices its old socket died. A bare name may
+      // only reclaim an EMPTY seat between matches: mid-match that would hand
+      // a stranger the seat's secret.
+      if (!owner && (existing.connected || existing.isBot)) {
         this.transport.toPlayer(socketId, "joinRejected", { reason: `"${existing.name}" is already in this room. Pick another name.` });
         return;
       }
-      // Rejoin: same name restores the seat and current state (spec 05).
+      if (!owner && !between) {
+        this.transport.toPlayer(socketId, "joinRejected", { reason: `"${existing.name}" is mid-match — rejoin from the phone that was playing, or wait for the report card.` });
+        return;
+      }
       existing.socketId = socketId;
       existing.connected = true;
       if (avatar) existing.avatar = avatar;
       this.transport.toPlayer(socketId, "joined", {
         playerId: existing.id,
         state: this.publicState(),
-        secret: this.secretFor(existing.id),
+        secret: this.paddedSecret(existing.id),
+        token: existing.token,
       });
       this.broadcast();
       return;
     }
-    if (this.phase !== "lobby" && this.phase !== "matchEnd" && this.phase !== "sessionEnd") {
+    if (this.phase !== "lobby" && this.phase !== "matchEnd") {
       this.transport.toPlayer(socketId, "joinRejected", { reason: "A match is in progress — join between matches." });
       return;
     }
     if (this.players.length >= MAX_PLAYERS) {
       this.transport.toPlayer(socketId, "joinRejected", { reason: `Room is full (${MAX_PLAYERS} players max).` });
+      return;
+    }
+    if (this.loadingQuestions) {
+      this.transport.toPlayer(socketId, "joinRejected", { reason: "The bell just rang — join after this period." });
       return;
     }
     const player = this.newPlayer(name, avatar, socketId, false);
@@ -145,7 +240,8 @@ export class HostEngine {
     this.transport.toPlayer(socketId, "joined", {
       playerId: player.id,
       state: this.publicState(),
-      secret: this.secretFor(player.id),
+      secret: this.paddedSecret(player.id),
+      token: player.token,
     });
     this.broadcast();
   }
@@ -194,7 +290,7 @@ export class HostEngine {
 
   private sendSnapshotTo(player: InternalPlayer): void {
     const state = this.publicState();
-    const secret = this.secretFor(player.id);
+    const secret = this.paddedSecret(player.id);
     if (player.socketId === "local") {
       this.transport.local("state", { state });
       this.transport.local("secret", { secret });
@@ -212,7 +308,7 @@ export class HostEngine {
   ];
 
   addBot(): void {
-    if (this.phase !== "lobby" && this.phase !== "matchEnd") return;
+    if ((this.phase !== "lobby" && this.phase !== "matchEnd") || this.loadingQuestions) return;
     if (this.players.length >= MAX_PLAYERS) return;
     const name = HostEngine.BOT_NAMES.find((n) => !this.players.some((p) => p.name === n));
     if (!name) return;
@@ -224,7 +320,7 @@ export class HostEngine {
   }
 
   removeBot(botId: string): void {
-    if (this.phase !== "lobby" && this.phase !== "matchEnd") return;
+    if ((this.phase !== "lobby" && this.phase !== "matchEnd") || this.loadingQuestions) return;
     const idx = this.players.findIndex((p) => p.id === botId && p.isBot);
     if (idx === -1) return;
     delete this.sessionBoard[botId];
@@ -236,61 +332,105 @@ export class HostEngine {
     return this.players.filter((p) => p.isBot);
   }
 
-  /** Bots answer with tier-scaled accuracy; a bot cheater "reads the marker". */
-  private botAnswer(botId: string): void {
-    if (this.phase !== "question") return;
-    const bot = this.players.find((p) => p.id === botId);
-    if (!bot || bot.answeredCurrent) return;
+  /** Bots answer like the simulated humans: knowledge and speed from the
+   *  research-based model. A bot cheater plays either "mimic" (always right,
+   *  human timing) or "careful" (sandbags some easy/medium questions). */
+  private planBotAnswer(bot: InternalPlayer): void {
     const q = this.questions[this.qIdx];
-    const accuracy = bot.id === this.cheaterId ? 0.88 : { easy: 0.65, medium: 0.45, hard: 0.28 }[q.tier];
+    const isCheater = bot.id === this.cheaterId;
+    const a = sampleAnswer(Math.random, DEFAULT_HUMAN, "mid", q.tier, bot.ability, bot.speed);
     let pick: number;
-    if (Math.random() < accuracy) pick = q.correctIdx;
-    else {
-      const wrong = [0, 1, 2, 3].filter((i) => i !== q.correctIdx);
-      pick = wrong[Math.floor(Math.random() * wrong.length)];
-    }
-    const elapsed = this.settings.questionTimerMs - (this.questionDeadline - Date.now());
-    this.onAnswer(bot, this.qIdx, pick, elapsed);
-  }
-
-  private botVote(botId: string): void {
-    if (this.phase !== "vote") return;
-    const bot = this.players.find((p) => p.id === botId);
-    if (!bot || bot.votedCurrent || !bot.votingRights || bot.banished) return;
-    const candidates = this.players.filter((p) => !p.banished && p.id !== bot.id);
-    if (!candidates.length) return;
-    let target: InternalPlayer;
-    if (bot.id === this.cheaterId) {
-      // The bot cheater deflects onto a random innocent.
-      target = candidates[Math.floor(Math.random() * candidates.length)];
-    } else if (Math.random() < 0.4) {
-      // Suspicion falls on the top scorer, like it does in real playgroups.
-      target = candidates.reduce((a, b) => (b.score > a.score ? b : a));
+    let rt = a.rtMs;
+    const wrong = () => {
+      const opts = [0, 1, 2, 3].filter((i) => i !== q.correctIdx);
+      return opts[Math.floor(Math.random() * opts.length)];
+    };
+    if (isCheater) {
+      const sandbag = this.botCheaterCareful && q.tier !== "hard" && Math.random() < (q.tier === "easy" ? 0.15 : 0.3);
+      pick = sandbag ? wrong() : q.correctIdx;
+      const h = DEFAULT_HUMAN;
+      const shifted = (median: number, sigma: number) => h.shiftMs + (median - h.shiftMs) * Math.exp(sigma * normal(Math.random) + bot.speed);
+      // Right answers at a knower's pace; a deliberate miss at a guesser's
+      // pace (a fast wrong answer would itself be a tell).
+      if (sandbag) rt = shifted(h.guessMedianMs[q.tier], h.guessSigma);
+      else if (!a.knows) rt = shifted(h.knowMedianMs[q.tier], h.knowSigma);
     } else {
-      target = candidates[Math.floor(Math.random() * candidates.length)];
+      pick = a.knows || a.guessRight ? q.correctIdx : wrong();
     }
-    this.onCastVote(bot, target.id);
+    const timer = this.settings.questionTimerMs;
+    if (rt >= timer - 250) {
+      if (Math.random() > DEFAULT_HUMAN.lastSecondTap) return; // ran out of time
+      rt = timer - 1500 + Math.random() * 1400;
+    }
+    this.after(rt, () => {
+      if (this.phase !== "question" || bot.answeredCurrent) return;
+      this.onAnswer(bot, this.qIdx, pick, rt);
+    });
   }
 
-  /** During reveals, a bot occasionally burns its token on the top scorer —
-   *  likelier once the cheater is closing in on graduation. */
+  /** Public-evidence suspicion, the way a sharp player would keep score:
+   *  announced callouts, plus pressure from closing in on the line. */
+  private suspicionOf(id: string): number {
+    let s = 0;
+    for (const e of this.caseFile) if (e.subjectIds.includes(id)) s += SUSPICION[e.kind as CalloutKind] ?? 0;
+    const p = this.players.find((x) => x.id === id);
+    if (p && this.threshold > 0) {
+      const share = p.score / this.threshold;
+      if (share >= 0.6) s += BOT_TUNING.lineHeat;
+      if (share >= 0.8) s += BOT_TUNING.lineHeat;
+    }
+    return s;
+  }
+
+  private suspects(excludeId: string): InternalPlayer[] {
+    return this.players.filter((p) => p.id !== excludeId && !p.banished && !this.evidence.cleared.has(p.id));
+  }
+
+  /** After the show arms ACCUSE, a bot with a clear suspect may raise its
+   *  hand. Never before the accuse beat — the reveal is never interrupted.
+   *  The cheater bot plays by the SAME rule (bluffing at its top suspect):
+   *  a hidden role must never gate a public action, or every accusing bot
+   *  would be provably innocent. */
   private scheduleBotAccusations(): void {
-    const cheater = this.players.find((p) => p.id === this.cheaterId);
-    const heat = cheater && this.threshold > 0 ? cheater.score / this.threshold : 0;
-    const prob = heat >= 0.6 ? 0.2 : 0.05;
-    const eligible = this.bots().filter((b) => !b.tokenUsed && !b.banished && b.votingRights);
-    for (const bot of eligible) {
-      if (Math.random() < prob) {
-        this.after(2500 + Math.random() * 4000, () => this.onBurnToken(this.players.find((p) => p.id === bot.id)!));
-        break; // at most one bot accusation per reveal
+    if (!this.reveal) return;
+    const wait = Math.max(0, this.reveal.accuseAt - this.now());
+    const epoch = ++this.botEpoch;
+    for (const bot of this.bots()) {
+      if (bot.tokenUsed || bot.banished || !bot.votingRights) continue;
+      const ranked = this.suspects(bot.id)
+        .map((p) => ({ p, s: this.suspicionOf(p.id) }))
+        .sort((a, b) => b.s - a.s);
+      if (!ranked.length) continue;
+      const lead = ranked[0].s - (ranked[1]?.s ?? 0);
+      if (ranked[0].s >= BOT_TUNING.accuseAt && lead >= BOT_TUNING.minLead && Math.random() < BOT_TUNING.accuseChance) {
+        this.after(wait + 1200 + Math.random() * 3500, () => {
+          if (epoch !== this.botEpoch) return; // superseded (host skipped the show)
+          const fresh = this.players.find((p) => p.id === bot.id);
+          if (fresh) this.onBurnToken(fresh);
+        });
+        return; // at most one bot accusation per reveal
       }
     }
+  }
+
+  private botVote(bot: InternalPlayer): void {
+    if (this.phase !== "vote" || bot.votedCurrent || !bot.votingRights || bot.banished) return;
+    const candidates = this.suspects(bot.id);
+    if (!candidates.length) return;
+    // Highest suspicion, ties to the higher score. A bot cheater deflects onto
+    // the most suspicious innocent the same way.
+    const target = candidates.reduce((a, b) => {
+      const sa = this.suspicionOf(a.id) + a.score / 10000;
+      const sb = this.suspicionOf(b.id) + b.score / 10000;
+      return sb > sa ? b : a;
+    });
+    this.onCastVote(bot, target.id);
   }
 
   // ---------------- Host controls ----------------
 
   updateSettings(patch: Partial<Settings>): void {
-    if (this.phase !== "lobby") return;
+    if (this.phase !== "lobby" || this.loadingQuestions) return;
     this.settings = { ...this.settings, ...patch, tierPoints: { ...this.settings.tierPoints, ...(patch.tierPoints ?? {}) } };
     this.broadcast();
   }
@@ -302,9 +442,16 @@ export class HostEngine {
 
     this.loadingQuestions = true;
     this.broadcast(); // lets the lobby show a brief "loading questions" state
-    const batch = await getMatchQuestions();
+    const batch = await this.source.get();
     this.loadingQuestions = false;
-    prefetchNextMatch(); // background-fetch the NEXT match during this one
+    this.source.prefetch(); // background-fetch the NEXT match during this one
+    // The room may have changed during the wait (up to ~8s): re-check it.
+    const ready = this.players.filter((p) => p.connected);
+    if ((this.phase !== "lobby" && this.phase !== "matchEnd") || ready.length < MIN_PLAYERS) {
+      this.broadcast();
+      return;
+    }
+    present.splice(0, present.length, ...ready);
 
     this.questions = batch.questions;
     this.usedFallback = batch.usedFallback;
@@ -317,6 +464,8 @@ export class HostEngine {
     this.voteResult = null;
     this.end = null;
     this.matchDelta = {};
+    this.evidence = new EvidenceTracker(DEFAULT_EVIDENCE);
+    this.caseFile = [];
     for (const p of this.players) {
       p.score = 0;
       p.tokenUsed = false;
@@ -326,30 +475,58 @@ export class HostEngine {
       p.votedCurrent = false;
     }
     // Cheater: uniform random among players present at match start (spec 02).
-    this.cheaterId = present[Math.floor(Math.random() * present.length)].id;
+    const forced = this.forceCheaterName && present.find((p) => p.name.toLowerCase() === this.forceCheaterName!.toLowerCase());
+    this.cheaterId = (forced || present[Math.floor(Math.random() * present.length)]).id;
+    this.botCheaterCareful = Math.random() < 0.5;
+    // A seat that wasn't connected at the bell cannot be the cheater. Say so
+    // publicly, so nobody gains a private elimination from noticing it.
+    const absent = this.players.filter((p) => !p.connected).map((p) => p.id);
+    if (absent.length) {
+      for (const id of absent) this.evidence.cleared.add(id);
+      this.caseFile.push({ q: -1, tier: "easy", kind: "cleared", subjectIds: absent, detail: { absent: 1 } });
+    }
 
     this.setPhase("role");
     this.broadcast();
     this.sendSecrets();
-    this.after(3000, () => this.startQuestion(0));
+    this.after(ROLE_SCREEN_MS, () => this.startQuestion(0));
   }
 
   /** Context-sensitive host "Next": reveal → next question / Q10 end,
-   *  voteResult → resolution, matchEnd → lobby. */
+   *  voteResult → resolution, matchEnd → lobby. Each waits for its show. */
   advance(): void {
-    if (this.phase === "reveal" && this.reveal && Date.now() >= this.reveal.minNextAt) {
+    const now = this.now();
+    if (this.phase === "reveal" && this.reveal && now >= this.reveal.minNextAt) {
       if (this.qIdx >= QUESTIONS_PER_MATCH - 1) this.endMatch("top_score");
       else this.startQuestion(this.qIdx + 1);
-    } else if (this.phase === "voteResult") {
-      this.afterVoteResult();
-    } else if (this.phase === "matchEnd") {
-      this.setPhase("lobby");
-      this.broadcast();
+    } else if (this.phase === "voteResult" && this.voteResult) {
+      const tl = voteResultTimeline(Object.keys(this.voteResult.votes).length, this.voteResult.newThreshold !== null);
+      if (now >= this.phaseStartedAt + tl.end) this.afterVoteResult();
+    } else if (this.phase === "matchEnd" && this.end) {
+      if (now >= this.phaseStartedAt + matchEndTimeline(this.end.reason).end) {
+        this.setPhase("lobby");
+        this.broadcast();
+      }
     }
   }
 
+  /** Host skips the reveal show to the accuse beat. The jump is scheduled a
+   *  beat-lead into the future so every phone lands it together. */
+  skipShow(): void {
+    if (this.phase !== "reveal" || !this.reveal) return;
+    const target = this.now() + this.lead;
+    if (target >= this.reveal.accuseAt) return;
+    const delta = this.reveal.accuseAt - target;
+    this.reveal.startedAt -= delta;
+    this.reveal.accuseAt = target;
+    this.reveal.minNextAt = Math.max(this.revealMinFrom + this.settings.revealMinMs, target + TALK_HOLD_MS);
+    this.phaseStartedAt -= delta;
+    this.broadcast();
+    this.scheduleBotAccusations(); // re-rolls once; the earlier roll is invalidated
+  }
+
   endSession(): void {
-    if (this.phase !== "lobby" && this.phase !== "matchEnd") return;
+    if ((this.phase !== "lobby" && this.phase !== "matchEnd") || this.loadingQuestions) return;
     this.setPhase("sessionEnd");
     this.broadcast();
   }
@@ -361,22 +538,20 @@ export class HostEngine {
     this.reveal = null;
     this.voteResult = null;
     for (const p of this.players) p.answeredCurrent = false;
-    this.questionDeadline = Date.now() + this.settings.questionTimerMs;
     this.setPhase("question");
+    this.questionDeadline = this.phaseStartedAt + this.settings.questionTimerMs;
     this.broadcast();
     this.sendSecrets(); // cheater's copy carries correctIdx for this question
     this.after(this.settings.questionTimerMs + 400, () => this.endQuestion());
-    for (const bot of this.bots()) {
-      const delay = 1800 + Math.random() * this.settings.questionTimerMs * 0.55;
-      this.after(delay, () => this.botAnswer(bot.id));
-    }
+    for (const bot of this.bots()) this.planBotAnswer(bot);
   }
 
   private onAnswer(player: InternalPlayer, questionIdx: number, optionIdx: number, clientElapsedMs: number): void {
     if (this.phase !== "question" || questionIdx !== this.qIdx) return;
     if (player.answeredCurrent) return; // answers lock on first tap
     if (!Number.isInteger(optionIdx) || optionIdx < 0 || optionIdx > 3) return;
-    const timeMs = Math.max(0, Math.min(this.settings.questionTimerMs, Math.round(clientElapsedMs)));
+    const elapsed = Number.isFinite(clientElapsedMs) ? clientElapsedMs : this.settings.questionTimerMs;
+    const timeMs = Math.max(0, Math.min(this.settings.questionTimerMs, Math.round(elapsed)));
     this.answers[this.qIdx][player.id] = { pick: optionIdx, timeMs };
     player.answeredCurrent = true;
     this.broadcast();
@@ -399,17 +574,46 @@ export class HostEngine {
       if (correct) p.score += points; // banished innocents keep scoring (spec 03)
       return { playerId: p.id, pick: rec.pick, correct, timeMs: rec.timeMs, pointsGained: correct ? points : 0 };
     });
+    // Beat 0 of the show sits a lead into the future (see BEAT_LEAD_MS).
+    const now = this.now() + this.lead;
+    const base = { correctIdx: q.correctIdx, rows, startedAt: now, stakes: "high" as const, callout: null, lastBell: [] as string[], accuseAt: now, minNextAt: now };
 
-    // Threshold check fires the moment scores update (specs 01/02):
-    // instant, loud takeover — the reveal never renders.
-    const cheater = this.players.find((p) => p.id === this.cheaterId)!;
-    if (cheater.score >= this.threshold) {
+    // Threshold check fires the moment scores update (specs 01/02): instant,
+    // loud takeover. The winning question's reveal still rides along in the
+    // matchEnd state so the end screen can show the answer that did it.
+    const cheater = this.players.find((p) => p.id === this.cheaterId);
+    if (cheater && cheater.score >= this.threshold) {
+      this.reveal = base;
       this.endMatch("cheater_threshold");
       return;
     }
 
-    this.reveal = { correctIdx: q.correctIdx, rows, minNextAt: Date.now() + this.settings.revealMinMs };
+    // Evidence from public data only — identical on every phone.
+    const scores = Object.fromEntries(this.players.map((p) => [p.id, p.score]));
+    const activeIds = this.players.filter((p) => !p.banished).map((p) => p.id);
+    const res = this.evidence.add({ questionIdx: this.qIdx, tier: q.tier, rows, scores, threshold: this.threshold, activeIds });
+    const callout: CaseEntry | null = res.selected
+      ? { q: this.qIdx, tier: q.tier, kind: res.selected.kind, subjectIds: res.selected.subjectIds, detail: res.selected.detail }
+      : null;
+    if (callout) this.caseFile.push(callout);
+    const suspectIds = activeIds.filter((id) => !this.evidence.cleared.has(id));
+    const nextTier = TIER_PLAN[this.qIdx + 1];
+    const lastBell = lastBellIds(scores, suspectIds, this.threshold, nextTier ? this.settings.tierPoints[nextTier] : null);
+    const stakes = revealStakes(q.tier, res.selected, lastBell.length > 0);
+    const tl = revealTimeline(stakes, rows.length, !!callout);
+    const accuseAt = now + tl.beats.accuse;
+    this.revealMinFrom = now;
+    this.reveal = {
+      ...base,
+      stakes,
+      callout,
+      lastBell,
+      accuseAt,
+      minNextAt: Math.max(now + this.settings.revealMinMs, accuseAt + TALK_HOLD_MS),
+    };
+
     this.setPhase("reveal");
+    this.phaseStartedAt = now;
     this.broadcast();
     this.sendSecrets(); // clears the cheater marker outside questions
     this.scheduleBotAccusations();
@@ -418,18 +622,20 @@ export class HostEngine {
   // ---------------- Accusations & voting (spec 03) ----------------
 
   private onBurnToken(player: InternalPlayer): void {
-    // Only during reveal; near-simultaneous second tap arrives when phase is
-    // already "vote" and is simply not consumed (spec 03).
-    if (this.phase !== "reveal") return;
+    // Only during reveal, and only once the show has armed ACCUSE; a
+    // near-simultaneous second tap arrives when the phase is already "vote"
+    // and is simply not consumed (spec 03).
+    if (this.phase !== "reveal" || !this.reveal) return;
+    if (this.now() < this.reveal.accuseAt) return;
     if (player.tokenUsed || player.banished || !player.votingRights) return;
     player.tokenUsed = true;
     for (const p of this.players) p.votedCurrent = false;
-    this.vote = { accuserId: player.id, deadline: Date.now() + this.settings.voteWindowMs, votes: {} };
     this.setPhase("vote");
+    this.vote = { accuserId: player.id, deadline: this.phaseStartedAt + this.settings.voteWindowMs, votes: {} };
     this.broadcast();
     this.after(this.settings.voteWindowMs + 400, () => this.resolveVote());
     for (const bot of this.bots()) {
-      this.after(1500 + Math.random() * 6000, () => this.botVote(bot.id));
+      this.after(1500 + Math.random() * 6000, () => this.botVote(bot));
     }
   }
 
@@ -501,15 +707,29 @@ export class HostEngine {
     }
     // Threshold may have dropped to/below the cheater's public score —
     // the win check invariant (spec 02) fires here.
-    const cheater = this.players.find((p) => p.id === this.cheaterId)!;
-    if (this.voteResult.banishedId && cheater.score >= this.threshold) {
+    const cheater = this.players.find((p) => p.id === this.cheaterId);
+    if (this.voteResult.banishedId && cheater && cheater.score >= this.threshold) {
       this.endMatch("cheater_threshold");
       return;
     }
-    // Back to the same reveal; the min-time gate has long passed.
+    // The match continues, so the cheater is below the (possibly lowered)
+    // line: anyone now at/above it is proven innocent right away.
+    if (this.voteResult.newThreshold !== null && this.reveal) {
+      const scores = Object.fromEntries(this.players.map((p) => [p.id, p.score]));
+      const active = this.players.filter((p) => !p.banished).map((p) => p.id);
+      const fresh = this.evidence.clearAtOrAbove(this.threshold, scores, active);
+      if (fresh.length) {
+        this.caseFile.push({ q: this.qIdx, tier: this.questions[this.qIdx].tier, kind: "cleared", subjectIds: fresh, detail: { threshold: this.threshold } });
+      }
+      const suspects = active.filter((id) => !this.evidence.cleared.has(id));
+      const nextTier = TIER_PLAN[this.qIdx + 1];
+      this.reveal.lastBell = lastBellIds(scores, suspects, this.threshold, nextTier ? this.settings.tierPoints[nextTier] : null);
+    }
+    // Back to the same reveal; its show has finished, so it renders settled.
     this.voteResult = null;
     this.setPhase("reveal");
     this.broadcast();
+    this.scheduleBotAccusations();
   }
 
   // ---------------- Match end & session (spec 04) ----------------
@@ -542,8 +762,11 @@ export class HostEngine {
 
   // ---------------- State & transport ----------------
 
+  /** Phases start a beat-lead into the future on the shared clock, so the
+   *  state reaches every phone before its beat 0 (sync across the room). */
   private setPhase(phase: Phase): void {
     this.phase = phase;
+    this.phaseStartedAt = this.now() + this.lead;
     this.epoch++;
   }
 
@@ -571,8 +794,10 @@ export class HostEngine {
     }));
     const inMatch = this.phase !== "lobby" && this.phase !== "sessionEnd" && this.matchNumber > 0;
     const q = this.questions[this.qIdx];
+    const showQuestion = this.phase === "question" || this.phase === "reveal" || this.phase === "vote" || this.phase === "voteResult" || this.phase === "matchEnd";
     return {
       phase: this.phase,
+      phaseStartedAt: this.phaseStartedAt,
       roomCode: this.roomCode,
       players,
       settings: this.settings,
@@ -584,36 +809,51 @@ export class HostEngine {
             questionIdx: this.qIdx,
             questionCount: QUESTIONS_PER_MATCH,
             threshold: this.threshold,
-            question:
-              this.phase === "question" || this.phase === "reveal" || this.phase === "vote" || this.phase === "voteResult"
-                ? {
-                    text: q.text,
-                    options: [...q.options],
-                    tier: q.tier,
-                    subject: q.subject,
-                    subjectEmoji: q.subjectEmoji,
-                    points: this.settings.tierPoints[q.tier],
-                    deadline: this.questionDeadline,
-                  }
-                : null,
+            question: showQuestion
+              ? {
+                  text: q.text,
+                  options: [...q.options],
+                  tier: q.tier,
+                  subject: q.subject,
+                  subjectEmoji: q.subjectEmoji,
+                  points: this.settings.tierPoints[q.tier],
+                  deadline: this.questionDeadline,
+                }
+              : null,
             reveal: this.phase === "question" ? null : this.reveal,
+            caseFile: [...this.caseFile],
+            cleared: [...this.evidence.cleared],
             vote: this.vote ? { accuserId: this.vote.accuserId, deadline: this.vote.deadline } : null,
             voteResult: this.voteResult,
             end: this.end,
           }
         : null,
       loadingQuestions: this.loadingQuestions,
+      debugForcedCheater: !!this.forceCheaterName,
     };
   }
 
+  /** Test hook: the serialized length of every phone's secret right now. */
+  secretLengths(): number[] {
+    return this.players.filter((p) => !p.isBot).map((p) => JSON.stringify(this.paddedSecret(p.id)).length);
+  }
+
   private secretFor(playerId: string): SecretState {
-    const isCheater = playerId === this.cheaterId && this.matchNumber > 0 && this.phase !== "lobby" && this.phase !== "sessionEnd";
+    const isCheater = playerId === this.cheaterId && this.matchNumber > 0 && SECRET_PHASES.has(this.phase);
     return {
       isCheater,
       // Correct answer shown to the cheater the moment the question appears
       // (spec 02); -1 in every other copy — identical payload shape (spec 05).
       correctIdx: isCheater && this.phase === "question" ? this.questions[this.qIdx].correctIdx : -1,
     };
+  }
+
+  /** The secret as sent: padded so every copy (cheater or not, any phase)
+   *  serializes to exactly SECRET_JSON_LEN characters on the wire. */
+  private paddedSecret(playerId: string): SecretState {
+    const s = this.secretFor(playerId);
+    const bare = JSON.stringify({ ...s, _: "" }).length;
+    return { ...s, _: " ".repeat(Math.max(0, SECRET_JSON_LEN - bare)) };
   }
 
   private broadcast(): void {
@@ -626,8 +866,8 @@ export class HostEngine {
    *  identical shape so traffic analysis is unhelpful (spec 05). */
   private sendSecrets(): void {
     for (const p of this.players) {
-      if (p.isBot) continue; // bots "read" their marker inside botAnswer
-      const secret = this.secretFor(p.id);
+      if (p.isBot) continue; // bots read the engine directly
+      const secret = this.paddedSecret(p.id);
       if (p.socketId === "local") this.transport.local("secret", { secret });
       else if (p.socketId) this.transport.toPlayer(p.socketId, "secret", { secret });
     }

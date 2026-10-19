@@ -47,30 +47,25 @@ function buildQuestion(
 }
 
 // ---------- Local pack provider ----------
-// Prefers an exact subject+tier match, then same subject, then same tier.
-// A session-wide used-set avoids repeats until the pool runs dry.
+// The tier is never compromised — it sets the points ramp (spec 01). Order:
+// fresh question in the requested subject; fresh question of the same tier
+// from a subject this match isn't using; any fresh question of the tier;
+// finally a repeat of the tier. A session-wide used-set avoids repeats.
 const usedLocal = new Set<RawQuestion>();
 
-function drawLocal(subject: SubjectDef, tier: Tier): Question {
+function drawLocal(subject: SubjectDef, tier: Tier, taken: Set<string>): Question {
+  const ofTier = LOCAL_PACK.filter((q) => q.tier === tier);
+  const fresh = ofTier.filter((q) => !usedLocal.has(q));
   const pools = [
-    LOCAL_PACK.filter((q) => q.subject === subject.label && q.tier === tier),
-    LOCAL_PACK.filter((q) => q.subject === subject.label),
-    LOCAL_PACK.filter((q) => q.tier === tier),
-    LOCAL_PACK,
+    fresh.filter((q) => q.subject === subject.label),
+    fresh.filter((q) => !taken.has(q.subject)),
+    fresh,
+    ofTier,
   ];
-  let pick: RawQuestion | undefined;
-  for (const pool of pools) {
-    const fresh = pool.filter((q) => !usedLocal.has(q));
-    if (fresh.length) {
-      pick = fresh[Math.floor(Math.random() * fresh.length)];
-      break;
-    }
-  }
-  if (!pick) {
-    usedLocal.clear();
-    pick = LOCAL_PACK[Math.floor(Math.random() * LOCAL_PACK.length)];
-  }
+  const pool = pools.find((p) => p.length)!;
+  const pick = pool[Math.floor(Math.random() * pool.length)];
   usedLocal.add(pick);
+  taken.add(pick.subject);
   // Display the question's OWN subject so the header never lies when the
   // fallback had to reach outside the requested subject.
   const own = SUBJECTS.find((s) => s.label === pick!.subject);
@@ -180,10 +175,36 @@ export async function getMatchQuestions(): Promise<MatchQuestions> {
   prefetched = null;
   await Promise.race([p.promise, new Promise((r) => setTimeout(r, MATCH_START_WAIT_MS))]);
   let usedFallback = false;
+  const taken = new Set(p.plan.map((s) => s.subject.label));
   const questions = p.plan.map(({ subject, tier }, i) => {
     if (p.slots[i]) return p.slots[i]!;
     usedFallback = true;
-    return drawLocal(subject, tier);
+    return drawLocal(subject, tier, taken);
   });
   return { questions, usedFallback };
+}
+
+/** The seam the engine pulls questions through. The live game uses OpenTDB
+ *  with local fallback; the simulator and replay fixtures plug in their own. */
+export interface QuestionSource {
+  prefetch(): void;
+  get(): Promise<MatchQuestions>;
+}
+
+export const openTdbSource: QuestionSource = { prefetch: prefetchNextMatch, get: getMatchQuestions };
+
+/** Offline-only source: exactly the fallback path the live game takes when
+ *  OpenTDB isn't ready, without touching the network. */
+export const localOnlySource: QuestionSource = {
+  prefetch() {},
+  async get() {
+    const plan = shuffle(SUBJECTS).slice(0, TIER_PLAN.length);
+    const taken = new Set<string>(plan.map((s) => s.label));
+    return { questions: plan.map((subject, i) => drawLocal(subject, TIER_PLAN[i], taken)), usedFallback: true };
+  },
+};
+
+/** Forget which local questions this session has used (a new session). */
+export function resetLocalDeck(): void {
+  usedLocal.clear();
 }

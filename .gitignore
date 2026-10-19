@@ -1,4 +1,8 @@
 node_modules/
 client/dist/
+sim/out/
+capture/
+test-results/
 *.log
 .DS_Store
+sim/_review/

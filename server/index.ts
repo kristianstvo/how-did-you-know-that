@@ -69,6 +69,12 @@ function newRoomCode(): string {
 }
 
 io.on("connection", (socket: Socket) => {
+  // Shared clock: every phone (host included) estimates its offset to this
+  // server's clock so reveal beats land together across the room.
+  socket.on("time", (cb: (serverNow: number) => void) => {
+    if (typeof cb === "function") cb(Date.now());
+  });
+
   socket.on("createRoom", (cb: (res: { code: string }) => void) => {
     if (typeof cb !== "function") return;
     const code = newRoomCode();
@@ -78,7 +84,7 @@ io.on("connection", (socket: Socket) => {
     cb({ code });
   });
 
-  socket.on("join", ({ code, name, avatar }: { code: string; name: string; avatar?: string }, cb?: (res: { ok: boolean; error?: string }) => void) => {
+  socket.on("join", ({ code, name, avatar, token }: { code: string; name: string; avatar?: string; token?: string }, cb?: (res: { ok: boolean; error?: string }) => void) => {
     const room = rooms.get(String(code ?? "").toUpperCase());
     if (!room) {
       cb?.({ ok: false, error: "Room not found. Check the code." });
@@ -90,7 +96,7 @@ io.on("connection", (socket: Socket) => {
     cb?.({ ok: true });
     // Host validates the join (duplicate names, capacity, rejoin) and replies
     // via toPlayer with "joined" or "joinRejected".
-    io.to(room.hostSocketId).emit("joinRequest", { socketId: socket.id, name: String(name ?? ""), avatar: String(avatar ?? "") });
+    io.to(room.hostSocketId).emit("joinRequest", { socketId: socket.id, name: String(name ?? ""), avatar: String(avatar ?? ""), token: String(token ?? "") });
   });
 
   socket.on("intent", (payload: unknown) => {

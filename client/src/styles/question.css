@@ -1,0 +1,195 @@
+/* Legacy shared rules: reveal.ts still renders .qhead/.qnum/.qtext. They are
+   kept as they were so the reveal screen doesn't lose styling. The question
+   screen itself uses the namespaced .qz-* classes below. */
+.qhead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 8px; }
+.qnum { font-weight: 900; color: var(--dim); font-size: 0.85rem; font-family: var(--hand); }
+.qtext { font-family: var(--hand); font-size: 1.2rem; font-weight: 800; line-height: 1.4; margin: 8px 0 18px; min-height: 3.2em; }
+
+/* ======================================================================
+   4. Question: a quiz sheet handed out in class (08 §4).
+   Only transform/opacity animate. Every box is reserved from frame 0.
+   Keyframes define only `from`: the final look is the element's own style,
+   so removing an animation (late join, .is-entered) never changes a pixel.
+   ====================================================================== */
+hd-qsheet.qz { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+
+/* ---- Header: Q n/10 · tier ticks · act chip (room on the right for the 🎓 tab) */
+.qz-head {
+  display: flex; align-items: center; gap: 10px; min-height: 44px; padding-right: 52px;
+  font-family: var(--hand);
+  animation: hd-fade-in var(--t-base) var(--e-standard) backwards;
+}
+.qz-qn { color: var(--dim); font-size: 0.95rem; white-space: nowrap; }
+.qz-qn b { color: var(--ink); font-size: 1.4rem; font-weight: 900; }
+.qz-ticks { color: var(--accent2); letter-spacing: 2px; font-size: 0.8rem; white-space: nowrap; }
+.qz-act {
+  margin-left: auto; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+  padding: 3px 9px; border: 1.5px dashed var(--chalk-line); border-radius: 999px; color: var(--dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+@media (max-width: 359px) { .qz-act-n { display: none; } } /* "Pop quiz" alone on small phones */
+
+/* ---- Subject flashcard: an index card that flips in (hd-spin-in, 0–450ms) */
+.qz-cardwrap { perspective: 700px; margin: 4px 4px 12px; transform: rotate(-1.2deg); }
+.qz-card {
+  display: flex; align-items: center; gap: 12px; height: 66px; padding: 4px 12px 0;
+  border-radius: 6px; color: #1f2a37;
+  background:
+    linear-gradient(to bottom, transparent 12px, rgba(226, 92, 92, 0.75) 12px, rgba(226, 92, 92, 0.75) 14px, transparent 14px),
+    repeating-linear-gradient(to bottom, transparent 0 24px, rgba(70, 120, 200, 0.2) 24px 25px),
+    #fbf7ea;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  backface-visibility: hidden;
+  animation: hd-spin-in var(--t-scene) var(--e-enter) backwards;
+}
+.qz-card-emoji { flex: none; font-size: 1.9rem; line-height: 1; }
+.qz-card-subject { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.1; }
+.qz-card-name { font-family: var(--hand); font-size: clamp(1.05rem, 5.4vw, 1.32rem); font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qz-card-sub { font-size: 0.6rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #6e4f22; margin-bottom: 1px; }
+.qz-card-pts {
+  flex: none; width: 50px; height: 50px; border-radius: 50%; display: grid; place-content: center; text-align: center;
+  background: var(--accent2); color: #2a1d00; font-weight: 900; font-size: 1.02rem; line-height: 1;
+  transform: rotate(8deg); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.18);
+}
+.qz-card-pts small { display: block; font-size: 0.6rem; letter-spacing: 1px; text-transform: uppercase; margin-top: 1px; }
+
+/* ---- Timer: a chalk bar that drains on the compositor + the number */
+.qz-timer { display: flex; align-items: center; gap: 10px; height: 46px; margin-bottom: 10px; animation: hd-fade-in var(--t-base) var(--e-standard) backwards; }
+.qz-track {
+  position: relative; flex: 1; height: 16px; border-radius: 9px; overflow: hidden;
+  border: 1.5px solid rgba(244, 241, 232, 0.2); background: rgba(244, 241, 232, 0.05);
+}
+.qz-fill {
+  position: absolute; inset: 0; transform-origin: 0 50%;
+  background:
+    repeating-linear-gradient(100deg, transparent 0 5px, rgba(22, 40, 30, 0.14) 5px 7px),
+    var(--ink);
+  /* duration = the question timer, delay = −(time already spent): correct on
+     every phone and after a late join. Inline vars are frozen (data-keep-style). */
+  animation: qz-drain var(--qt-dur) linear var(--qt-delay) both;
+  will-change: transform;
+}
+/* Urgent: a red layer inside the scaled fill cross-fades in (opacity only). */
+.qz-fill-hot { position: absolute; inset: 0; background: inherit; background-color: var(--accent); opacity: 0; transition: opacity var(--t-base) var(--e-standard); }
+.b-urgent .qz-fill-hot { opacity: 1; }
+@keyframes qz-drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* Reduced-motion timer: one tally per second, each fades out on its second. */
+.qz-tallies { display: none; position: absolute; inset: 2px 3px; gap: 3px; }
+.qz-tally { flex: 1; border-radius: 2px; background: var(--ink); animation: qz-tally-out 200ms linear var(--d) both; }
+.b-urgent .qz-tally { background: var(--accent); }
+@keyframes qz-tally-out { to { opacity: 0.1; } }
+
+.qz-count {
+  flex: none; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center;
+  font-family: var(--hand); font-size: 1.3rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums;
+  border: 2.5px solid var(--chalk-line); color: var(--ink);
+}
+.b-urgent .qz-count { color: var(--accent); border-color: var(--accent); }
+/* One pulse per urgent second, restarted on the frame the digit changes
+   (each urgent second is a beat; the class alternates a/b to restart). */
+.qz-count.pulse-a { animation: qz-pulse-a 1000ms var(--e-standard); }
+.qz-count.pulse-b { animation: qz-pulse-b 1000ms var(--e-standard); }
+@keyframes qz-pulse-a { from { transform: scale(1.32); } 35% { transform: none; } }
+@keyframes qz-pulse-b { from { transform: scale(1.32); } 35% { transform: none; } }
+
+/* ---- Question text rises at 150ms; three lines reserved */
+.qz-text {
+  font-family: var(--hand); font-size: 1.2rem; font-weight: 800; line-height: 1.38;
+  min-height: calc(3 * 1.38em); margin: 2px 0 12px; overflow-wrap: anywhere;
+  animation: hd-enter-up var(--t-scene) var(--e-enter) 150ms backwards;
+}
+.qz-text.is-long { font-size: 1.04rem; line-height: 1.34; min-height: calc(3 * 1.34em); }
+
+/* ---- Options: cascade at 250 + 50ms each (decorative) */
+/* Explicit rows: each option sits in row i+1; stamps share a cell with it. */
+/* overflow-x: clip keeps the 2.2× stamp entrances from widening the page
+   (no scroll container, vertical overflow stays visible). */
+.qz-board { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 9px; overflow-x: clip; overflow-clip-margin: 8px; /* keep focus rings */ }
+.qz-board > * { grid-column: 1; }
+.screen-question .opt {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 58px; padding: 9px 14px 9px 10px;
+  text-align: left; font-weight: 700; font-size: 1rem; line-height: 1.25;
+  background: var(--card); border: 2.5px solid var(--card2); border-radius: 14px;
+  position: relative;
+  animation: hd-enter-up var(--t-base) var(--e-enter) calc(250ms + var(--i, 0) * var(--stagger-deco)) backwards;
+  /* press is instant feedback; the fade of the other options waits for the stamp */
+  transition: transform var(--t-tap) var(--e-standard), opacity var(--t-base) var(--e-standard) var(--t-quick);
+}
+.screen-question .opt:active:not(:disabled) { transform: scale(0.97); }
+.screen-question .opt:disabled { opacity: 1; cursor: default; } /* base dims disabled buttons; we dim deliberately below */
+.screen-question.is-locked .opt:not(.picked),
+.screen-question.b-pencils .opt:not(.picked) { opacity: 0.55; }
+.qz-letter {
+  flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  font-family: var(--hand); font-weight: 900; font-size: 1rem; color: var(--purple);
+  border: 2px solid rgba(124, 196, 255, 0.45);
+}
+.qz-opt-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.opt.picked { border-color: var(--accent2); background: var(--card2); }
+.opt.picked .qz-letter { background: var(--accent2); border-color: var(--accent2); color: #2a1d00; }
+/* Cheater marker (spec 02): a faint corner dot ONLY. It never changes the
+   box (no border-width change), never animates, and never overrides the
+   "your pick" outline, so the cheater's layout and feedback stay identical to
+   everyone else's. ::after on .opt is reserved for it — nothing else uses it. */
+.opt.cheat-mark::after { content: ""; position: absolute; top: 7px; right: 8px; width: 4px; height: 4px; border-radius: 50%; background: rgba(244,241,232,0.28); pointer-events: none; }
+
+/* ---- Stamps (hd-stamp ends at rotate(-4deg), so that is their resting look) */
+.qz-stamp {
+  display: inline-block; font-family: var(--hand); font-weight: 900; text-transform: uppercase; letter-spacing: 1px;
+  white-space: nowrap; border: 2.5px solid currentColor; border-radius: 7px; background: rgba(22, 40, 30, 0.94);
+  transform: rotate(-4deg); pointer-events: none;
+  animation: hd-stamp var(--t-stamp) var(--e-impact) backwards;
+}
+/* Pinned over the picked option's top-right corner like a sticker, so it never
+   hides the answer text (even when the option wraps to two lines). */
+.qz-lock-stamp {
+  position: relative; z-index: 1; justify-self: end; align-self: start; margin: -18px 10px 0 0;
+  height: 26px; padding: 0 8px; line-height: 21px; font-size: 0.78rem; color: var(--accent2);
+  transform-origin: 100% 50%; /* slams in from its right anchor, inside the row */
+}
+.qz-pencils { position: relative; z-index: 2; display: grid; place-items: center; pointer-events: none; }
+.qz-pencils-stamp { font-size: 1.5rem; color: var(--accent); padding: 6px 14px; border-width: 3px; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5); }
+
+/* ---- "Locked in" desks: every classmate has a reserved desk (seat order);
+   their avatar pops in when they answer. Up to 10 fit at 380px. */
+.qz-lockin { margin-top: 16px; animation: hd-fade-in var(--t-base) var(--e-standard) 450ms backwards; }
+.qz-lock-row { display: flex; align-items: baseline; gap: 8px; height: 22px; font-family: var(--hand); font-size: 0.86rem; color: var(--dim); }
+.qz-lock-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qz-lock-n { flex: none; font-weight: 900; color: var(--ink); font-variant-numeric: tabular-nums; }
+/* Desks shrink (never wrap) so 10 fit even at 320px. */
+.qz-desks { display: flex; flex-wrap: nowrap; gap: 4px; margin-top: 6px; }
+.qz-desk {
+  flex: 0 1 30px; min-width: 0; aspect-ratio: 1 / 1; border-radius: 50%; display: grid; place-items: center;
+  border: 1.5px dashed var(--chalk-line); background: rgba(244, 241, 232, 0.03);
+}
+.qz-desk.me { border: 2px solid var(--accent2); }
+.qz-desk.off { opacity: 0.45; }
+.qz-desk-av { font-size: 1.05rem; line-height: 1; animation: hd-pop var(--t-stamp) var(--e-impact) backwards; }
+
+.qz-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* ---- Entrance done (rendered after 900ms, and on late joins): drop the
+   entrance animations. Keyframes are from-only, so nothing visibly changes. */
+.screen-question.is-entered .qz-head,
+.screen-question.is-entered .qz-card,
+.screen-question.is-entered .qz-timer,
+.screen-question.is-entered .qz-text,
+.screen-question.is-entered .opt,
+.screen-question.is-entered .qz-lockin { animation: none; }
+
+/* ---- The shell's .settle zeroes every animation for two frames; the timer
+   must keep its real timing (it is information, not an entrance). */
+#app.settle .qz-fill { animation-duration: var(--qt-dur) !important; animation-delay: var(--qt-delay) !important; }
+#app.settle .qz-tally { animation-duration: 200ms !important; animation-delay: var(--d) !important; }
+
+/* ---- Reduced motion: opacity only, identical instants. */
+@media (prefers-reduced-motion: reduce) {
+  .qz-fill { display: none; }
+  .qz-tallies { display: flex; }
+  @keyframes qz-drain { from { opacity: 1; } to { opacity: 1; } }
+  @keyframes qz-pulse-a { from { opacity: 0.35; } 35% { opacity: 1; } }
+  @keyframes qz-pulse-b { from { opacity: 0.35; } 35% { opacity: 1; } }
+  .screen-question .opt { transition: opacity var(--t-base) var(--e-standard) var(--t-quick); }
+  .screen-question .opt:active:not(:disabled) { transform: none; background: var(--card2); }
+}

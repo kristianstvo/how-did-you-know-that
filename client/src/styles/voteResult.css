@@ -1,0 +1,211 @@
+/* 6b. Vote result (08 §4). Beats are state classes on the section (b-sealed,
+   b-flip, b-f1…, b-verdict, b-drop, b-done); entrances are pinned to the
+   shared clock via --d (voteResult.ts). Only transform and opacity move;
+   every box is reserved before its beat. */
+.screen-voteResult { position: relative; overflow: clip; overflow-clip-margin: 14px; }
+
+.vr-top {
+  display: block; height: 34px; line-height: 34px; padding-right: 52px;
+  font-family: var(--hand); font-weight: 900; font-size: 0.8rem; letter-spacing: 0.5px; color: var(--dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.vr-nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; }
+.vr-av { width: 24px; height: 24px; font-size: 0.85rem; }
+.vr-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* ---- Header: "THE VOTES ARE IN…" → verdict stamp (same box) ---- */
+.vr-head { position: relative; height: 108px; display: grid; place-items: center; margin: 6px 0 4px; }
+.vr-sealed {
+  text-align: center; transition: opacity var(--t-quick) var(--e-exit), transform var(--t-quick) var(--e-exit);
+  animation: hd-enter-down var(--t-scene) var(--e-enter) var(--d, 0ms) backwards;
+}
+.vr-sealed-t { font-family: var(--hand); font-weight: 900; font-size: 1.75rem; letter-spacing: 1px; text-transform: uppercase; line-height: 1.2; }
+.vr-sealed-s { margin-top: 4px; font-family: var(--hand); font-weight: 700; color: var(--dim); font-size: 0.95rem; font-variant-numeric: tabular-nums; min-height: 1.3em; }
+.all-in .vr-sealed-t { animation: hd-pulse 650ms var(--e-standard) infinite; } /* the drumroll before the stamp */
+.b-verdict .vr-sealed { opacity: 0; transform: scale(0.94); }
+.b-verdict .vr-sealed-t { animation: none; }
+
+.vr-verdict {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  animation: vr-thud 560ms linear var(--d, 0ms) backwards;
+}
+.vr-verdict.tie { animation: none; }
+.vr-stamp {
+  max-width: calc(100% - 24px); min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 16px 9px; border-radius: 10px; text-align: center;
+  font-family: var(--hand); font-weight: 900; line-height: 1.15;
+  transform: rotate(-4deg); /* hd-stamp's resting pose */
+  animation: hd-stamp var(--t-stamp) var(--e-standard) var(--d, 0ms) backwards;
+}
+.vr-l1 { display: flex; align-items: baseline; gap: 0.3em; max-width: 100%; font-size: 1.38rem; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+.vr-l1 .vr-nm { font-weight: 900; }
+.vr-l2 { display: flex; align-items: center; justify-content: center; gap: 6px; max-width: 100%; font-size: 0.95rem; font-weight: 800; }
+.vr-l2t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* Correct/wrong never by colour alone: ✓/✗ + solid-double vs dashed vs dotted */
+.vr-verdict.caught .vr-stamp { color: var(--good); border: 6px double var(--good); background: rgba(142, 229, 154, 0.08); }
+.vr-verdict.innocent .vr-stamp { color: var(--bad); border: 3px dashed var(--bad); background: rgba(255, 138, 101, 0.08); }
+.vr-verdict.tie .vr-stamp { color: var(--ink); border: 3px dotted var(--chalk-line); background: rgba(244, 241, 232, 0.05); }
+
+/* ---- Tally chips: appear on their first vote, count up with chalk ticks ---- */
+.vr-tally {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px 8px; align-content: start;
+  padding-top: 7px; margin-bottom: 10px; min-height: calc(var(--rows, 1) * 40px + (var(--rows, 1) - 1) * 12px + 7px);
+}
+.vr-chip {
+  position: relative; display: flex; align-items: center; gap: 6px; min-width: 0; height: 40px; padding: 0 8px;
+  border-radius: 12px; background: var(--card); border: 2px solid var(--chalk-line);
+  animation: hd-pop var(--t-stamp) var(--e-standard) var(--d, 0ms) backwards;
+  transition: opacity var(--t-base) var(--e-standard);
+}
+.vr-chip .vr-nm { flex: 1; font-size: 0.86rem; }
+.vr-ticks { flex: none; display: flex; gap: 5px; width: 43px; height: 16px; }
+.vr-tg { position: relative; width: 19px; height: 16px; }
+.vr-tk {
+  position: absolute; top: 0; bottom: 0; left: calc(var(--j, 0) * 5px); width: 2.5px; border-radius: 2px; background: var(--ink);
+  transform-origin: 50% 100%; animation: vr-tick var(--t-base) var(--e-enter) var(--d, 0ms) backwards;
+}
+.vr-tk.strike {
+  left: -2px; top: 7px; bottom: auto; width: 23px; height: 2.5px; background: var(--accent2);
+  transform: rotate(-28deg); transform-origin: 50% 50%; animation-name: vr-strike;
+}
+.vr-count {
+  flex: none; width: 20px; text-align: right; font-family: var(--hand); font-weight: 900; font-size: 1.2rem; font-variant-numeric: tabular-nums;
+  animation: hd-pop var(--t-stamp) var(--e-standard) var(--d, 0ms) backwards;
+}
+.vr-tag {
+  position: absolute; top: -10px; right: 6px; padding: 0 6px; border-radius: 4px; background: var(--bg);
+  font-family: var(--hand); font-weight: 900; font-size: 0.62rem; letter-spacing: 0.5px; line-height: 1.5;
+  transform: rotate(-4deg); animation: hd-stamp var(--t-stamp) var(--e-standard) var(--d, 0ms) backwards;
+}
+.vr-tag.ok { color: var(--good); border: 1.5px solid var(--good); }
+.vr-tag.bad { color: var(--bad); border: 1.5px dashed var(--bad); }
+.vr-tag.tie { color: var(--ink); border: 1.5px dotted var(--ink); }
+.out-caught .vr-chip.win { border-color: var(--good); }
+.out-innocent .vr-chip.win { border: 2px dashed var(--bad); }
+.vr-chip.lose { opacity: 0.45; }
+
+/* ---- Ballots: voter → sealed card that flips to the target ---- */
+.vr-lines { list-style: none; display: grid; gap: 4px; }
+.vr-line {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 16px minmax(0, 1fr) 20px; align-items: center; gap: 6px;
+  height: 36px; padding: 0 6px 0 8px; border-radius: 10px; background: rgba(244, 241, 232, 0.04);
+}
+.dense .vr-line { height: 30px; }
+.vr-who, .vr-face { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 0.88rem; }
+.vr-hand { flex: none; font-size: 0.8rem; }
+.vr-arrow { color: var(--dim); font-weight: 900; text-align: center; }
+.vr-card { position: relative; height: 28px; perspective: 400px; }
+.dense .vr-card { height: 24px; }
+.vr-back, .vr-face { position: absolute; inset: 0; border-radius: 8px; padding: 0 6px; }
+.vr-back {
+  display: grid; place-items: center; border: 1.5px dashed var(--chalk-line); color: var(--dim); font-size: 0.72rem; font-weight: 700;
+  letter-spacing: 0.4px; text-transform: uppercase; background: rgba(244, 241, 232, 0.05);
+  transition: opacity var(--t-quick) var(--e-exit), transform var(--t-quick) var(--e-exit);
+}
+.flipped .vr-back { opacity: 0; transform: rotateY(-90deg); }
+.vr-face {
+  background: var(--card2); border: 1.5px solid var(--chalk-line);
+  animation: hd-spin-in var(--t-base) var(--e-enter) var(--d, 0ms) backwards;
+}
+.vr-line.ok .vr-face { border: 2px solid var(--good); }
+.vr-line.bad .vr-face { border: 2px dashed var(--bad); }
+.vr-mark { text-align: center; font-weight: 900; font-size: 1rem; }
+.vr-mk { display: inline-block; animation: hd-pop var(--t-stamp) var(--e-standard) var(--d, 0ms) backwards; }
+.vr-line.ok .vr-mk { color: var(--good); }
+.vr-line.bad .vr-mk { color: var(--bad); }
+.vr-empty, .vr-abstain { text-align: center; color: var(--dim); font-family: var(--hand); font-weight: 700; }
+.vr-empty { font-size: 1.1rem; margin: 12px 0; }
+.vr-abstain { font-size: 0.8rem; margin-top: 8px; }
+
+/* ---- Consequence slot: the grade-book strip (line drop) or a note ---- */
+.vr-after { min-height: 96px; margin-top: 12px; }
+.vr-note {
+  text-align: center; font-family: var(--hand); font-weight: 700; font-size: 0.95rem; line-height: 1.4; color: var(--ink);
+  padding: 14px 10px; border: 2px dashed var(--chalk-line); border-radius: var(--radius);
+  animation: hd-enter-up var(--t-base) var(--e-enter) var(--d, 0ms) backwards;
+}
+.vr-gb {
+  padding: 8px 12px 6px; background: var(--card); border: 2px dashed var(--chalk-line); border-radius: var(--radius);
+  animation: hd-enter-up var(--t-base) var(--e-enter) var(--d, 0ms) backwards;
+}
+.vr-gb-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 0.7rem; font-weight: 800; color: var(--dim); text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
+.vr-gb-head > :first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.vr-gb-val { flex: none; display: inline-flex; align-items: baseline; gap: 5px; font-family: var(--hand); font-size: 0.98rem; color: var(--ink); font-variant-numeric: tabular-nums; text-transform: none; white-space: nowrap; }
+.vr-gb-old { position: relative; }
+.b-drop .vr-gb-old { color: var(--dim); }
+.b-drop .vr-gb-old::after { content: ""; position: absolute; left: -2px; right: -2px; top: 52%; height: 2px; background: var(--bad); transform-origin: left; animation: vr-strike-thru var(--t-base) var(--e-enter) backwards; }
+.vr-gb-minus { color: var(--bad); font-weight: 900; display: inline-block; animation: hd-pop var(--t-stamp) var(--e-standard) var(--d, 0ms) backwards; }
+.vr-gb-new { color: var(--accent2); font-weight: 900; display: inline-block; animation: hd-enter-scale var(--t-base) var(--e-enter) var(--d, 0ms) backwards; }
+
+.vr-gb-track { position: relative; height: 46px; margin: 4px 4px 0; }
+.vr-gb-rail { position: absolute; left: 0; right: 0; bottom: 4px; height: 6px; border-radius: 99px; background: var(--card2); }
+.vr-pin {
+  z-index: 1;
+  position: absolute; left: var(--x); bottom: calc(12px + var(--row) * 15px); transform: translateX(-50%);
+  font-size: 0.8rem; line-height: 1;
+}
+.vr-pin.out { opacity: 0.4; }
+.vr-gb-ghost {
+  position: absolute; left: var(--x); top: 2px; bottom: 0; width: 0; border-left: 2px dashed var(--chalk-line); opacity: 0;
+  transition: opacity var(--t-base) var(--e-standard);
+}
+.b-drop .vr-gb-ghost { opacity: 1; }
+/* The graduation line: a full-width mover translated by a % of its own
+   (= the track's) width, clipped so it can never widen the page. */
+.vr-gb-clip { position: absolute; inset: -2px 0 0 0; overflow: hidden; pointer-events: none; }
+.vr-gb-mover {
+  position: absolute; inset: 0; transform: translateX(var(--from));
+  transition: transform var(--t-drama) var(--e-standard), opacity var(--t-drama) var(--e-standard);
+}
+.b-drop .vr-gb-mover { transform: translateX(var(--to)); }
+.vr-gb-line { position: absolute; left: -1.5px; top: 14px; bottom: 0; width: 3px; border-radius: 2px; background: var(--accent2); }
+.vr-gb-cap { position: absolute; left: 0; top: 0; font-size: 0.75rem; line-height: 1; transform: translateX(-50%); }
+.vr-gb-mover.rm-new { display: none; }
+.vr-gb-fly {
+  position: absolute; left: calc(var(--x) + 5px); top: 12px; padding: 0 4px; border-radius: 5px; background: var(--card); pointer-events: none;
+  font-family: var(--hand); font-weight: 900; font-size: 0.9rem; color: var(--bad); opacity: 0;
+  animation: vr-fly 1100ms var(--e-standard) var(--d, 0ms) backwards;
+}
+.vr-gb-scale { display: flex; justify-content: space-between; font-size: 0.62rem; color: var(--dim); font-variant-numeric: tabular-nums; margin: 1px 2px 0; }
+
+/* ---- Dock: the host's Continue at "done" ---- */
+.vr-dock {
+  position: sticky; bottom: 0; margin-top: auto; min-height: 62px; padding: 10px 0 2px;
+  background: linear-gradient(transparent, var(--bg) 30%);
+}
+.vr-continue { animation: hd-enter-up var(--t-base) var(--e-enter) var(--d, 0ms) backwards; }
+.vr-wait { text-align: center; color: var(--dim); font-weight: 700; font-family: var(--hand); padding: 12px 0; animation: hd-fade-in var(--t-base) var(--e-standard) var(--d, 0ms) backwards; }
+
+@keyframes vr-tick { from { opacity: 0; transform: scaleY(0.15); } }
+@keyframes vr-strike { from { opacity: 0; transform: rotate(-28deg) scaleX(0.1); } }
+@keyframes vr-strike-thru { from { transform: scaleX(0); } }
+@keyframes vr-fly {
+  0% { opacity: 0; transform: translateY(6px); }
+  20% { opacity: 1; transform: none; }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-14px); }
+}
+@keyframes vr-thud {
+  0%, 34% { transform: none; }
+  46% { transform: translateX(-3px); }
+  58% { transform: translateX(3px); }
+  70% { transform: translateX(-2px); }
+  82% { transform: translateX(2px); }
+  100% { transform: none; }
+}
+
+/* Reduced motion: opacity only, identical timings. The line cross-fades
+   from the old mark to the new one instead of sliding. */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes vr-tick { from { opacity: 0; } }
+  @keyframes vr-strike { from { opacity: 0; } }
+  @keyframes vr-strike-thru { from { opacity: 0; } }
+  @keyframes vr-fly { 0% { opacity: 0; } 20%, 70% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes vr-thud { to { opacity: 1; } }
+  .flipped .vr-back { transform: none; }
+  .b-verdict .vr-sealed { transform: none; }
+  .vr-gb-mover, .b-drop .vr-gb-mover { transform: translateX(var(--from)); }
+  .b-drop .vr-gb-mover:not(.rm-new) { opacity: 0; }
+  .vr-gb-mover.rm-new { display: block; opacity: 0; }
+  .b-drop .vr-gb-mover.rm-new { opacity: 1; }
+}

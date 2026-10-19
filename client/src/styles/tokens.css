@@ -1,0 +1,88 @@
+/* Design tokens + the motion language (08-reveal-direction.md §Motion).
+   Rules: animate only transform and opacity; information-bearing staggers
+   ≥110ms (> 2× the ±50ms clock tolerance); entrances ≥200ms (6 frames at
+   30fps); nothing that carries information moves after ACCUSE arms. */
+:root {
+  /* Chalkboard palette */
+  --bg: #16281e;
+  --bg2: #1d3628;
+  --card: #223b2d;
+  --card2: #2c4a39;
+  --chalk-line: rgba(244, 241, 232, 0.28);
+  --ink: #f4f1e8;
+  --dim: #a8bfab;
+  --accent: #ff6b6b; /* red marker */
+  --accent2: #ffd166; /* pencil yellow */
+  --good: #8ee59a; /* chalk green — always paired with ✓ + solid border */
+  --bad: #ff8a65; /* chalk orange — always paired with ✗ + dashed border */
+  --cleared: #7cc4ff; /* chalk blue — always paired with the word CLEARED */
+  --purple: #7cc4ff;
+  --radius: 14px;
+  --hand: "Segoe Print", "Comic Sans MS", "Chalkboard SE", cursive;
+  font-size: 16px;
+
+  /* Durations */
+  --t-tap: 100ms; /* press feedback */
+  --t-quick: 160ms; /* small state changes */
+  --t-base: 240ms; /* standard entrances/exits */
+  --t-stamp: 320ms; /* slaps, stamps — impact moments */
+  --t-scene: 450ms; /* cards, banners, screen changes */
+  --t-drama: 700ms; /* grade-book bars, the graduation line moving */
+
+  /* Easings (Material 3 standard/emphasized + one overshoot for impacts) */
+  --e-standard: cubic-bezier(0.2, 0, 0, 1);
+  --e-enter: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --e-exit: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --e-impact: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Staggers */
+  --stagger-info: 110ms; /* order carries meaning */
+  --stagger-deco: 50ms; /* decorative cascades only */
+}
+
+/* ---- Named keyframes (screens use these; reduced motion redefines them) ---- */
+@keyframes hd-enter-up { from { opacity: 0; transform: translateY(14px); } }
+@keyframes hd-enter-down { from { opacity: 0; transform: translateY(-14px); } }
+@keyframes hd-enter-scale { from { opacity: 0; transform: scale(0.92); } }
+@keyframes hd-fade-in { from { opacity: 0; } }
+@keyframes hd-slap {
+  0% { opacity: 0; transform: scale(1.7) rotate(-8deg); }
+  70% { opacity: 1; transform: scale(0.9) rotate(2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes hd-stamp {
+  0% { opacity: 0; transform: scale(2.2) rotate(-12deg); }
+  60% { opacity: 1; transform: scale(0.94) rotate(-4deg); }
+  100% { opacity: 1; transform: scale(1) rotate(-4deg); }
+}
+@keyframes hd-pop { 0% { opacity: 0; transform: translateY(6px) scale(0.6); } 60% { opacity: 1; transform: translateY(-4px) scale(1.08); } 100% { opacity: 1; transform: none; } }
+@keyframes hd-shake { 20% { transform: translateX(-3px); } 40% { transform: translateX(3px); } 60% { transform: translateX(-2px); } 80% { transform: translateX(2px); } }
+@keyframes hd-pulse { 50% { transform: scale(1.04); } }
+@keyframes hd-glow { 50% { opacity: 0.55; } }
+@keyframes hd-spin-in { from { opacity: 0; transform: rotateY(90deg); } }
+
+/* Reduced motion: identical beat timings, opacity only (WCAG 2.3.3). */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes hd-enter-up { from { opacity: 0; } }
+  @keyframes hd-enter-down { from { opacity: 0; } }
+  @keyframes hd-enter-scale { from { opacity: 0; } }
+  @keyframes hd-slap { from { opacity: 0; } }
+  @keyframes hd-stamp { from { opacity: 0; } }
+  @keyframes hd-pop { from { opacity: 0; } }
+  @keyframes hd-shake { to { opacity: 1; } }
+  @keyframes hd-pulse { to { opacity: 1; } }
+  @keyframes hd-spin-in { from { opacity: 0; } }
+}
+
+/* Settle: when several beats are reached at once (host skip, late join, back
+   from a vote) the shell finishes every finite animation in the screen (Web
+   Animations finish(); elements under [data-keep-style] are exempt) and adds
+   .settle for two frames so transitions jump straight to their end state.
+   Animations are NOT overridden here — changing animation-duration back
+   after the class is removed would make them replay. */
+#app.settle *,
+#app.settle *::before,
+#app.settle *::after {
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+}

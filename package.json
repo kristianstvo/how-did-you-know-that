@@ -8,13 +8,23 @@
     "dev:server": "tsx watch server/index.ts",
     "dev:client": "vite client",
     "build": "vite build client",
-    "start": "tsx server/index.ts"
+    "start": "tsx server/index.ts",
+    "typecheck": "tsc --noEmit -p .",
+    "sim": "tsx sim/run.ts",
+    "sim:tune": "tsx sim/tune.ts",
+    "sim:report": "tsx sim/report.ts",
+    "sim:tapes": "tsx sim/tape.ts",
+    "sim:determinism": "tsx sim/determinism.ts",
+    "playtest:report": "tsx sim/report-logs.ts",
+    "test:e2e": "npm run build && node tools/e2e.mjs"
   },
   "dependencies": {
+    "idiomorph": "^0.8.0",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
     "concurrently": "^9.1.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",

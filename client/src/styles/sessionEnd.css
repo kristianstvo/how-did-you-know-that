@@ -1,0 +1,111 @@
+/* 8. Session end — graduation day. Root classes b-start, b-rise3, b-rise2,
+   b-rise1, b-crown, b-list, b-done (sessionEnd.ts). Each is a STATE class:
+   columns are reserved at full height from frame 0 and scaled to 0, so the
+   rise is a compositor-only scaleY and a settled render simply shows them.
+   Reduced motion: the same beats as opacity fades. */
+.screen-sessionEnd {
+  --se-row: 44px;
+  position: relative;
+  overflow-x: clip; /* the stamp starts at 2.2× — never widen the viewport */
+  overflow-clip-margin: 8px; /* keep full-width buttons' focus rings */
+}
+
+/* ---- Header ---- */
+.se-head { text-align: center; font-family: var(--hand); margin: 4px 0 2px; }
+.se-kick { font-size: 0.78rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); animation: hd-enter-down var(--t-base) var(--e-enter) both; }
+.se-title { font-size: 1.7rem; font-weight: 900; color: var(--accent2); line-height: 1.2; animation: hd-enter-up var(--t-scene) var(--e-enter) 80ms both; }
+.se-sub { color: var(--dim); font-size: 0.88rem; animation: hd-fade-in var(--t-base) var(--e-standard) 200ms both; }
+
+/* ---- Podium ---- */
+.se-podium {
+  position: relative; height: 286px; margin: 0 0 14px; padding-top: 58px;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: end;
+  border-bottom: 2px solid var(--chalk-line);
+}
+.se-stamp-row { position: absolute; top: 8px; left: 0; right: 0; height: 44px; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 2; }
+.se-stamp {
+  display: inline-block; padding: 2px 12px; border: 3px solid var(--accent); border-radius: 6px;
+  background: rgba(22, 40, 30, 0.88); color: var(--accent);
+  font-family: var(--hand); font-weight: 900; font-size: 1.1rem; letter-spacing: 2px; white-space: nowrap;
+  transform: rotate(-4deg); /* hd-stamp's resting angle */
+  animation: hd-stamp var(--t-stamp) var(--e-impact) both;
+}
+.se-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.se-col { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.se-fig {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; min-width: 0; padding: 0 2px 8px;
+  opacity: 0; transform: translateY(10px) scale(0.9);
+  transition: opacity var(--t-base) var(--e-enter) 280ms, transform var(--t-base) var(--e-impact) 280ms;
+}
+.se-av {
+  display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%;
+  background: rgba(244, 241, 232, 0.1); border: 2px solid var(--chalk-line); font-size: 1.55rem;
+}
+.se-r1 .se-av { width: 56px; height: 56px; font-size: 1.95rem; border-color: var(--accent2); }
+.se-nm { max-width: 100%; font-weight: 800; font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.se-pts { font-size: 0.78rem; font-weight: 700; color: var(--dim); font-variant-numeric: tabular-nums; }
+.se-block {
+  width: 100%; height: var(--h); border-radius: 10px 10px 0 0;
+  border: 2px solid var(--chalk-line); border-bottom: none;
+  background: linear-gradient(var(--card2), var(--card));
+  display: flex; justify-content: center; padding-top: 8px;
+  transform-origin: 50% 100%; transform: scaleY(0);
+  transition: transform var(--t-scene) var(--e-enter);
+}
+.se-r1 .se-block { border-top: 4px solid var(--accent2); }
+.se-r2 .se-block { border-top: 4px solid #d6dccf; }
+.se-r3 .se-block { border-top: 4px solid #d9a066; }
+.se-place {
+  font-family: var(--hand); font-weight: 900; font-size: 1.35rem; line-height: 1;
+  opacity: 0; transition: opacity var(--t-base) var(--e-standard) 300ms;
+}
+.se-r1 .se-place { color: var(--accent2); font-size: 1.6rem; }
+/* The rise: 3rd → 2nd → 1st, 300ms apart. */
+.b-rise3 .se-p3 .se-block, .b-rise2 .se-p2 .se-block, .b-rise1 .se-p1 .se-block { transform: scaleY(1); }
+.b-rise3 .se-p3 .se-fig, .b-rise2 .se-p2 .se-fig, .b-rise1 .se-p1 .se-fig { opacity: 1; transform: none; }
+.b-rise3 .se-p3 .se-place, .b-rise2 .se-p2 .se-place, .b-rise1 .se-p1 .se-place { opacity: 1; }
+
+/* ---- Confetti with the stamp (≤24 particles, transform/opacity only) ---- */
+.se-confetti { position: fixed; inset: 0; z-index: 35; overflow: hidden; pointer-events: none; }
+.se-confetti i {
+  position: absolute; left: 50%; top: 150px; width: 8px; height: 12px; margin-left: -4px; border-radius: 2px; opacity: 0;
+  animation-name: se-burst; animation-fill-mode: both; animation-timing-function: linear;
+}
+.se-confetti i.c { width: 8px; height: 8px; border-radius: 50%; }
+.se-confetti i.s { width: 4px; height: 15px; }
+@keyframes se-burst {
+  0% { opacity: 0; transform: translate3d(0, 0, 0) rotate(0); animation-timing-function: cubic-bezier(0.1, 0.7, 0.3, 1); }
+  6% { opacity: 1; }
+  24% { transform: translate3d(var(--bx), var(--by), 0) rotate(calc(var(--rot) * 0.25)); animation-timing-function: cubic-bezier(0.45, 0, 0.8, 0.6); }
+  78% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(calc(var(--bx) * 1.25), 100vh, 0) rotate(var(--rot)); }
+}
+
+/* ---- Final standings: rows cascade in rank order (info stagger) ---- */
+.se-standings { padding: 12px 12px 8px; }
+.se-list {
+  height: calc(var(--n) * var(--se-row));
+  background: repeating-linear-gradient(180deg, transparent 0 calc(var(--se-row) - 1px), rgba(244, 241, 232, 0.07) calc(var(--se-row) - 1px) var(--se-row));
+}
+.se-row {
+  display: flex; align-items: center; gap: 8px; height: var(--se-row); padding: 0 4px; border-radius: 8px;
+  animation: hd-enter-up var(--t-base) var(--e-enter) both; animation-delay: calc(var(--i) * 110ms);
+}
+.se-row.self { background: rgba(255, 209, 102, 0.08); }
+.se-rank { flex: none; width: 24px; text-align: center; font-weight: 800; color: var(--dim); font-variant-numeric: tabular-nums; }
+.se-row-nm { flex: 0 1 auto; min-width: 0; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.se-row .badge { flex: none; }
+.se-row-pts { margin-left: auto; flex: none; font-weight: 900; font-variant-numeric: tabular-nums; }
+
+/* ---- Dock (done beat; reserved) ---- */
+.se-dock { margin-top: auto; min-height: 58px; padding-top: 6px; }
+.se-dock.host { min-height: 116px; }
+.se-dock .btn { animation: hd-enter-up var(--t-base) var(--e-enter) both; }
+.se-dock .btn + .btn { animation-delay: 80ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .se-confetti { display: none; }
+  .se-block { transform: none; opacity: 0; transition: opacity var(--t-scene) var(--e-standard); }
+  .se-fig { transform: none; }
+  .b-rise3 .se-p3 .se-block, .b-rise2 .se-p2 .se-block, .b-rise1 .se-p1 .se-block { transform: none; opacity: 1; }
+}

@@ -1,0 +1,106 @@
+/* 1. Home — 08-reveal-direction.md §4.
+   Title wobble-in at 0 · tagline 150 · the name-tag card and the two cards
+   rise with the 50ms deco stagger from 200 · footer 400. Picking an avatar
+   pops it (grid + sticker). Errors shake. Transform/opacity only; custom
+   keyframes are redefined opacity-only under reduced motion (bottom). */
+
+.hm-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Cards run 4px wider than the gutter so the avatar sheet fits 8 × 44px
+   targets at 380px (8 × 44 = 352 = the card's inner width). */
+.screen-home .hm-card { margin-inline: -4px; }
+
+/* ---- Title: two chalk lines, wobble in ---- */
+.hm-title { display: flex; flex-direction: column; align-items: center; line-height: 1.12; margin: 6px 0 6px; transform: rotate(-1.5deg); }
+.hm-t1, .hm-t2 { display: block; animation: hm-wobble 820ms var(--e-standard) both; }
+.hm-t1 { font-size: 1.4rem; color: var(--ink); }
+.hm-t2 { font-size: 2.15rem; color: var(--accent2); animation-delay: 90ms; text-shadow: 0 0 18px rgba(255, 209, 102, 0.3); }
+@keyframes hm-wobble {
+  0% { opacity: 0; transform: translateY(-12px) rotate(-9deg) scale(0.84); }
+  40% { opacity: 1; transform: translateY(2px) rotate(5deg) scale(1.05); }
+  62% { transform: rotate(-3deg) scale(0.99); }
+  82% { transform: rotate(1.2deg); }
+  100% { opacity: 1; transform: none; }
+}
+.hm-tagline { margin-bottom: 14px; font-size: 0.92rem; line-height: 1.45; padding: 0 6px; animation: hd-fade-in var(--t-scene) var(--e-standard) 150ms both; }
+.hm-closed { animation: hd-enter-down var(--t-base) var(--e-enter) both; }
+
+/* ---- Rise: name tag → Join → Start (decorative 50ms stagger) ---- */
+.hm-card { animation: hd-enter-up var(--t-scene) var(--e-enter) both; }
+.hm-namecard { animation-delay: 200ms; }
+.hm-join { animation-delay: calc(200ms + var(--stagger-deco)); }
+.hm-create { animation-delay: calc(200ms + 2 * var(--stagger-deco)); }
+.hm-foot { padding-top: 14px; animation: hd-fade-in var(--t-scene) var(--e-standard) 400ms both; }
+
+/* ---- The name tag: a "HELLO my name is" sticker + input + avatar sheet ---- */
+.hm-namecard { padding: 14px 14px 0; }
+.hello {
+  margin: 2px 4px 14px; padding: 5px 5px 9px; border-radius: 12px;
+  background: #d8423a; color: #fff; rotate: -1.5deg; /* `rotate`, so the shake's transform composes with the tilt */
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.22), 0 8px 18px rgba(0, 0, 0, 0.3);
+}
+.hm-namecard.need-name .hello { animation: hd-shake var(--t-stamp) var(--e-standard); }
+.hello-band { display: flex; flex-direction: column; align-items: center; line-height: 1; padding: 3px 0 6px; }
+.hello-big { font-weight: 900; font-size: 1.5rem; letter-spacing: 4px; }
+.hello-small { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.6px; margin-top: 3px; }
+.hello-body { height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: 6px; background: #fffcf2; color: #1d2547; }
+.hello-av { flex: none; font-size: 1.85rem; line-height: 1; animation: hd-pop var(--t-stamp) var(--e-impact) both; }
+.hello-name { flex: 1; min-width: 0; font-family: var(--hand); font-weight: 900; font-size: 1.5rem; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hello-name.sm { font-size: 1.2rem; }
+.hello-name.xs { font-size: 1rem; }
+.hello-name.empty { color: rgba(29, 37, 71, 0.32); font-weight: 700; font-size: 1.15rem; }
+
+/* Avatar sheet: flush with the card's inner edges, 8 per row at 380px
+   (on narrower phones 7 per row, last row centred — targets never drop
+   below 44px). */
+.av-grid {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  margin: 12px -14px 0; padding: 4px 0;
+  background: rgba(0, 0, 0, 0.16); border-top: 2px dashed var(--chalk-line); border-radius: 0 0 12px 12px;
+}
+.av-pick { flex: none; width: max(44px, 12.5%); min-height: 46px; display: grid; place-items: center; border-radius: 12px; }
+.av-face {
+  width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%;
+  background: var(--card2); font-size: 1.25rem; line-height: 1;
+  transition: transform var(--t-quick) var(--e-standard);
+}
+.av-pick:active .av-face { transform: scale(0.9); }
+.av-pick.sel .av-face {
+  background: rgba(255, 209, 102, 0.2); box-shadow: 0 0 0 2.5px var(--accent2);
+  transform: scale(1.08); animation: hm-pick var(--t-stamp) var(--e-impact);
+}
+@keyframes hm-pick {
+  0% { transform: scale(0.7) rotate(-14deg); }
+  60% { transform: scale(1.28) rotate(6deg); }
+  100% { transform: scale(1.08); }
+}
+
+/* ---- Join / Start, side by side ---- */
+.screen-home .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 0 12px; align-items: stretch; }
+.screen-home .duo .card { position: relative; display: flex; flex-direction: column; gap: 10px; margin-bottom: 0; padding: 14px 12px; }
+.screen-home .duo .card h2 { margin-bottom: 0; font-size: 0.98rem; }
+.screen-home .duo .card .hint { font-size: 0.82rem; line-height: 1.4; }
+.screen-home .duo .card .btn { margin-top: auto; }
+.code-input { text-transform: uppercase; letter-spacing: 4px; font-weight: 800; text-align: center; font-family: var(--hand); padding-inline: 6px; }
+.code-input::placeholder { letter-spacing: 4px; }
+.hm-join.invited { border-style: solid; border-color: var(--accent2); }
+.hm-invited {
+  position: absolute; top: -10px; right: 8px; padding: 2px 8px; border: 2px solid var(--accent2); border-radius: 6px;
+  background: var(--bg); color: var(--accent2); font-family: var(--hand); font-weight: 900; font-size: 0.68rem; letter-spacing: 1px;
+  transform: rotate(-4deg); animation: hd-stamp var(--t-stamp) var(--e-impact) 550ms both;
+}
+.btn.hm-busy span { animation: hd-glow 1.2s var(--e-standard) 4; } /* ≤5s (WCAG 2.2.2) */
+
+/* ---- Errors: below the buttons (nothing the thumb is on moves), shake ---- */
+.hm-err { margin: 0 0 4px; }
+/* Same error again? Pressing Join/Create drops the animation, releasing
+   restarts it — so a repeated mistake still gets a shake. */
+.screen-home:has([data-action="join"]:active, [data-action="create"]:active) .hm-err,
+.screen-home:has([data-action="join"]:active, [data-action="create"]:active) .hm-namecard.need-name .hello { animation: none; }
+
+/* ---- Reduced motion: opacity only, identical timings ---- */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes hm-wobble { from { opacity: 0; } }
+  @keyframes hm-pick { from { opacity: 0.4; } }
+  .av-face { transition: none; }
+}

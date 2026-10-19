@@ -98,8 +98,18 @@ export interface RevealRow {
   pointsGained: number;
 }
 
+/** One announced piece of evidence, kept for the rest of the match. */
+export interface CaseEntry {
+  q: number; // question index it came from
+  tier: Tier;
+  kind: string; // CalloutKind (shared/evidence.ts)
+  subjectIds: string[];
+  detail: Record<string, number>;
+}
+
 export interface PublicState {
   phase: Phase;
+  phaseStartedAt: number; // shared-clock ms when this phase began
   roomCode: string;
   players: PublicPlayer[];
   settings: Settings;
@@ -107,6 +117,7 @@ export interface PublicState {
   matchNumber: number; // 1-based, 0 = none played yet
   offlineQuestions: boolean; // fallback pack active this match (spec 06)
   loadingQuestions: boolean; // host is fetching questions at match start
+  debugForcedCheater?: boolean; // test hook active: the cheater is not random (shown to everyone)
   match: null | {
     questionIdx: number; // 0-based
     questionCount: number;
@@ -123,8 +134,15 @@ export interface PublicState {
     reveal: null | {
       correctIdx: number;
       rows: RevealRow[];
-      minNextAt: number; // epoch ms; host Next enabled after this
+      startedAt: number; // shared-clock ms: beat 0 of the reveal show
+      stakes: "low" | "mid" | "high";
+      callout: CaseEntry | null; // the one piece of evidence this reveal announces
+      lastBell: string[]; // could graduate on the next question if they're the cheater
+      accuseAt: number; // shared-clock ms when ACCUSE arms
+      minNextAt: number; // shared-clock ms; host Next enabled after this
     };
+    caseFile: CaseEntry[]; // every announced callout this match, in order
+    cleared: string[]; // proven innocent: at/above the line with no siren
     vote: null | {
       accuserId: string;
       deadline: number;
@@ -152,6 +170,9 @@ export interface PublicState {
 export interface SecretState {
   isCheater: boolean;
   correctIdx: number; // real index for cheater during a question, -1 otherwise
+  /** Padding so every copy serializes to the same byte length on the wire
+   *  (spec 05: the cheater's packet must not be distinguishable by size). */
+  _?: string;
 }
 
 // ---- Client -> host intents (relayed) ----
@@ -170,6 +191,7 @@ export interface JoinRequestMsg {
   socketId: string;
   name: string;
   avatar: string;
+  token?: string;
 }
 export interface RelayedIntent {
   fromSocket: string;
@@ -184,6 +206,8 @@ export interface JoinedMsg {
   playerId: string;
   state: PublicState;
   secret: SecretState;
+  /** Seat token: proves this phone owns the seat on a later rejoin. */
+  token: string;
 }
 export interface JoinRejectedMsg {
   reason: string;

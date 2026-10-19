@@ -1,0 +1,430 @@
+/* 5. Reveal — the game-show main stage (08-reveal-direction.md §3).
+   Every selector is scoped to .screen-reveal. Beats are state classes on the
+   root (b-pencils … b-accuse, plus "drumming" while the drumroll holds);
+   elements are in the DOM from frame 0 and TRANSITION (transform/opacity
+   only) from their pre-beat state to their beat state. Short keyframe effects
+   hang off "fx-<beat>" classes that exist only just after their beat.
+   Reduced motion: see the block at the end (opacity only, same timings). */
+
+.screen-reveal {
+  --tray-av: 24px;
+  --bar-w: 86px;
+  --paper: #f3ead2;
+  --paper-ink: #2a2318;
+  position: relative;
+  overflow-x: clip;
+  overflow-clip-margin: 14px;
+}
+.screen-reveal.dense { --tray-av: 22px; }
+.screen-reveal .sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Settled jumps (skip, late join, back from a vote): `transition: none`
+   also CANCELS transitions already in flight or waiting out a stagger delay
+   (e.g. a skip mid-slap), so every passed beat snaps to its final state.
+   Nothing replays when .settle is removed: no computed value changes then. */
+#app.settle .screen-reveal,
+#app.settle .screen-reveal *,
+#app.settle .screen-reveal *::before,
+#app.settle .screen-reveal *::after { transition: none !important; }
+
+/* ---------------- Header ---------------- */
+.screen-reveal .rv-head { display: grid; gap: 4px; min-height: 44px; padding-right: 52px; margin-bottom: 4px; align-content: center; }
+.screen-reveal .rv-h1 { display: flex; align-items: baseline; gap: 9px; min-width: 0; font-family: var(--hand); font-weight: 900; line-height: 1.15; }
+.screen-reveal .rv-q { flex: none; font-size: 0.98rem; color: var(--accent2); }
+.screen-reveal .rv-subj { min-width: 0; font-size: 0.98rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.screen-reveal .rv-h2 { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.screen-reveal .rv-ticks { flex: none; font-size: 0.66rem; letter-spacing: 2px; color: var(--accent2); }
+.screen-reveal .rv-act { flex: none; text-transform: uppercase; letter-spacing: 0.4px; font-size: 0.64rem; }
+.screen-reveal .chip.offline { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.64rem; }
+
+.screen-reveal .rv-qtext {
+  font-family: var(--hand); font-weight: 800; font-size: 0.96rem; line-height: 1.3; margin: 0 0 10px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* ---------------- THE BOARD ---------------- */
+.screen-reveal .board { position: relative; display: grid; gap: 5px; margin-bottom: 14px; }
+.screen-reveal .ob-row {
+  position: relative; display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; align-items: center; gap: 8px;
+  height: 42px; padding: 0 9px 0 7px; border-radius: 12px; background: var(--card); border: 2px solid var(--card2);
+  transition: opacity var(--t-base) var(--e-standard);
+}
+.screen-reveal.dense .ob-row { height: 36px; }
+.screen-reveal.dense .ob-none { height: 28px; }
+.screen-reveal.dense .none-chip { height: 26px; }
+.screen-reveal.dense .ob-text { font-size: 0.86rem; }
+.screen-reveal.dense .rv-qtext { font-size: 0.92rem; margin-bottom: 8px; }
+.screen-reveal.dense .board { margin-bottom: 12px; }
+/* Outlines are overlays swapped by opacity: correct = solid + tint, wrong = dashed. */
+.screen-reveal .ob-row::before,
+.screen-reveal .ob-row::after {
+  content: ""; position: absolute; inset: -2px; border-radius: inherit; pointer-events: none; opacity: 0;
+  transition: opacity var(--t-base) var(--e-standard);
+}
+.screen-reveal .ob-row::before { border: 2.5px solid var(--good); background: rgba(142, 229, 154, 0.12); }
+.screen-reveal .ob-row::after { border: 2px dashed var(--bad); }
+.screen-reveal.drumming .ob-row { opacity: 0.6; } /* the board dims */
+.screen-reveal.b-answer .ob-row.is-wrong { opacity: 0.55; }
+.screen-reveal.b-answer .ob-row.is-correct::before { opacity: 1; }
+.screen-reveal.b-answer .ob-row.is-wrong::after { opacity: 0.9; }
+
+.screen-reveal .ob-glyph { position: relative; display: grid; width: 26px; height: 26px; z-index: 1; }
+.screen-reveal .ob-letter,
+.screen-reveal .ob-mark { grid-area: 1 / 1; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; font-weight: 900; line-height: 1; }
+.screen-reveal .ob-letter {
+  font-family: var(--hand); font-size: 0.82rem; color: var(--purple); border: 1.5px solid rgba(124, 196, 255, 0.45);
+  transition: opacity var(--t-quick) var(--e-standard);
+}
+.screen-reveal .ob-mark { opacity: 0; font-size: 0.95rem; }
+.screen-reveal .is-correct .ob-mark { background: var(--good); color: #10241a; transform: scale(2.2) rotate(-14deg); }
+.screen-reveal .is-wrong .ob-mark { color: var(--bad); border: 2px dashed var(--bad); font-size: 0.8rem; transform: scale(1.6); }
+.screen-reveal.b-answer .ob-letter { opacity: 0; }
+.screen-reveal.b-answer .ob-mark { opacity: 1; transition: transform var(--t-stamp) var(--e-impact), opacity var(--t-quick) linear; }
+.screen-reveal.b-answer .is-correct .ob-mark { transform: rotate(-6deg); }
+.screen-reveal.b-answer .is-wrong .ob-mark { transform: none; }
+
+.screen-reveal .ob-text {
+  min-width: 0; font-weight: 700; font-size: 0.9rem; line-height: 1.15; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* Avatar trays: reserved from frame 0, avatars slap in fastest-first. */
+.screen-reveal .tray { display: flex; align-items: center; flex: none; min-height: var(--tray-av); }
+.screen-reveal .tav {
+  position: relative; flex: none; width: var(--tray-av); height: var(--tray-av);
+  opacity: 0; transform: scale(1.7) rotate(-8deg);
+}
+.screen-reveal .tav + .tav { margin-left: var(--ov, 3px); }
+.screen-reveal .tav .av {
+  width: 100%; height: 100%; font-size: 0.8rem; background: #2f5240; box-shadow: 0 0 0 2px var(--card);
+  transition: transform var(--t-stamp) var(--e-impact) calc(140ms + var(--dj, 0ms));
+}
+.screen-reveal.dense .tav .av { font-size: 0.74rem; }
+.screen-reveal .tav.me .av { box-shadow: 0 0 0 2px var(--accent2); }
+.screen-reveal.b-slap .tav {
+  opacity: 1; transform: none;
+  transition: transform var(--t-stamp) var(--e-impact) var(--d), opacity var(--t-quick) linear var(--d);
+}
+/* ANSWER: the correct tray's avatars pop (and stay a size up). */
+.screen-reveal.b-answer .is-correct .tav .av { transform: scale(1.1); }
+
+/* ①②③ speed ranks (land with the avatar, top centre) and ✓/✗ verdict
+   badges (bottom centre). Centred badges never collide, even when a crowded
+   tray overlaps its avatars. */
+.screen-reveal .tav-rank,
+.screen-reveal .tav-mark {
+  position: absolute; left: 50%; width: 13px; height: 13px; margin-left: -6.5px; border-radius: 50%;
+  display: grid; place-items: center; font: 900 0.52rem/1 system-ui, sans-serif; pointer-events: none;
+}
+.screen-reveal .tav-rank { top: -7px; background: var(--accent2); color: #241300; box-shadow: 0 0 0 1.5px var(--card); }
+.screen-reveal .tav-mark { bottom: -7px; opacity: 0; transform: scale(0.3); }
+.screen-reveal .tav-mark.ok { background: var(--good); color: #10241a; box-shadow: 0 0 0 1.5px var(--card); }
+.screen-reveal .tav-mark.no { background: #3b2a22; color: var(--bad); border: 1px dashed var(--bad); }
+.screen-reveal.b-verdict .tav-mark {
+  opacity: 1; transform: none;
+  transition: transform var(--t-base) var(--e-impact) var(--dj), opacity var(--t-quick) linear var(--dj);
+}
+
+/* No-answer chip: those avatars drop in instead of slapping. */
+.screen-reveal .ob-none { display: flex; justify-content: flex-end; align-items: center; height: 30px; transition: opacity var(--t-base) var(--e-standard); }
+.screen-reveal.drumming .ob-none { opacity: 0.6; }
+.screen-reveal.b-answer .ob-none { opacity: 0.55; }
+.screen-reveal .none-chip {
+  display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 6px 0 10px; border-radius: 999px;
+  border: 1.5px dashed var(--chalk-line); color: var(--dim); font-size: 0.72rem; font-weight: 800; font-family: var(--hand);
+}
+.screen-reveal .none-chip { opacity: 0; }
+.screen-reveal.b-slap .none-chip { opacity: 1; transition: opacity var(--t-quick) linear var(--d); }
+.screen-reveal .ob-none .tav { --tray-av: 22px; transform: translateY(-14px); }
+.screen-reveal.b-slap .ob-none .tav { transform: none; transition: transform var(--t-base) var(--e-enter) var(--d), opacity var(--t-quick) linear var(--d); }
+
+/* PENCILS DOWN stamp (beat 0) lifts off when the drumroll starts. */
+.screen-reveal .pd-wrap {
+  position: absolute; left: 0; right: 0; top: 0; bottom: 0; z-index: 30; pointer-events: none;
+  display: grid; place-items: center start; padding-left: 44px;
+  transition: opacity var(--t-base) var(--e-exit);
+}
+.screen-reveal .pd-stamp {
+  font-family: var(--hand); font-weight: 900; font-size: 1.2rem; letter-spacing: 1px; color: var(--accent); white-space: nowrap;
+  padding: 4px 14px; border: 3px double var(--accent); border-radius: 10px; background: rgba(22, 40, 30, 0.86);
+  transform: rotate(-4deg);
+}
+.screen-reveal.fx-pencils .pd-stamp { animation: hd-stamp var(--t-stamp) var(--e-impact) both; }
+.screen-reveal.b-drumroll .pd-wrap { opacity: 0; }
+
+/* DRUMROLL: chalk underline sweeps across the hold; high stakes shimmer. */
+.screen-reveal .chalk-ul {
+  position: absolute; left: 6px; right: 6px; bottom: -9px; height: 3px; border-radius: 3px;
+  background: linear-gradient(90deg, rgba(244, 241, 232, 0.55), rgba(244, 241, 232, 0.95));
+  transform: scaleX(0); transform-origin: left center; opacity: 0;
+}
+.screen-reveal.b-drumroll .chalk-ul {
+  transform: scaleX(1); opacity: 1;
+  transition: transform var(--hold) cubic-bezier(0.45, 0, 0.55, 1), opacity var(--t-quick) linear;
+}
+.screen-reveal.b-answer .chalk-ul { opacity: 0; transition: transform var(--hold) linear, opacity var(--t-base) var(--e-standard); }
+.screen-reveal .board-fx { position: absolute; inset: 0; z-index: 4; overflow: hidden; border-radius: 12px; pointer-events: none; }
+.screen-reveal .shimmer {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 45%; opacity: 0; transform: translateX(-110%);
+  background: linear-gradient(100deg, transparent, rgba(244, 241, 232, 0.08) 38%, rgba(255, 209, 102, 0.22) 50%, rgba(244, 241, 232, 0.08) 62%, transparent);
+}
+.screen-reveal.stakes-high.drumming .shimmer { opacity: 1; animation: rv-shimmer var(--hold) var(--e-standard) both; }
+@keyframes rv-shimmer { from { transform: translateX(-110%); } to { transform: translateX(240%); } }
+
+/* High stakes: the parent takes a 3px shake on impact (hd-shake). */
+.screen-reveal.stakes-high.fx-answer .board { animation: hd-shake var(--t-stamp) var(--e-standard) 170ms; }
+.screen-reveal.stakes-high.fx-evidence .ev-slot.has-card { animation: hd-shake var(--t-stamp) var(--e-standard) 170ms; }
+
+/* ---------------- Evidence slot (sized by its content from frame 0) ----------------
+   The EXHIBIT card is in the DOM, invisible, from the first frame, so the slot
+   is exactly the card's height and the card only ever changes opacity/transform. */
+.screen-reveal .ev-slot { position: relative; min-height: 64px; border-radius: 12px; border: 2px dashed rgba(244, 241, 232, 0.12); }
+.screen-reveal .ev-slot.has-note { height: 40px; min-height: 0; }
+.screen-reveal .ev-ph {
+  position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--hand); font-size: 0.78rem;
+  color: var(--dim); opacity: 0.4; letter-spacing: 0.5px; transition: opacity var(--t-quick) linear;
+}
+.screen-reveal.b-evidence .ev-ph { opacity: 0; }
+.screen-reveal .ev-card {
+  position: relative; margin: -2px; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 8px; align-items: start;
+  padding: 10px 12px 9px 10px; border-radius: 12px; background: var(--paper); color: var(--paper-ink);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  opacity: 0; transform: scale(1.22) rotate(-5deg);
+}
+.screen-reveal.b-evidence .ev-card {
+  opacity: 1; transform: rotate(-0.6deg);
+  transition: transform var(--t-stamp) var(--e-impact), opacity var(--t-quick) linear;
+}
+.screen-reveal .ev-tag {
+  position: absolute; top: -8px; right: 12px; padding: 3px 7px 2px; border-radius: 4px;
+  font: 900 0.6rem/1.1 var(--hand); letter-spacing: 1px; color: #fff4ec; background: #b02e2c; transform: rotate(4deg);
+}
+.screen-reveal .ev-icon { font-size: 1.45rem; line-height: 1; padding-top: 3px; text-align: center; }
+.screen-reveal .ev-body { min-width: 0; }
+.screen-reveal .ev-title { display: block; font-family: var(--hand); font-size: 0.9rem; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 64px; }
+.screen-reveal .ev-line {
+  margin-top: 2px; font-size: 0.8rem; line-height: 1.25; font-weight: 600;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.screen-reveal .ev-ask { margin-top: 2px; font-family: var(--hand); font-size: 0.8rem; font-weight: 900; color: #b3261e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.screen-reveal.dense .ev-card { padding-top: 8px; padding-bottom: 7px; }
+.screen-reveal.dense .ev-line,
+.screen-reveal.dense .ev-ask { font-size: 0.76rem; }
+.screen-reveal .ev-foot { height: 15px; margin-top: 2px; line-height: 15px; text-align: right; font-family: var(--hand); font-size: 0.68rem; color: var(--dim); opacity: 0; }
+.screen-reveal.b-evidence .ev-foot { opacity: 1; transition: opacity var(--t-base) var(--e-standard) 250ms; }
+
+/* Class note (no callout): one line at the grade beat. */
+.screen-reveal .ev-note {
+  position: absolute; inset: 0; display: flex; align-items: center; gap: 8px; padding: 0 12px;
+  font-family: var(--hand); font-weight: 800; font-size: 0.86rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  opacity: 0; transform: translateY(8px);
+}
+.screen-reveal .ev-note .ev-fast { color: var(--accent2); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.screen-reveal.b-grade .ev-note { opacity: 1; transform: none; transition: transform var(--t-base) var(--e-enter), opacity var(--t-base) var(--e-standard); }
+
+/* ---------------- LAST BELL ---------------- */
+.screen-reveal .lb-slot { position: relative; margin-top: 8px; border-radius: 12px; border: 2px dashed rgba(244, 241, 232, 0.1); }
+.screen-reveal .lastbell {
+  display: flex; align-items: center; gap: 9px; min-height: 42px; margin: -2px; padding: 5px 10px;
+  border-radius: 12px; background: rgba(255, 107, 107, 0.13); border: 2px solid var(--accent); color: #ffe1dc;
+  font-size: 0.78rem; line-height: 1.25; font-weight: 600;
+  opacity: 0; transform: scale(1.3) rotate(-3deg);
+}
+.screen-reveal.b-grade .lastbell { opacity: 1; transform: none; transition: transform var(--t-scene) var(--e-impact), opacity var(--t-quick) linear; }
+.screen-reveal .lb-bell { flex: none; font-size: 1.35rem; transform-origin: 50% 8%; }
+.screen-reveal .lb-text { min-width: 0; }
+.screen-reveal .lb-text b { font-family: var(--hand); color: var(--accent); letter-spacing: 0.5px; font-size: 0.86rem; }
+.screen-reveal.fx-grade .lb-bell { animation: rv-ring 700ms var(--e-standard) 150ms; }
+@keyframes rv-ring { 20% { transform: rotate(16deg); } 40% { transform: rotate(-13deg); } 60% { transform: rotate(8deg); } 80% { transform: rotate(-4deg); } }
+
+/* ---------------- GRADE BOOK ---------------- */
+.screen-reveal .gb {
+  position: relative; margin: 10px 0 10px; padding: 2px 4px 5px; border-radius: 14px;
+  background: rgba(29, 54, 40, 0.7); border: 2px dashed var(--chalk-line);
+}
+.screen-reveal .gb-head { height: 24px; display: flex; align-items: center; }
+.screen-reveal.dense .gb { margin-top: 8px; }
+.screen-reveal.dense .gb-head { height: 22px; }
+.screen-reveal .gb-title { font-family: var(--hand); font-weight: 800; font-size: 0.74rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.6px; }
+.screen-reveal .gb-rows { position: relative; }
+/* Rows are absolutely positioned; ranking = translateY (previous → new). */
+.screen-reveal .gb-row {
+  position: absolute; left: 0; right: 0; top: 0; height: var(--rowh);
+  display: grid; grid-template-columns: 22px minmax(0, 1fr) 40px 34px var(--bar-w) 36px; align-items: center; gap: 4px; padding: 0 3px;
+  transform: translateY(var(--y0));
+}
+.screen-reveal.b-grade .gb-row { transform: translateY(var(--y1)); transition: transform var(--t-drama) var(--e-standard); }
+.screen-reveal .gb-row.me::before {
+  content: ""; position: absolute; inset: 2px -3px; border-radius: 9px; pointer-events: none;
+  background: rgba(255, 209, 102, 0.08); border: 1px solid rgba(255, 209, 102, 0.35);
+}
+.screen-reveal .gb-row .av { width: 22px; height: 22px; font-size: 0.78rem; }
+.screen-reveal .gb-row.off .av { opacity: 0.4; }
+.screen-reveal .gb-name { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.screen-reveal .gb-nm { flex: 0 1 auto; min-width: 0; font-weight: 800; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.screen-reveal .gb-row.banished .gb-nm,
+.screen-reveal .gb-row.off .gb-nm { color: var(--dim); }
+/* Exhibits are pinned like tiny paper tags (the ⚡ in the time column is a
+   different thing: the fastest correct answer). Latest three shown. */
+.screen-reveal .gb-name .exhibits { flex: none; display: inline-flex; gap: 2px; }
+.screen-reveal .gb-name .exhibit {
+  flex: none; display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 4px;
+  font-size: 0.6rem; line-height: 1; background: rgba(243, 234, 210, 0.88); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+  filter: none; transform: rotate(-4deg);
+}
+.screen-reveal .gb-name .exhibits .exhibit:nth-last-child(n + 4) { display: none; }
+.screen-reveal .gb-name:has(.ex-new) .exhibits .exhibit:nth-last-child(n + 3) { display: none; }
+.screen-reveal .gb-name .exhibit.ex-new { opacity: 0; transform: scale(2.4) rotate(-16deg); }
+.screen-reveal.b-evidence .gb-name .exhibit.ex-new {
+  opacity: 1; transform: rotate(-4deg);
+  transition: transform var(--t-stamp) var(--e-impact) 260ms, opacity var(--t-quick) linear 260ms;
+}
+
+/* VERDICT: time chips (⚡ = fastest correct) and +points. */
+.screen-reveal .gb-time,
+.screen-reveal .gb-pts {
+  font-size: 0.72rem; font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap;
+  opacity: 0; transform: translateY(6px) scale(0.7);
+}
+.screen-reveal .gb-time { color: var(--dim); }
+.screen-reveal .gb-time.fast { color: var(--accent2); }
+.screen-reveal .gb-pts { color: var(--dim); font-weight: 700; }
+.screen-reveal .gb-pts.pos { color: var(--good); font-weight: 900; }
+.screen-reveal.b-verdict .gb-time,
+.screen-reveal.b-verdict .gb-pts {
+  opacity: 1; transform: none;
+  transition: transform var(--t-base) var(--e-impact) var(--dr), opacity var(--t-quick) linear var(--dr);
+}
+.screen-reveal.b-verdict .gb-pts { transition-delay: calc(var(--dr) + 80ms); }
+
+/* GRADE: bars grow with scaleX from the old share to the new one. */
+.screen-reveal .gb-bar { position: relative; height: 10px; border-radius: 5px; background: rgba(244, 241, 232, 0.08); }
+.screen-reveal .gb-fill { position: absolute; inset: 0; border-radius: 5px; transform-origin: left center; transform: scaleX(var(--s0)); }
+.screen-reveal .gb-fill.prev { background: rgba(244, 241, 232, 0.6); }
+.screen-reveal .gb-fill.now { background: var(--accent2); }
+.screen-reveal.b-grade .gb-fill.now { transform: scaleX(var(--s1)); transition: transform var(--t-drama) var(--e-standard); }
+.screen-reveal .gb-stamps { position: absolute; inset: -6px 0; display: flex; align-items: center; justify-content: flex-end; gap: 2px; pointer-events: none; }
+.screen-reveal .gb-stamp {
+  padding: 2px 4px 1px; border-radius: 4px; font: 900 0.54rem/1.1 var(--hand); letter-spacing: 0.4px;
+  background: rgba(22, 40, 30, 0.9); transform: rotate(-5deg);
+}
+.screen-reveal .gb-stamps.two { inset: -10px 0; flex-direction: column; align-items: flex-end; justify-content: center; gap: 1px; }
+.screen-reveal .gb-stamps.two .gb-stamp { font-size: 0.46rem; padding: 1px 3px 0; }
+.screen-reveal .gb-stamp.cleared { color: var(--cleared); border: 1.5px solid var(--cleared); }
+.screen-reveal .gb-stamp.detention { color: #ffd9a8; border: 1.5px solid #8a6a45; background: #574632; }
+.screen-reveal .gb-stamp.cleared.now { opacity: 0; transform: scale(2.4) rotate(-16deg); }
+.screen-reveal.b-grade .gb-stamp.cleared.now {
+  opacity: 1; transform: rotate(-5deg);
+  transition: transform var(--t-stamp) var(--e-impact) 150ms, opacity var(--t-quick) linear 150ms;
+}
+
+.screen-reveal .gb-score { display: grid; justify-items: end; font-weight: 900; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+.screen-reveal .gb-score > span { grid-area: 1 / 1; }
+.screen-reveal .gb-score .sc1 { opacity: 0; transform: translateY(8px); }
+.screen-reveal.b-grade .gb-score .sc0 { opacity: 0; transform: translateY(-8px); transition: transform var(--t-base) var(--e-exit), opacity var(--t-quick) linear; }
+.screen-reveal.b-grade .gb-score .sc1 {
+  opacity: 1; transform: none; color: var(--accent2);
+  transition: transform var(--t-base) var(--e-enter) 160ms, opacity var(--t-base) linear 160ms;
+}
+.screen-reveal .gb-score.same .sc0 { visibility: hidden; }
+.screen-reveal .gb-score.same .sc1 { opacity: 1; transform: none; color: inherit; }
+
+/* The graduation line: one marker across the bar column (translateX). */
+.screen-reveal .gb-line {
+  position: absolute; top: -22px; bottom: 0; right: 43px; width: var(--bar-w); pointer-events: none; z-index: 2;
+  transform: translateX(calc(var(--line) * 100%));
+}
+.screen-reveal .gb-line::before { content: ""; position: absolute; left: -1px; top: 18px; bottom: 2px; border-left: 2px dashed var(--accent2); opacity: 0.9; }
+.screen-reveal .gb-line-lbl {
+  position: absolute; top: 2px; left: 0; transform: translateX(-50%); white-space: nowrap;
+  font: 800 0.66rem/16px var(--hand); color: var(--accent2);
+}
+
+/* ---------------- ACCUSE dock (fixed height: no reflow on confirm) ---------------- */
+.screen-reveal .rv-dock {
+  position: sticky; bottom: 0; z-index: 40; margin-top: auto; padding: 12px 0 2px;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px;
+  background: linear-gradient(transparent, var(--bg) 24%);
+}
+.screen-reveal .rv-dock.host { grid-template-columns: minmax(0, 1fr) 108px; }
+.screen-reveal .rv-dock .btn + .btn { margin-top: 0; }
+.screen-reveal .btn.accuse {
+  position: relative; isolation: isolate; display: grid; place-items: center; height: 56px; min-height: 56px; padding: 0 12px; overflow: hidden;
+  background: var(--card2); border: 2px dashed var(--chalk-line); color: var(--dim);
+  font-size: 1.08rem; letter-spacing: 0.5px; white-space: nowrap;
+  transition: transform var(--t-tap) var(--e-standard), opacity var(--t-quick) var(--e-standard);
+}
+.screen-reveal .btn.accuse:disabled { opacity: 1; }
+.screen-reveal .btn.accuse.st-go,
+.screen-reveal .btn.accuse.st-confirm { border-color: transparent; color: #fff8ee; box-shadow: 0 4px 22px rgba(255, 107, 107, 0.32); }
+.screen-reveal .btn.accuse.st-confirm { color: #241300; }
+.screen-reveal .btn.accuse.st-off { color: var(--dim); font-size: 0.92rem; }
+.screen-reveal .ac-bg,
+.screen-reveal .ac-glow { position: absolute; inset: -2px; z-index: -1; opacity: 0; transition: opacity var(--t-base) var(--e-standard); }
+.screen-reveal .ac-bg.go { background: linear-gradient(100deg, #b02e2c, #c23b39); } /* AA contrast for the label */
+.screen-reveal .ac-bg.confirm { background: var(--accent2); }
+.screen-reveal .st-go .ac-bg.go,
+.screen-reveal .st-confirm .ac-bg.confirm { opacity: 1; }
+.screen-reveal .ac-glow { z-index: 0; border-radius: inherit; background: radial-gradient(120% 140% at 50% 50%, rgba(255, 241, 214, 0.55), transparent 70%); box-shadow: inset 0 0 0 3px rgba(255, 209, 102, 0.95); transition: none; }
+.screen-reveal.fx-accuse .st-go .ac-glow { animation: rv-glow 900ms var(--e-standard) 1; }
+@keyframes rv-glow { 0% { opacity: 0; transform: scale(0.97); } 35% { opacity: 1; transform: scale(1.02); } 100% { opacity: 0; transform: none; } }
+.screen-reveal .ac-l { grid-area: 1 / 1; z-index: 1; max-width: 100%; overflow: hidden; text-overflow: ellipsis; opacity: 0; transition: opacity var(--t-quick) var(--e-standard); }
+.screen-reveal .st-wait .ac-l.wait,
+.screen-reveal .st-go .ac-l.go,
+.screen-reveal .st-confirm .ac-l.confirm,
+.screen-reveal .st-off .ac-l.off { opacity: 1; }
+.screen-reveal .ac-l.wait { font-weight: 700; font-size: 0.98rem; }
+.screen-reveal .ac-l.confirm { font-size: 0.98rem; }
+.screen-reveal .btn.accuse.st-confirm { animation: hd-shake var(--t-stamp) var(--e-standard); }
+.screen-reveal .rv-host { height: 56px; min-height: 56px; padding: 4px 8px; font-size: 0.88rem; line-height: 1.12; }
+
+/* ---------------- Reduced motion: opacity only, identical timings ---------------- */
+@media (prefers-reduced-motion: reduce) {
+  .screen-reveal .tav,
+  .screen-reveal .ob-none .tav,
+  .screen-reveal .tav-mark,
+  .screen-reveal .is-wrong .ob-mark,
+  .screen-reveal .ev-note,
+  .screen-reveal .lastbell,
+  .screen-reveal .gb-time,
+  .screen-reveal .gb-pts,
+  .screen-reveal .exhibit.ex-new,
+  .screen-reveal .gb-score .sc1,
+  .screen-reveal.b-grade .gb-score .sc0 { transform: none; }
+  .screen-reveal .is-correct .ob-mark { transform: rotate(-6deg); }
+  .screen-reveal .ev-card { transform: rotate(-0.6deg); }
+  .screen-reveal .gb-stamp.cleared.now { transform: rotate(-5deg); }
+  .screen-reveal .gb-name .exhibit.ex-new { transform: rotate(-4deg); }
+  .screen-reveal.b-answer .is-correct .tav .av { transform: none; }
+  /* Chalk underline: fades in across the hold instead of sweeping. */
+  .screen-reveal .chalk-ul { transform: none; }
+  .screen-reveal.b-drumroll .chalk-ul { transition: opacity var(--hold) linear; }
+  .screen-reveal .shimmer { left: 0; width: 100%; transform: none; background: rgba(255, 209, 102, 0.07); }
+  .screen-reveal.stakes-high.drumming .shimmer { animation: rv-shimmer var(--hold) var(--e-standard) both; }
+  @keyframes rv-shimmer { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+  @keyframes rv-ring { 50% { opacity: 0.45; } }
+  @keyframes rv-glow { 0% { opacity: 0; } 35% { opacity: 1; } 100% { opacity: 0; } }
+  /* Bars: the new share fades in over the old one. */
+  .screen-reveal .gb-fill.now { transform: scaleX(var(--s1)); opacity: 0; }
+  .screen-reveal.b-grade .gb-fill.now { opacity: 1; transition: opacity var(--t-drama) var(--e-standard); }
+  /* Information-bearing entrances keep their full length as fades (≥200ms;
+     only the duration changes, so each element's own delays are kept). */
+  .screen-reveal .tav,
+  .screen-reveal .tav-mark,
+  .screen-reveal .ob-mark,
+  .screen-reveal .ev-card,
+  .screen-reveal .lastbell,
+  .screen-reveal .gb-stamp.cleared { transition-duration: var(--t-stamp); }
+  .screen-reveal .gb-time,
+  .screen-reveal .gb-pts,
+  .screen-reveal .exhibit.ex-new,
+  .screen-reveal .none-chip,
+  .screen-reveal .ac-l { transition-duration: var(--t-base); }
+  /* Reorder: rows dip out, jump at the midpoint, and fade back in place. */
+  .screen-reveal.b-grade .gb-row { transition: transform 0s linear calc(var(--t-drama) / 2); }
+  .screen-reveal.fx-grade .gb-row.moved { animation: rv-dip var(--t-drama) linear both; }
+  @keyframes rv-dip { 0%, 100% { opacity: 1; } 45%, 55% { opacity: 0; } }
+}

@@ -1,0 +1,187 @@
+/* 2. Lobby — 08-reveal-direction.md §4: a classroom before the bell.
+   Everything animates on insertion (the lobby has no timeline):
+   board 0 · code letters drop from 180 (50ms deco stagger) · roster rows pop
+   as classmates join (bots boot with a 🤖 spin) · Start gives ONE glow pulse
+   when it becomes ready · the toast slides up out of the sticky dock.
+   Transform/opacity only; custom keyframes are redefined opacity-only under
+   reduced motion (bottom). */
+
+.lb-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Between periods the fixed 🎓 semester tab sits top-right: keep clear of it. */
+.screen-lobby.between .lb-head { margin-inline: 50px; }
+.lb-head {
+  margin: -4px 0 8px; text-align: center; font-family: var(--hand); font-weight: 900; font-size: 1rem; color: var(--dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 44px; line-height: 44px; /* clears the fixed 🎓 tab */
+  animation: hd-fade-in var(--t-scene) var(--e-standard) both;
+}
+
+/* ---- The chalkboard (room code) ---- */
+.lb-board {
+  position: relative; margin: 0 -4px 12px; padding: 10px 14px 20px;
+  border: 7px solid #8a5d36; border-radius: 10px;
+  background:
+    radial-gradient(60% 50% at 25% 30%, rgba(244, 241, 232, 0.05), transparent 70%),
+    radial-gradient(50% 40% at 80% 75%, rgba(244, 241, 232, 0.04), transparent 70%),
+    #0e2117;
+  box-shadow: inset 0 0 28px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(0, 0, 0, 0.5), 0 3px 0 #5c3c21, 0 8px 18px rgba(0, 0, 0, 0.35);
+  animation: hd-enter-scale var(--t-scene) var(--e-enter) both;
+}
+.lb-board-top { display: flex; justify-content: space-between; align-items: baseline; font-family: var(--hand); font-size: 0.8rem; color: rgba(244, 241, 232, 0.62); }
+.lb-clock { font-variant-numeric: tabular-nums; font-weight: 800; }
+.lb-clock i { font-style: normal; animation: lb-tick 1s steps(1, end) 4; } /* ticks a few seconds, then rests (WCAG 2.2.2: no endless blinking) */
+@keyframes lb-tick { 50% { opacity: 0.25; } }
+.lb-board-label { text-align: center; font-family: var(--hand); font-size: 0.78rem; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(244, 241, 232, 0.7); margin-top: 2px; }
+.screen-lobby .roomcode {
+  display: flex; justify-content: center; gap: 12px; margin: 0 0 2px;
+  font-family: var(--hand); font-size: 2.55rem; font-weight: 900; line-height: 1.15; letter-spacing: 0;
+  color: var(--accent2); text-shadow: 0 0 1px rgba(255, 240, 200, 0.7), 0 0 10px rgba(255, 209, 102, 0.28);
+}
+.rc-l { display: inline-block; animation: lb-drop 560ms var(--e-standard) both; animation-delay: calc(180ms + var(--i) * var(--stagger-deco)); }
+.rc-l:nth-child(odd) { rotate: -3deg; }
+.rc-l:nth-child(3n) { rotate: 2.5deg; }
+@keyframes lb-drop {
+  0% { opacity: 0; transform: translateY(-28px) rotate(-14deg) scale(1.25); }
+  50% { opacity: 1; transform: translateY(4px) rotate(4deg) scale(0.95); }
+  75% { transform: translateY(-2px) rotate(-1.5deg) scale(1.01); }
+  100% { opacity: 1; transform: none; }
+}
+/* chalk tray: a wooden ledge with two sticks of chalk and an eraser */
+.lb-tray { position: absolute; left: 10px; right: 10px; bottom: -7px; height: 9px; border-radius: 3px 3px 2px 2px; background: #a0703f; box-shadow: 0 2px 0 #5c3c21; }
+.lb-tray i { position: absolute; bottom: 7px; display: block; }
+.lb-chalk { left: 22%; width: 22px; height: 5px; border-radius: 3px; background: #f4f1e8; }
+.lb-chalk-y { left: calc(22% + 30px); width: 15px; background: var(--accent2); rotate: -6deg; }
+.lb-eraser { right: 16%; width: 36px; height: 11px; border-radius: 3px; background: linear-gradient(#3c2a1e 0 55%, #d9d4c5 55%); }
+
+.lb-share { margin: 0 0 14px; animation: hd-enter-up var(--t-scene) var(--e-enter) 120ms both; }
+
+/* ---- Attendance (roster): dense rows, up to 10 ---- */
+.lb-roster { margin-inline: -4px; padding: 12px 12px 8px; animation: hd-enter-up var(--t-scene) var(--e-enter) 170ms both; }
+.lb-roster-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
+.lb-roster-head h2 { margin: 0; }
+.lb-count { font-family: var(--hand); font-weight: 800; color: var(--dim); font-size: 0.85rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lb-count b { display: inline-block; color: var(--ink); font-size: 1.05rem; animation: hd-pop var(--t-stamp) var(--e-impact) both; }
+
+.lb-row {
+  --d: calc(min(var(--i, 0), 4) * var(--stagger-deco)); /* decorative; a late joiner waits ≤200ms */
+  min-height: 48px; padding: 2px 0; gap: 8px;
+  animation: lb-row-in var(--t-base) var(--e-enter) both; animation-delay: var(--d);
+}
+@keyframes lb-row-in { from { opacity: 0; transform: translateY(10px) scale(0.97); } }
+.lb-desk { flex: none; width: 16px; text-align: right; font-family: var(--hand); font-weight: 800; font-size: 0.74rem; color: var(--dim); font-variant-numeric: tabular-nums; }
+.lb-av { position: relative; display: inline-grid; flex: none; }
+.lb-row .av { animation: hd-pop var(--t-stamp) var(--e-impact) both; animation-delay: calc(var(--d) + 60ms); }
+.lb-row.is-me .av { box-shadow: 0 0 0 2px var(--accent2); }
+.badge.you { background: var(--accent2); color: #1a2a1f; }
+.lb-pts { flex: none; font-family: var(--hand); font-weight: 900; color: var(--accent2); font-variant-numeric: tabular-nums; }
+.lb-pts small { font-size: 0.7rem; color: var(--dim); }
+
+/* Bots boot: a 🤖 spins up, then the avatar takes its seat. */
+.lb-row.is-bot .av { animation: lb-boot-av 900ms var(--e-standard) both; animation-delay: var(--d); }
+.lb-boot { position: absolute; inset: 0; display: grid; place-items: center; font-size: 1.05rem; pointer-events: none; animation: lb-boot 900ms var(--e-standard) both; animation-delay: var(--d); }
+@keyframes lb-boot {
+  0% { opacity: 0; transform: rotate(-540deg) scale(0.3); }
+  45% { opacity: 1; transform: rotate(0deg) scale(1.15); }
+  68% { opacity: 1; transform: rotate(0deg) scale(1); }
+  100% { opacity: 0; transform: rotate(120deg) scale(0.4); }
+}
+@keyframes lb-boot-av {
+  0%, 66% { opacity: 0; transform: scale(0.4); }
+  86% { opacity: 1; transform: scale(1.12); }
+  100% { opacity: 1; transform: none; }
+}
+
+.bot-x { flex: none; width: 44px; height: 44px; margin: 0 -4px 0 -6px; display: grid; place-items: center; border-radius: 50%; }
+.bot-x span { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: rgba(255, 107, 107, 0.15); color: var(--accent); font-weight: 900; font-size: 0.85rem; transition: transform var(--t-tap) var(--e-standard); }
+.bot-x:active span { transform: scale(0.88); }
+
+/* The class-size warning: a sticky note under the roster (only the space
+   below it moves when it appears). */
+.lb-note {
+  margin: 8px 4px 6px; padding: 9px 12px; border-radius: 3px 3px 3px 16px;
+  background: #f3dd78; color: #3b300c; font-family: var(--hand); font-weight: 700; font-size: 0.86rem; line-height: 1.35;
+  rotate: -1deg; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.18), 0 6px 12px rgba(0, 0, 0, 0.28);
+  animation: lb-note-in var(--t-base) var(--e-enter) both;
+}
+@keyframes lb-note-in { from { opacity: 0; transform: translateY(8px) rotate(-3deg) scale(0.96); } }
+
+/* "Add a bot" reads as the next empty desk */
+.lb-addbot {
+  display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 46px; margin-top: 6px;
+  border: 2px dashed var(--chalk-line); border-radius: 12px; color: var(--dim); font-family: var(--hand); font-weight: 800; font-size: 0.95rem;
+  transition: transform var(--t-tap) var(--e-standard);
+}
+.lb-addbot:active { transform: scale(0.98); }
+
+/* ---- How to play (the one rules panel) ---- */
+.screen-lobby details.how { background: var(--card); border: 2px dashed var(--chalk-line); border-radius: var(--radius); padding: 0 14px; margin: 0 -4px 14px; animation: hd-enter-up var(--t-scene) var(--e-enter) 220ms both; }
+.screen-lobby details.how summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; font-family: var(--hand); font-weight: 800; cursor: pointer; }
+.screen-lobby details.how summary::-webkit-details-marker { display: none; }
+.lb-chev { display: inline-block; color: var(--dim); font-size: 1.1rem; width: 24px; text-align: center; rotate: -90deg; transition: rotate var(--t-base) var(--e-standard); }
+.screen-lobby details.how[open] .lb-chev { rotate: 0deg; }
+.screen-lobby details.how p { color: var(--dim); font-size: 0.9rem; margin: 0 0 10px; line-height: 1.5; }
+.screen-lobby details.how p:last-child { margin-bottom: 14px; }
+.screen-lobby details.how[open] p { animation: hd-enter-up var(--t-base) var(--e-enter) both; animation-delay: calc(var(--i) * var(--stagger-deco)); }
+.screen-lobby details.how b { color: var(--ink); }
+
+/* ---- Class rules ---- */
+.lb-rules { margin-inline: -4px; animation: hd-enter-up var(--t-scene) var(--e-enter) 270ms both; }
+.settings-grid { display: grid; grid-template-columns: 1fr auto; gap: 10px 12px; align-items: center; font-size: 0.92rem; }
+.settings-grid label { display: flex; flex-direction: column; line-height: 1.25; font-weight: 600; }
+.settings-grid label small { color: var(--dim); font-size: 0.74rem; font-weight: 400; margin-top: 2px; }
+.settings-grid input { width: 88px; padding: 8px 10px; text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
+.lb-rules-ro { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 0 0 12px; animation: hd-fade-in var(--t-scene) var(--e-standard) 270ms both; }
+.lb-rule { padding: 5px 10px; border-radius: 999px; background: var(--card2); color: var(--dim); font-size: 0.78rem; white-space: nowrap; }
+.lb-rule b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.lb-end { margin: -4px 0 6px; font-size: 0.9rem; }
+
+/* ---- The dock: sticky, always within thumb reach ---- */
+.lb-dock {
+  position: sticky; bottom: 0; z-index: 5; margin: auto -14px 0; padding: 18px 14px max(6px, env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, transparent, var(--bg) 26%);
+  overflow-x: clip; /* the ready glow may grow past the screen edge for a frame; never a sideways scroll */
+}
+.lb-start { position: relative; min-height: 56px; font-size: 1.15rem; }
+.lb-start::after {
+  content: ""; position: absolute; inset: -4px; border-radius: 18px; pointer-events: none; opacity: 0;
+  box-shadow: 0 0 0 3px var(--accent2), 0 0 26px 6px rgba(255, 209, 102, 0.55);
+}
+.lb-start .lb-bell { display: inline-block; transform-origin: 50% 15%; }
+/* Not ready: an opaque, chalk-outlined slot (a translucent red over the
+   scrolling page read as mud). */
+.lb-start:disabled { opacity: 1; background: var(--card2); color: var(--dim); border: 2px dashed var(--chalk-line); }
+.lb-start:disabled .lb-bell { opacity: 0.5; }
+/* Becoming ready: one glow pulse and one ring of the bell. */
+.lb-start.ready::after { animation: lb-glow 1100ms var(--e-standard) 1 both; }
+.lb-start.ready .lb-bell { animation: lb-ring 760ms var(--e-standard) 1; }
+.lb-start.busy .lb-start-l { animation: hd-glow 1.2s var(--e-standard) 4; } /* ≤5s (WCAG 2.2.2) */
+@keyframes lb-glow { 0% { opacity: 0; transform: scale(0.97); } 35% { opacity: 1; } 100% { opacity: 0; transform: scale(1.03); } }
+@keyframes lb-ring { 15% { transform: rotate(18deg); } 35% { transform: rotate(-15deg); } 55% { transform: rotate(10deg); } 75% { transform: rotate(-5deg); } }
+.lb-need { min-height: 1.4em; margin-top: 6px; text-align: center; font-family: var(--hand); font-size: 0.78rem; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-wait {
+  margin: 0 0 4px; padding: 12px 14px; border-radius: 999px; background: var(--card); border: 2px dashed var(--chalk-line);
+  font-size: 0.88rem; line-height: 1.35;
+}
+.lb-wait .lb-bell { display: inline-block; transform-origin: 50% 15%; animation: lb-sway 2.4s ease-in-out 2; } /* two swings (<5s), then still */
+@keyframes lb-sway { 0%, 60%, 100% { transform: rotate(0deg); } 70% { transform: rotate(14deg); } 80% { transform: rotate(-11deg); } 90% { transform: rotate(6deg); } }
+
+/* Toast: slides up out of the dock (never covers Start) */
+.lb-toast-slot { position: absolute; left: 14px; right: 14px; bottom: calc(100% - 6px); display: flex; justify-content: center; pointer-events: none; }
+.lb-toast {
+  max-width: 100%; padding: 10px 16px; border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 800; font-size: 0.92rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4); animation: hd-enter-up var(--t-base) var(--e-enter) both;
+}
+
+/* ---- Reduced motion: opacity only, identical timings ---- */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes lb-drop { from { opacity: 0; } }
+  @keyframes lb-row-in { from { opacity: 0; } }
+  @keyframes lb-boot { 0% { opacity: 0; } 45%, 68% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes lb-boot-av { 0%, 66% { opacity: 0; } 100% { opacity: 1; } }
+  @keyframes lb-note-in { from { opacity: 0; } }
+  @keyframes lb-glow { 0% { opacity: 0; } 35% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes lb-ring { to { opacity: 1; } }
+  @keyframes lb-sway { to { opacity: 1; } }
+  .lb-chev, .bot-x span, .lb-addbot { transition: none; }
+  .lb-clock i { animation: none; }
+}

@@ -1,0 +1,263 @@
+/* 7. Match end — 08-reveal-direction.md §4, staged by matchEndTimeline.
+   Root classes: v-caught | v-graduated | v-top, plus b-<beat> for every beat
+   reached (takeover, drumroll, finalBlow, unmask, scores, caseFile, session,
+   done). Each beat is a STATE class: it looks right whether it animated in or
+   arrived settled (#app.settle). Every box below the hero is reserved from
+   frame 0 (fixed row heights × counts) so no beat reflows. Motion is
+   transform/opacity only; reduced motion = opacity only, same timings. */
+.screen-matchEnd {
+  --me-rc-row: 46px; /* report card row */
+  --me-cf-head: 28px; /* case-file group header */
+  --me-cf-row: 30px; /* case-file exhibit line */
+  --me-sem-row: 40px; /* semester row (SEM_ROW in matchEnd.ts) */
+  position: relative;
+  /* Stamps start at 2.2× scale; clip the transient overhang so a phone never
+     widens its layout viewport (clip, unlike hidden, keeps sticky working). */
+  overflow-x: clip;
+  overflow-clip-margin: 8px; /* keep full-width buttons' focus rings */
+}
+
+/* ---- Banner (takeover, 0ms) ---- */
+.me-banner { text-align: center; font-family: var(--hand); margin: 6px 0 12px; }
+.me-kick {
+  font-size: 0.78rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--dim);
+  animation: hd-enter-down var(--t-base) var(--e-enter) both;
+}
+.me-title {
+  max-width: 300px; margin: 2px auto 4px;
+  font-size: 1.8rem; line-height: 1.15; font-weight: 900; text-transform: uppercase;
+  transform: rotate(-4deg); /* = hd-stamp's resting angle, so settled/reduced match */
+  animation: hd-stamp var(--t-scene) var(--e-impact) 60ms both;
+}
+.v-caught .me-title { color: var(--good); }
+.v-graduated .me-title { color: var(--accent); text-shadow: 0 0 22px rgba(255, 107, 107, 0.35); }
+.v-top .me-title { color: var(--accent2); }
+.me-subt { color: var(--dim); font-size: 0.9rem; animation: hd-fade-in var(--t-base) var(--e-standard) 360ms both; }
+/* High stakes: the parent shakes 3px as the stamp lands. */
+.v-graduated .me-banner { animation: hd-shake var(--t-stamp) var(--e-standard) 330ms; }
+
+/* ---- Siren takeover (graduated): red room light pulsing ×3, opacity only ---- */
+.me-siren { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
+.me-siren::before,
+.me-siren::after { content: ""; position: absolute; inset: 0; opacity: 0; }
+.me-siren::before { background: rgba(255, 45, 45, 0.3); animation: me-siren 1800ms linear both; }
+.me-siren::after {
+  background: radial-gradient(140% 100% at 50% 45%, rgba(255, 50, 50, 0) 55%, rgba(255, 50, 50, 0.5) 100%);
+  animation: me-siren-edge 1800ms linear both;
+}
+/* 3 pulses in 1.8s (≈1.7 Hz, under the 3-flashes-per-second limit). */
+@keyframes me-siren { 0%, 33%, 66%, 100% { opacity: 0; } 16%, 50%, 83% { opacity: 1; } }
+@keyframes me-siren-edge { 0%, 33%, 66% { opacity: 0.15; } 16%, 50%, 83% { opacity: 1; } 100% { opacity: 0.3; } }
+
+/* ---- Confetti (caught): ≤24 particles, transform/opacity only ---- */
+.me-confetti { position: fixed; inset: 0; z-index: 35; overflow: hidden; pointer-events: none; }
+.me-confetti i {
+  position: absolute; left: 50%; top: 92px; width: 8px; height: 12px; margin-left: -4px; border-radius: 2px; opacity: 0;
+  animation-name: me-burst; animation-fill-mode: both; animation-timing-function: linear;
+}
+.me-confetti i.c { width: 8px; height: 8px; border-radius: 50%; }
+.me-confetti i.s { width: 4px; height: 15px; }
+@keyframes me-burst {
+  0% { opacity: 0; transform: translate3d(0, 0, 0) rotate(0); animation-timing-function: cubic-bezier(0.1, 0.7, 0.3, 1); }
+  6% { opacity: 1; }
+  24% { transform: translate3d(var(--bx), var(--by), 0) rotate(calc(var(--rot) * 0.25)); animation-timing-function: cubic-bezier(0.45, 0, 0.8, 0.6); }
+  78% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(calc(var(--bx) * 1.25), 100vh, 0) rotate(var(--rot)); }
+}
+
+/* ---- Hero: the yearbook photo (redacted until the unmask) ---- */
+.me-hero {
+  position: relative; padding: 12px 14px 14px; margin-bottom: 12px;
+  border-style: solid; border-color: rgba(244, 241, 232, 0.32);
+  animation: hd-enter-up var(--t-scene) var(--e-enter) 140ms both;
+}
+.v-graduated .me-hero { border-color: rgba(255, 107, 107, 0.7); }
+/* The unmask lands with a 3px shake (high-stakes impact). */
+.b-unmask .me-hero { animation: hd-shake var(--t-stamp) var(--e-standard) 200ms; }
+.me-hk {
+  height: 22px; font-family: var(--hand); font-weight: 800; font-size: 0.82rem; letter-spacing: 1.2px;
+  text-transform: uppercase; color: var(--accent2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.me-dots i { font-style: normal; opacity: 0.3; }
+.b-drumroll:not(.b-unmask) .me-dots i { animation: me-dot 900ms ease-in-out infinite both; }
+.b-drumroll:not(.b-unmask) .me-dots i:nth-child(2) { animation-delay: 150ms; }
+.b-drumroll:not(.b-unmask) .me-dots i:nth-child(3) { animation-delay: 300ms; }
+.b-unmask .me-dots i { opacity: 1; }
+@keyframes me-dot { 0%, 100% { opacity: 0.3; } 40% { opacity: 1; } }
+
+.me-id { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px; align-items: center; margin-top: 8px; }
+.me-face {
+  position: relative; width: 72px; height: 72px; border-radius: 14px;
+  border: 2px dashed var(--chalk-line);
+  background: repeating-linear-gradient(180deg, transparent 0 11px, rgba(244, 241, 232, 0.06) 11px 12px), var(--card2);
+  display: grid; place-items: center; perspective: 320px;
+}
+.me-face-mask { font-family: var(--hand); font-size: 2.3rem; font-weight: 900; color: var(--dim); line-height: 1; }
+.b-drumroll:not(.b-unmask) .me-face-mask { animation: hd-pulse 900ms ease-in-out infinite; }
+.me-face-real { font-size: 2.5rem; line-height: 1; animation: hd-spin-in var(--t-scene) var(--e-enter) both; }
+.me-stamp-wrap { position: absolute; left: -10px; right: -10px; bottom: 3px; display: flex; justify-content: center; pointer-events: none; }
+.me-stamp {
+  display: inline-block; padding: 1px 6px; border: 2.5px solid var(--accent); border-radius: 5px;
+  background: rgba(22, 40, 30, 0.88); color: var(--accent);
+  font-family: var(--hand); font-weight: 900; font-size: 0.72rem; letter-spacing: 1.5px; line-height: 1.35;
+  transform: rotate(-4deg); /* hd-stamp's resting angle */
+  animation: hd-stamp var(--t-stamp) var(--e-impact) 120ms both;
+}
+
+.me-who { min-width: 0; }
+.me-name-slot { height: 34px; display: flex; align-items: center; min-width: 0; perspective: 420px; }
+.me-name {
+  font-family: var(--hand); font-size: 1.5rem; font-weight: 900; color: var(--accent);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  transform-origin: left center; animation: hd-spin-in var(--t-scene) var(--e-enter) 60ms both;
+}
+.me-redact {
+  display: block; width: 8em; max-width: 100%; height: 18px; border-radius: 4px;
+  background: repeating-linear-gradient(-45deg, rgba(244, 241, 232, 0.34) 0 3px, rgba(244, 241, 232, 0.1) 3px 7px);
+}
+.me-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.me-sub-slot { height: 24px; display: flex; align-items: center; min-width: 0; }
+.me-drum { width: 100%; height: 8px; border-radius: 4px; background: rgba(244, 241, 232, 0.1); overflow: hidden; }
+/* Chalk drumroll: fills over exactly drumroll → unmask (inline duration;
+   a negative inline delay catches up a late render). */
+.me-drum-fill {
+  display: block; width: 100%; height: 100%; transform-origin: left center;
+  background: repeating-linear-gradient(90deg, var(--ink) 0 7px, rgba(244, 241, 232, 0.65) 7px 10px);
+  animation-name: me-fill; animation-timing-function: linear; animation-fill-mode: both;
+}
+@keyframes me-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.me-sub {
+  font-size: 0.88rem; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  animation: hd-enter-up var(--t-base) var(--e-enter) 260ms both;
+}
+
+/* Graduated hero = the FINAL BLOW card (finalBlow beat, 300ms). */
+.me-qtext {
+  height: 2.7em; margin-top: 2px; font-family: var(--hand); font-size: 0.9rem; line-height: 1.35; color: var(--dim);
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.me-qtext span { animation: hd-fade-in var(--t-base) var(--e-standard) both; }
+.me-blow-l, .me-drop { height: 21px; min-width: 0; }
+.me-blow-in {
+  display: flex; align-items: center; gap: 0; min-width: 0; height: 100%; font-size: 0.9rem; white-space: nowrap;
+  animation: hd-enter-up var(--t-base) var(--e-enter) both; animation-delay: calc(var(--i) * var(--stagger-info));
+}
+.me-blow-in .me-fx { flex: none; }
+.me-opt { min-width: 2em; overflow: hidden; text-overflow: ellipsis; font-weight: 800; }
+.me-blow-in b { font-weight: 900; }
+.me-ok { color: var(--good); }
+.me-no { color: var(--bad); }
+.me-dimtxt { color: var(--dim); font-size: 0.8rem; margin-left: 4px; }
+/* Two reserved lines: the sentence wraps instead of being clipped. */
+.me-drop { height: 48px; margin-top: 8px; padding-top: 4px; border-top: 1px dashed var(--chalk-line); color: var(--accent2); }
+.me-drop .me-blow-in { display: block; height: auto; font-size: 0.84rem; font-weight: 700; line-height: 1.35; white-space: normal; overflow: hidden; }
+.me-drop-nm { font-weight: 900; }
+
+/* ---- Sections: shells reserved from frame 0 as a faint, blank report
+   card; each comes up to full ink on its beat. ---- */
+.me-sec {
+  padding: 12px 12px 10px; margin-bottom: 12px; opacity: 0.38;
+  transition: opacity var(--t-scene) var(--e-standard);
+  animation: hd-fade-in var(--t-scene) var(--e-standard) 260ms backwards;
+}
+.b-scores .me-rc, .b-caseFile .me-cf, .b-session .me-sem { opacity: 1; }
+.me-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.me-h > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.me-aside { flex: none; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 0.72rem; font-weight: 700; color: var(--dim); white-space: nowrap; }
+.me-rank { color: var(--dim); font-weight: 800; font-size: 0.85rem; text-align: center; font-variant-numeric: tabular-nums; }
+.me-nm { font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+/* Report card (scores beat): rows cascade top → bottom at the info stagger. */
+.me-rc-list {
+  position: relative; height: calc(var(--n) * var(--me-rc-row));
+  background: repeating-linear-gradient(180deg, transparent 0 calc(var(--me-rc-row) - 1px), rgba(244, 241, 232, 0.07) calc(var(--me-rc-row) - 1px) var(--me-rc-row));
+}
+.me-rc-row {
+  display: grid; grid-template-columns: 18px 30px minmax(0, 1fr) 46px 22px; column-gap: 6px; align-items: center;
+  height: var(--me-rc-row); padding: 0 2px; border-radius: 8px;
+  animation: hd-enter-up var(--t-base) var(--e-enter) both; animation-delay: calc(var(--i) * var(--stagger-info));
+}
+.me-rc-row.self { background: rgba(255, 209, 102, 0.08); }
+.me-rc-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.me-rc-top { display: flex; align-items: center; gap: 5px; height: 20px; min-width: 0; }
+/* Compact badges so even two of them (e.g. DETENTION + CLEARED) leave the
+   name ~70px; the full name is always in the title attribute. */
+.me-rc-top .badge { flex: none; font-size: 0.56rem; padding: 1px 4px; }
+.me-badge-cheater { background: var(--accent); color: #2a0b0b; }
+.me-bar { position: relative; height: 6px; border-radius: 3px; background: rgba(244, 241, 232, 0.1); }
+.me-bar-fill {
+  position: absolute; inset: 0; border-radius: 3px; background: rgba(244, 241, 232, 0.55);
+  transform-origin: left center; transform: scaleX(var(--share));
+  animation: me-grow var(--t-drama) var(--e-standard) both;
+  animation-delay: calc(var(--i) * var(--stagger-info) + 160ms);
+}
+.me-rc-row.win .me-bar-fill { background: var(--accent2); }
+.me-rc-row.is-cheater .me-bar-fill { background: var(--accent); }
+.me-bar-line { position: absolute; top: -4px; bottom: -4px; left: var(--line); width: 2px; margin-left: -1px; border-radius: 1px; background: var(--ink); }
+@keyframes me-grow { from { transform: scaleX(0); } }
+.me-score { font-weight: 900; font-size: 1rem; text-align: right; font-variant-numeric: tabular-nums; }
+.me-rc-row.is-cheater .me-score { color: var(--accent); }
+.me-trophy { width: 22px; text-align: center; }
+.me-trophy > span { display: inline-block; animation: hd-pop var(--t-base) var(--e-impact) both; animation-delay: calc(var(--i) * var(--stagger-info) + 200ms); }
+
+/* Case file (caseFile beat): ✓ solid = pointed at the cheater,
+   ✗ dashed = pointed at innocents (readable without colour). */
+.me-cf-list { position: relative; height: calc(var(--g) * var(--me-cf-head) + var(--n) * var(--me-cf-row)); }
+.me-cf-group, .me-cf-line, .me-cf-empty { animation: hd-enter-up var(--t-base) var(--e-enter) both; animation-delay: calc(var(--i) * var(--stagger-info)); }
+.me-cf-group {
+  height: var(--me-cf-head); display: flex; align-items: flex-end; gap: 6px; padding-bottom: 5px;
+  font-size: 0.72rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--dim);
+}
+.me-cf-glyph { font-size: 0.9rem; line-height: 1; }
+.me-cf-group.hit .me-cf-glyph { color: var(--good); }
+.me-cf-group.miss .me-cf-glyph { color: var(--bad); }
+.me-cf-line {
+  height: var(--me-cf-row); display: grid; grid-template-columns: 20px 26px minmax(0, 1fr) auto; column-gap: 6px; align-items: center;
+  padding-left: 8px; font-size: 0.86rem; border-left: 3px solid var(--good);
+}
+.me-cf-line.miss { border-left: 3px dashed var(--bad); }
+.me-cf-ic { text-align: center; }
+.me-cf-q { color: var(--dim); font-weight: 800; font-size: 0.76rem; font-variant-numeric: tabular-nums; }
+.me-cf-title { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.me-cf-who { max-width: 118px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right; font-weight: 700; }
+.me-cf-hit { display: inline-block; border-bottom: 2px solid var(--accent); margin: 0 1px; }
+.me-cf-empty { height: var(--me-cf-row); display: flex; align-items: center; color: var(--dim); font-family: var(--hand); font-size: 0.86rem; }
+.me-cf-foot { height: 22px; margin-top: 6px; display: flex; align-items: center; font-family: var(--hand); font-size: 0.8rem; color: var(--accent2); white-space: nowrap; overflow: hidden; }
+.me-cf-foot span { animation: hd-fade-in var(--t-base) var(--e-standard) both; animation-delay: calc(var(--i) * var(--stagger-info)); }
+
+/* Semester (session beat → done beat): rows are absolutely positioned and
+   re-ranked with translateY; the entrance lives on the inner box so it never
+   fights the positioning transform. */
+.me-sem-list { position: relative; height: calc(var(--n) * var(--me-sem-row)); }
+.me-sem-row { position: absolute; left: 0; right: 0; top: 0; height: var(--me-sem-row); transition: transform var(--t-drama) var(--e-standard); }
+.me-sem-in {
+  display: grid; grid-template-columns: 20px 30px minmax(0, 1fr) 40px 34px; column-gap: 8px; align-items: center;
+  height: 100%; padding: 0 2px; border-bottom: 1px solid rgba(244, 241, 232, 0.07); border-radius: 6px;
+  animation: hd-fade-in var(--t-base) var(--e-standard) both;
+}
+.me-sem-row.self .me-sem-in { background: rgba(255, 209, 102, 0.08); }
+.me-delta { text-align: right; font-size: 0.9rem; animation: hd-pop var(--t-base) var(--e-impact) both; animation-delay: calc(220ms + var(--j) * var(--stagger-deco)); }
+.me-tot { text-align: right; font-weight: 900; font-variant-numeric: tabular-nums; }
+
+/* ---- Host dock (done beat): reserved from frame 0, pins to the bottom once
+   it has buttons (the old build put "End the school day" below the fold). ---- */
+.me-dock { margin-top: auto; min-height: 52px; padding: 10px 0 2px; z-index: 6; }
+.me-dock.host { min-height: 120px; }
+.b-done .me-dock.host { position: sticky; bottom: 0; background: linear-gradient(rgba(22, 40, 30, 0), var(--bg) 24%); }
+.me-dock .btn { animation: hd-enter-up var(--t-base) var(--e-enter) both; }
+.me-dock-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.me-dock-row .btn { min-height: 44px; padding: 9px 6px; font-size: 0.92rem; margin-top: 0; animation-delay: 80ms; }
+.me-wait { text-align: center; color: var(--dim); font-family: var(--hand); font-weight: 700; padding: 10px 0; animation: hd-fade-in var(--t-base) var(--e-standard) both; }
+
+/* ---- Reduced motion: opacity only, identical timings ---- */
+@media (prefers-reduced-motion: reduce) {
+  .me-confetti { display: none; }
+  /* The siren keeps its 3 beats but at a gentle peak. */
+  .me-siren::before { animation-name: me-siren-soft; }
+  @keyframes me-siren-soft { 0%, 33%, 66%, 100% { opacity: 0; } 16%, 50%, 83% { opacity: 0.4; } }
+  @keyframes me-fill { from { opacity: 0.12; } to { opacity: 1; } }
+  @keyframes me-grow { from { opacity: 0; } }
+  .me-sem-row { transition: none; }
+  .b-done .me-sem-row { animation: me-refade var(--t-drama) var(--e-standard) both; }
+}
+@keyframes me-refade { from { opacity: 0; } }

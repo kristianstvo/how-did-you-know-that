@@ -47,10 +47,36 @@ npm run dev
   subject slot (session token, ≥5s request spacing, background prefetch of the
   next match) with the subject-tagged local pack (`localPack.ts`) filling any
   slot that isn't ready or errors (offline badge).
-- **`client/src/ui.ts` / `main.ts` / `style.css`** — the eight screens,
-  mobile-first portrait.
+- **`client/src/screens/`** + **`client/src/styles/`** — one module and one
+  stylesheet per screen, mobile-first portrait. `main.ts` routes screens;
+  `render.ts` morphs the DOM (idiomorph) and runs View Transitions between
+  screens.
+- **`shared/choreo.ts`** — the reveal show: beat timelines (pencils down →
+  slap avatars → drumroll → answer → ✓/✗ and times → evidence callout → grade
+  book → ACCUSE) as pure functions of public data, scaled by stakes.
+- **`client/src/clock.ts`** — shared server clock, so every phone hits each
+  beat at the same moment.
+- **`shared/evidence.ts`** — picks the reveal callout (lone correct, against
+  the crowd, lightning, streak, near the line, CLEARED, …) and keeps the case
+  file.
 - **`shared/protocol.ts`** — types shared by relay, engine, and player UI;
   also the single table of default settings and session point values.
+
+## Show direction and proofs
+
+The design rationale, beat sheet, motion language and simulation findings are
+in `08-reveal-direction.md`; the playtest procedure is in
+`09-playtest-checklist.md`.
+
+```bash
+npm run test:e2e     # build, protocol check, then Playwright: parity, sync, perf, a11y (uses Edge)
+npm run sim          # seeded headless match simulation, writes sim/out/
+npm run typecheck
+```
+
+Recorded matches replay at `/#/fixture/<caught|graduated|topscore|detention>`
+with a scrubber. Add `?as=cheater` to watch from the cheater's seat, `&mask=1`
+for the same seat as an innocent, and `&host=1` for host controls.
 
 ## Known accepted limitations (spec 00)
 

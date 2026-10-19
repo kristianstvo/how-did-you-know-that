@@ -1,0 +1,44 @@
+/* Screen-to-screen View Transitions — one per screen change, never per
+   broadcast (render.ts). The shell sets html[data-vt] to the kind. Reduced
+   motion always uses "fade". */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--t-scene);
+  animation-timing-function: var(--e-standard);
+}
+
+/* slide: lobby ↔ home, matchEnd → lobby: the page turns */
+html[data-vt="slide"]::view-transition-old(root) { animation-name: vt-out-left; animation-timing-function: var(--e-exit); }
+html[data-vt="slide"]::view-transition-new(root) { animation-name: vt-in-right; animation-timing-function: var(--e-enter); }
+
+/* takeover: vote / match end — the new screen slams over a darkened room */
+html[data-vt="takeover"]::view-transition-old(root) { animation: vt-dim var(--t-scene) var(--e-standard) both; }
+html[data-vt="takeover"]::view-transition-new(root) { animation: vt-slam var(--t-scene) var(--e-impact) both; }
+
+/* flip: question → reveal — the quiz sheet is turned in for grading */
+html[data-vt="flip"]::view-transition-old(root) { animation: vt-hand-in var(--t-base) var(--e-exit) both; }
+html[data-vt="flip"]::view-transition-new(root) { animation: vt-in-up var(--t-scene) var(--e-enter) both; }
+
+/* rise: role / next question — a fresh sheet slides up */
+html[data-vt="rise"]::view-transition-old(root) { animation: vt-fade-out var(--t-base) var(--e-exit) both; }
+html[data-vt="rise"]::view-transition-new(root) { animation: vt-in-up var(--t-scene) var(--e-enter) both; }
+
+/* fade: vote result ↔ reveal, and everything under reduced motion */
+html[data-vt="fade"]::view-transition-old(root) { animation: vt-fade-out var(--t-base) var(--e-standard) both; }
+html[data-vt="fade"]::view-transition-new(root) { animation: vt-fade-in var(--t-base) var(--e-standard) both; }
+
+/* The browser's default group animation interpolates a transform; with a
+   full-page root it's a no-op visually, but reduced motion must not move. */
+html[data-vt="fade"]::view-transition-group(root) { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(root) { animation: none; }
+}
+
+@keyframes vt-out-left { to { opacity: 0; transform: translateX(-12%); } }
+@keyframes vt-in-right { from { opacity: 0; transform: translateX(12%); } }
+@keyframes vt-in-up { from { opacity: 0; transform: translateY(6%); } }
+@keyframes vt-hand-in { to { opacity: 0; transform: translateY(-4%) scale(0.96); } }
+@keyframes vt-dim { to { opacity: 0.15; transform: scale(0.97); } }
+@keyframes vt-slam { from { opacity: 0; transform: scale(1.08); } }
+@keyframes vt-fade-out { to { opacity: 0; } }
+@keyframes vt-fade-in { from { opacity: 0; } }

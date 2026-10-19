@@ -1,0 +1,150 @@
+/* 6. Vote — a takeover (08 §4). Entrances are pinned to the shared clock via
+   --d (set at insertion, see vote.ts); every box is reserved from frame 0;
+   only transform and opacity move. */
+/* Stamps start at scale 2.2: clip them to the screen (+ the #app gutter) so a
+   transient overshoot never widens a phone's layout viewport. overflow:clip
+   is not a scroll container, so nothing sticky breaks. */
+.screen-vote { position: relative; overflow: clip; overflow-clip-margin: 14px; }
+
+.vo-top {
+  display: block; height: 34px; line-height: 34px; padding-right: 52px;
+  font-family: var(--hand); font-weight: 900; font-size: 0.8rem; letter-spacing: 0.5px; color: var(--dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ---- The raised hand: big avatar + rubber stamp ---- */
+.vo-accuser {
+  display: flex; align-items: center; justify-content: center; gap: 16px;
+  height: 100px; margin-bottom: 2px;
+  animation: vo-thud 560ms linear var(--d, 0ms) backwards;
+}
+.vo-bigav {
+  position: relative; flex: none; width: 72px; height: 72px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 2.3rem;
+  background: rgba(244, 241, 232, 0.1); border: 3px solid var(--accent);
+  animation: hd-pop var(--t-stamp) var(--e-standard) var(--d, 0ms) backwards;
+}
+.vo-stamp {
+  min-width: 0; max-width: calc(100% - 88px);
+  display: flex; flex-direction: column; align-items: flex-start;
+  padding: 5px 12px 7px; border: 3px solid var(--accent); border-radius: 8px;
+  background: rgba(255, 107, 107, 0.08); color: var(--accent);
+  font-family: var(--hand); font-weight: 900; text-transform: uppercase; line-height: 1.12;
+  transform: rotate(-4deg); /* = hd-stamp's resting pose, so reduced motion matches */
+  animation: hd-stamp var(--t-stamp) var(--e-standard) var(--d, 0ms) backwards;
+}
+.vo-stamp-name { font-size: 1.45rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vo-stamp-line { font-size: 0.98rem; letter-spacing: 1.5px; }
+
+.vo-sub {
+  text-align: center; font-family: var(--hand); color: var(--dim); font-size: 0.92rem; line-height: 1.35;
+  min-height: 1.35em; margin: 0 0 6px;
+  animation: hd-enter-up var(--t-base) var(--e-enter) var(--d, 0ms) backwards;
+}
+
+/* ---- Countdown: scaleX on the compositor + the [data-count] number ---- */
+.vo-clock {
+  display: flex; align-items: center; gap: 10px; height: 34px;
+  animation: hd-fade-in var(--t-base) var(--e-standard) var(--d, 0ms) backwards;
+}
+.vo-track { position: relative; flex: 1; height: 10px; border-radius: 99px; overflow: hidden; background: var(--card2); border: 1px solid var(--chalk-line); }
+.vo-drain {
+  position: absolute; inset: 0; border-radius: inherit; background: var(--accent2); transform-origin: left center;
+  animation: vo-drain var(--dur, 20000ms) linear var(--d, 0ms) both;
+}
+.vo-drain::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--accent); opacity: 0; transition: opacity var(--t-base) var(--e-standard); }
+.b-urgent .vo-drain::after { opacity: 1; }
+/* A settle must never zero the countdown: keep its real timing. */
+#app.settle .vo-drain { animation-duration: var(--dur, 20000ms) !important; animation-delay: var(--d, 0ms) !important; }
+.vo-num { flex: none; width: 40px; text-align: right; font-family: var(--hand); font-weight: 900; font-size: 1.45rem; color: var(--accent2); font-variant-numeric: tabular-nums; }
+.b-urgent .vo-num { color: var(--accent); animation: hd-pulse 1s var(--e-standard) infinite; }
+.b-closed .vo-num { animation: none; }
+
+/* ---- Candidate grid: 2 columns, dense cells, seat-order cascade ---- */
+.vo-cap {
+  display: flex; justify-content: space-between; min-height: 1.2em; font-size: 0.68rem; font-weight: 700; color: var(--dim); letter-spacing: 0.4px; margin: 4px 2px 5px; text-transform: uppercase;
+  animation: hd-fade-in var(--t-base) var(--e-standard) var(--d, 0ms) backwards;
+}
+.vo-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+.vo-wrap {
+  position: relative; display: flex; min-width: 0;
+  animation: hd-enter-up var(--t-base) var(--e-enter) var(--d, 0ms) backwards;
+  transition: opacity var(--t-base) var(--e-standard);
+}
+.vo-cell {
+  position: relative; flex: 1; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto;
+  align-content: center; column-gap: 8px; row-gap: 3px; min-height: 66px; min-width: 0;
+  padding: 7px 9px; text-align: left; border-radius: 14px;
+  background: var(--card); border: 2.5px dashed var(--chalk-line);
+  transition: transform var(--t-tap) var(--e-standard);
+}
+.roomy .vo-cell { min-height: 76px; }
+.vo-cell:active:not(:disabled) { transform: scale(0.97); }
+.vo-cell:disabled { opacity: 1; cursor: default; }
+.vo-cell .vo-av { grid-row: 1 / span 2; width: 34px; height: 34px; font-size: 1.15rem; align-self: center; }
+.vo-nm { grid-column: 2; font-weight: 800; font-size: 0.95rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vo-tags { grid-column: 3; display: inline-flex; gap: 3px; align-items: center; }
+.vo-hand-tag { font-size: 0.85rem; line-height: 1; }
+.vo-you { font-size: 0.56rem; font-weight: 900; letter-spacing: 0.5px; padding: 1px 5px; border-radius: 5px; background: var(--ink); color: var(--bg); font-family: var(--hand); }
+.vo-meta { grid-column: 2 / span 2; display: flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; white-space: nowrap; }
+.vo-pick { flex: none; font-size: 0.74rem; font-weight: 800; font-variant-numeric: tabular-nums; padding: 0 5px; border-radius: 6px; line-height: 1.45; }
+.vo-pick.ok { color: var(--good); border: 1.5px solid var(--good); }
+.vo-pick.bad { color: var(--bad); border: 1.5px dashed var(--bad); }
+.vo-pick.none { color: var(--dim); border: 1.5px dotted var(--chalk-line); }
+.vo-meta .exhibits { gap: 2px; }
+.vo-meta .exhibit { font-size: 0.82rem; }
+
+/* CLEARED: the word in a stamp + "proven innocent" — still votable */
+.vo-cell.cleared { border: 3px double var(--cleared); }
+.vo-clear-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 7px; margin-top: 3px; min-width: 0; overflow: hidden; }
+.vo-cleared {
+  flex: none; font-family: var(--hand); font-weight: 900; font-size: 0.66rem; letter-spacing: 1px; color: var(--cleared);
+  border: 2px solid var(--cleared); border-radius: 4px; padding: 0 5px; transform: rotate(-4deg);
+}
+.vo-proven { font-size: 0.62rem; font-weight: 800; line-height: 1.05; color: var(--cleared); text-transform: uppercase; letter-spacing: 0.3px; }
+.vo-legend { margin: 6px 2px 0; font-size: 0.7rem; color: var(--cleared); font-weight: 700; text-align: center; }
+
+/* Your vote: a chalk circle stamped round the cell; everyone else dims */
+.vo-circle {
+  position: absolute; inset: -7px -6px; width: calc(100% + 12px); height: calc(100% + 14px); overflow: visible; pointer-events: none;
+  transform: rotate(-4deg); animation: hd-stamp var(--t-stamp) var(--e-standard) both;
+}
+.vo-circle path { fill: none; stroke: var(--accent2); stroke-width: 3.2; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.vo-cell.picked { border-style: solid; border-color: var(--accent2); background: var(--card2); }
+.has-voted .vo-wrap:not(.picked) { opacity: 0.4; }
+.no-rights .vo-wrap { opacity: 0.72; }
+
+/* ---- Handed-in strip: who voted, never for whom ---- */
+.vo-handin { margin-top: 12px; animation: hd-fade-in var(--t-base) var(--e-standard) var(--d, 0ms) backwards; }
+.vo-handin-head { display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 800; color: var(--dim); text-transform: uppercase; letter-spacing: 0.4px; margin: 0 2px 5px; }
+.vo-handin-n { font-variant-numeric: tabular-nums; color: var(--ink); }
+.vo-slots { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; min-height: 30px; }
+.vo-slot {
+  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  border: 2px dashed var(--chalk-line);
+}
+.vo-slot.in { border-style: solid; border-color: var(--good); }
+.vo-in { font-size: 1rem; line-height: 1; animation: hd-pop var(--t-stamp) var(--e-standard) both; }
+
+.vo-status {
+  text-align: center; color: var(--dim); font-weight: 700; font-family: var(--hand); font-size: 0.92rem; min-height: 2.7em; margin-top: 10px; line-height: 1.35;
+  animation: hd-fade-in var(--t-base) var(--e-standard) var(--d, 0ms) backwards;
+}
+
+@keyframes vo-drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+/* Stamp impact rattles the row (high stakes): still until the stamp lands. */
+@keyframes vo-thud {
+  0%, 34% { transform: none; }
+  46% { transform: translateX(-3px); }
+  58% { transform: translateX(3px); }
+  70% { transform: translateX(-2px); }
+  82% { transform: translateX(2px); }
+  100% { transform: none; }
+}
+
+/* Reduced motion: opacity only, identical timings. */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes vo-thud { to { opacity: 1; } }
+  @keyframes vo-drain { from { opacity: 1; } to { opacity: 0.15; } }
+  .vo-cell:active:not(:disabled) { transform: none; }
+}
