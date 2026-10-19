@@ -66,14 +66,15 @@ function confetti(from: number, count: number, beatDelay: number): string {
   return out;
 }
 
+const STRUCK_OUT = { kick: "🚨 Too many wrong detentions 🚨", title: "The cheater graduated", sub: "The class kept sending innocents to detention." };
 const BANNER: Record<Variant, { kick: string; title: string; sub: string }> = {
   caught: { kick: "🎉 Class dismissed", title: "Cheater caught!", sub: "The class vote sent them to the principal." },
   graduated: { kick: "🚨 Alarm bells 🚨", title: "The cheater graduated", sub: "They crossed the line. Nobody stopped them." },
   top: { kick: "🔔 Final bell", title: "Top of the class", sub: "Nobody graduated early. Highest score wins." },
 };
 
-function banner(v: Variant): string {
-  const t = BANNER[v];
+function banner(v: Variant, struckOut = false): string {
+  const t = struckOut ? STRUCK_OUT : BANNER[v];
   return `<header class="me-banner" id="me-banner" role="alert">
     <div class="me-kick">${t.kick}</div>
     <h1 class="me-title">${t.title}</h1>
@@ -100,6 +101,28 @@ function hero(ctx: RenderCtx, v: Variant, b: Set<MatchEndBeat>, drum: { at: numb
     : `<span class="me-redact" id="me-redact" aria-hidden="true"></span><span class="me-sr">not revealed yet</span>`;
   const photo = `<div class="me-face">${face}${stamp}</div>`;
 
+  if (v === "graduated" && e.struckOut) {
+    // The final blow was a vote, not an answer: the last innocent sent away.
+    const vr = m.voteResult;
+    const sent = vr?.banishedId ? s.players.find((p) => p.id === vr.banishedId) : undefined;
+    const accuser = vr ? s.players.find((p) => p.id === vr.accuserId) : undefined;
+    const blow = b.has("finalBlow");
+    const line1 = sent ? `<span class="me-fx">${sent.avatar} <b class="me-drop-nm" title="${esc(sent.name)}">${esc(sent.name)}</b> was innocent <b class="me-no">✗</b></span>` : "";
+    const line2 = `<span class="me-fx">${"✗".repeat(Math.max(1, m.wrongDetentions))} strike ${m.wrongDetentions} · <b>${cheater?.score ?? 0}</b> 🎓 <span class="me-dimtxt">line ${m.threshold}</span></span>`;
+    const story = `${accuser ? `🙋 ${esc(accuser.name)} raised a hand, and the` : "The"} class sent ${sent ? esc(sent.name) : "an innocent"} to detention.`;
+    return `<div class="card me-hero me-blow" id="me-hero" role="status" aria-live="polite" aria-atomic="false">
+      <div class="me-hk">💥 Final blow · Q${m.questionIdx + 1} vote</div>
+      <p class="me-qtext">${blow ? `<span id="me-qtext">${story}</span>` : ""}</p>
+      <div class="me-id">
+        ${photo}
+        <div class="me-who">
+          <div class="me-name-slot">${name}</div>
+          <div class="me-blow-l">${blow ? `<span class="me-blow-in" id="me-blow-1" style="--i:0">${line1}</span>` : ""}</div>
+          <div class="me-blow-l">${blow ? `<span class="me-blow-in" id="me-blow-2" style="--i:1">${line2}</span>` : ""}</div>
+        </div>
+      </div>
+    </div>`;
+  }
   if (v === "graduated") {
     const q = m.question;
     const r = m.reveal;
@@ -321,7 +344,7 @@ export const matchEnd: Screen = {
         : "";
     return `<section class="screen screen-matchEnd v-${v} ${[...b].map((x) => `b-${x}`).join(" ")}" aria-label="Period ${s.matchNumber} results">
       ${siren}${party}
-      ${banner(v)}
+      ${banner(v, !!s.match!.end!.struckOut)}
       ${hero(ctx, v, b, drum)}
       ${reportCard(ctx, b)}
       ${caseFileRecap(ctx, b)}

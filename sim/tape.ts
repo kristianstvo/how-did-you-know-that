@@ -47,14 +47,18 @@ const WANTS: Want[] = [
     test: (r) => endOf(r).reason === "cheater_threshold" && votes(r).some((v) => v.newThreshold !== null),
   },
   {
-    // Rare at the default 1400 line (a careful cheater usually graduates), so
-    // this one is recorded with the lobby line at 2000.
     name: "topscore",
-    description: "Graduation line 2000: nobody graduates; top of the class takes it at Q10.",
+    description: "Nobody graduates; top of the class takes it at Q10.",
     strategy: "careful",
     policy: "scoreAware",
-    threshold: 2000,
     test: (r) => endOf(r).reason === "top_score" && reveals(r).length === 10,
+  },
+  {
+    name: "struckout",
+    description: "Two wrong detentions: the cheater graduates on strikes.",
+    strategy: "careful",
+    policy: "score",
+    test: (r) => !!endOf(r).struckOut,
   },
   {
     name: "detention",

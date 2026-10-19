@@ -25,7 +25,8 @@ Tie for most votes = **nobody is banished**, the burned token stays burned. A fa
 - They **keep answering questions and scoring**, but permanently lose voting rights and accusation rights for the rest of the match.
 - They remain eligible to win the match on points at Q10 (04) — a redemption arc.
 - The cheater's threshold drops by 200, announced loudly (02).
-- Match continues.
+- It is a **strike** (v0.4): at the strike limit (default 2) the cheater graduates on the spot (02).
+- Otherwise the match continues.
 
 ## Edge cases
 - If all remaining tokens are burned, no further votes are possible; the match resolves via threshold or Q10.

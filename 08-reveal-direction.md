@@ -20,6 +20,10 @@ the data and research show, and how every screen plays as a result.
 
 ## 1. What the data says
 
+> **Since v0.4** the rules changed: two strikes (the 2nd wrong detention
+> graduates the cheater) and a default line of 2100. The numbers below are for
+> the v0.2 rules; the decision and its evidence are in `PRODUCT.md`.
+
 These numbers come from 19,000 simulated matches across 95 scenarios, run
 through the real engine and protocol. The player model is grounded in Kahoot
 and psychometrics data (`design/research-human-quiz-behavior.md`): lognormal

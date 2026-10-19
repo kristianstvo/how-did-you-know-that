@@ -51,7 +51,7 @@ const RULES = [
   "The class answers the same <b>10 questions</b>, each from a different school subject (100 → 200 → 400 points). One classmate is secretly <b>the cheater</b> and sees the correct answers.",
   "The cheater <b>graduates instantly</b> by reaching the public score line on the grade book. Everyone else wins by catching them first.",
   "After every question, everyone's picks and <b>answer times</b> go up on the board. Suspicious? Each player holds <b>one accusation</b> per period — raise your hand during a reveal to force a vote. Plurality goes to <b>detention</b>.",
-  "Detention for the cheater → class wins. Detention for an innocent → they keep answering but lose their vote, and the cheater's graduation line <b>drops by {drop}</b>. Ties send nobody.",
+  "Detention for the cheater → class wins. Detention for an innocent → they keep answering but lose their vote, and the cheater's graduation line <b>drops by {drop}</b>.{strikes} Ties send nobody.",
   "Anyone who reaches the line and <b>no siren goes off</b> is proven innocent — <b>cleared</b>.",
   "If nobody wins by question 10, <b>top of the class</b> takes the period — whoever they are. Semester points add up across periods.",
 ];
@@ -64,6 +64,8 @@ export const lobby: Screen = {
     const between = s.matchNumber > 0;
     const hour = ((7 + s.matchNumber) % 12) + 1; // 8:59 — one minute to the bell
     const letters = [...s.roomCode];
+    const k = s.settings.strikes;
+    const strikesRule = k > 0 ? ` <b>${k === 1 ? "One wrong detention" : `${k} wrong detentions`}</b> and the cheater graduates on the spot.` : "";
 
     const rows = s.players
       .map((p, i) => {
@@ -144,7 +146,7 @@ export const lobby: Screen = {
 
     <details class="how" id="lb-how" ${howOpen ? "open" : ""}>
       <summary><span><span aria-hidden="true">📖 </span>How to play</span><span class="lb-chev" aria-hidden="true">▾</span></summary>
-      ${RULES.map((r, i) => `<p style="--i:${i}">${r.replace("{drop}", String(s.settings.thresholdDrop))}</p>`).join("")}
+      ${RULES.map((r, i) => `<p style="--i:${i}">${r.replace("{drop}", String(s.settings.thresholdDrop)).replace("{strikes}", strikesRule)}</p>`).join("")}
     </details>
 
     ${
@@ -158,6 +160,8 @@ export const lobby: Screen = {
               <input id="set-line" data-setting="threshold" type="number" inputmode="numeric" min="200" max="2300" step="100" value="${s.settings.threshold}" />
               <label for="set-drop">Drop per wrong detention<small>the line falls when an innocent is sent</small></label>
               <input id="set-drop" data-setting="thresholdDrop" type="number" inputmode="numeric" min="0" max="800" step="50" value="${s.settings.thresholdDrop}" />
+              <label for="set-strikes">Strikes<small>wrong detentions before the cheater graduates (0 = off)</small></label>
+              <input id="set-strikes" data-setting="strikes" type="number" inputmode="numeric" min="0" max="3" value="${s.settings.strikes}" />
             </div>
           </div>
           ${between ? `<button class="btn ghost lb-end" id="lb-end" data-action="endSession">🏁 End the school day · final report cards</button>` : ""}`
@@ -165,6 +169,7 @@ export const lobby: Screen = {
             <span class="lb-rule">⏱ <b>${s.settings.questionTimerMs / 1000}s</b> per question</span>
             <span class="lb-rule">🎓 line <b>${s.settings.threshold}</b></span>
             <span class="lb-rule">⬇ <b>−${s.settings.thresholdDrop}</b> per wrong detention</span>
+            ${k > 0 ? `<span class="lb-rule">✗ <b>${k}</b> strike${k === 1 ? "" : "s"} and they graduate</span>` : ""}
           </div>`
     }
 

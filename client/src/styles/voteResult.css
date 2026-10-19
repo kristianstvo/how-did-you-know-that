@@ -209,3 +209,7 @@
   .vr-gb-mover.rm-new { display: block; opacity: 0; }
   .b-drop .vr-gb-mover.rm-new { opacity: 1; }
 }
+
+/* Strikes (v0.4) */
+.vr-strike { color: var(--bad); font-weight: 900; white-space: nowrap; }
+.vr-note.vr-strikeout { color: var(--bad); font-weight: 900; }

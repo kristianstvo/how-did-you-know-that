@@ -210,6 +210,14 @@ export const reveal: Screen = {
       })
       .join("");
 
+    // ---- Strikes: one chalk box per allowed wrong detention, ✗ when used ----
+    const k = s.settings.strikes;
+    const w = m.wrongDetentions;
+    const strikeBoxes =
+      k > 0
+        ? `<span class="gb-strikes" role="img" aria-label="Wrong detentions: ${w} of ${k}" title="${w} of ${k} strikes. At ${k}, the cheater graduates">${Array.from({ length: k }, (_, i) => `<i class="${i < w ? "used" : ""}">${i < w ? "✗" : ""}</i>`).join("")}</span>`
+        : "";
+
     // ---- ACCUSE dock ----
     const armed = b.has("accuse");
     const blocked = !self ? "Watching" : self.banished ? "In detention" : self.tokenUsed ? "Accusation used ✋" : !self.votingRights ? "No accusing" : "";
@@ -269,7 +277,7 @@ export const reveal: Screen = {
     ${lastBell}
 
     <div class="gb" id="gb" role="group" aria-label="Grade book">
-      <div class="gb-head"><span class="gb-title">📋 Grade book</span></div>
+      <div class="gb-head"><span class="gb-title">📋 Grade book</span>${strikeBoxes}</div>
       <div class="gb-rows" style="height:${players.length * rowH}px">
         ${gbRows}
         <div class="gb-line" aria-hidden="true" style="--line:${share(m.threshold / max)}"><span class="gb-line-lbl">🎓 line ${m.threshold}</span></div>

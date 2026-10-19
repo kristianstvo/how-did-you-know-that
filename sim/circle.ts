@@ -16,10 +16,12 @@ const STRATEGIES: Strategy[] = ["naive", "mimic", "careful", "sprint"];
 const SIZES = [4, 5, 6, 8, 10];
 const STARTS = [0, 3, 6]; // sweep begins in the reveal after Q1, Q4, Q7
 
-const RULES: Record<string, RuleVariant> = {
-  current: {},
-  onePerReveal: { onePerReveal: true },
-  onePerRevealFromQ4: { onePerReveal: true, accuseFromQ: 3 },
+// "current" here means the rules before v0.4 (no strike-out); v0.4 shipped
+// strikes2 as the default.
+const RULES: Record<string, { rules?: RuleVariant; strikes: number }> = {
+  current: { strikes: 0 },
+  onePerReveal: { rules: { onePerReveal: true }, strikes: 0 },
+  onePerRevealFromQ4: { rules: { onePerReveal: true, accuseFromQ: 3 }, strikes: 0 },
   strikes2: { strikes: 2 },
 };
 
@@ -66,7 +68,7 @@ async function run(sc: Scenario, rule: string, start: number): Promise<Report> {
 const pct = (x: number) => `${Math.round(x * 100)}%`.padStart(4);
 
 // 1. The sweep, every rule × policy × start × room size × cheater strategy.
-for (const [rule, rules] of Object.entries(RULES)) {
+for (const [rule, { rules, strikes }] of Object.entries(RULES)) {
   for (const policy of ["circle", "circleInformed"] as Policy[]) {
     for (const start of STARTS) {
       const line: string[] = [];
@@ -74,7 +76,7 @@ for (const [rule, rules] of Object.entries(RULES)) {
         const wins: number[] = [];
         for (const strategy of STRATEGIES) {
           // Same seed per room size across rules, starts and policies: paired comparisons.
-          const sc: Scenario = { name: `${rule}-${policy}-q${start + 1}-n${n}-${strategy}`, players: n, accuracy: "mid", strategy, policy, matches: MATCHES, seed: hashSeed(SEED, n), mode: "clients", sweepFrom: start, rules };
+          const sc: Scenario = { name: `${rule}-${policy}-q${start + 1}-n${n}-${strategy}`, players: n, accuracy: "mid", strategy, policy, matches: MATCHES, seed: hashSeed(SEED, n), mode: "clients", sweepFrom: start, rules, strikes };
           wins.push((await run(sc, rule, start)).cheaterWinRate);
         }
         line.push(`${n}p ${pct(Math.max(...wins))}`);
@@ -85,17 +87,17 @@ for (const [rule, rules] of Object.entries(RULES)) {
 }
 
 // 2. Normal play under each rule: does the fix hurt honest deduction?
-for (const [rule, rules] of Object.entries(RULES)) {
+for (const [rule, { rules, strikes }] of Object.entries(RULES)) {
   for (const threshold of [1400, 2000]) {
     const out: string[] = [];
     for (const policy of ["scoreAware", "evidence"] as Policy[]) {
       for (const strategy of STRATEGIES) {
-        const sc: Scenario = { name: `${rule}-normal-${policy}-n6-${strategy}-t${threshold}`, players: 6, accuracy: "mid", strategy, policy, matches: MATCHES, seed: hashSeed(SEED, 6, "normal"), mode: "clients", threshold, rules };
+        const sc: Scenario = { name: `${rule}-normal-${policy}-n6-${strategy}-t${threshold}`, players: 6, accuracy: "mid", strategy, policy, matches: MATCHES, seed: hashSeed(SEED, 6, "normal"), mode: "clients", threshold, rules, strikes };
         out.push(`${policy[0]}/${strategy} ${pct((await run(sc, rule, -1)).cheaterWinRate)}`);
       }
     }
     for (const n of [4, 6, 8]) {
-      const sc: Scenario = { name: `${rule}-bots-n${n}-t${threshold}`, players: n, accuracy: "mid", strategy: "mimic", policy: "score", matches: MATCHES, seed: hashSeed(SEED, n, "bots"), mode: "builtinBots", threshold, rules };
+      const sc: Scenario = { name: `${rule}-bots-n${n}-t${threshold}`, players: n, accuracy: "mid", strategy: "mimic", policy: "score", matches: MATCHES, seed: hashSeed(SEED, n, "bots"), mode: "builtinBots", threshold, rules, strikes };
       out.push(`bots${n} ${pct((await run(sc, rule, -1)).cheaterWinRate)}`);
     }
     console.log(`${rule.padEnd(19)} normal play, line ${threshold}: ${out.join("  ")}`);

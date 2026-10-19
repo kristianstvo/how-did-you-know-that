@@ -88,7 +88,7 @@ async function open(browser: Browser, url: string) {
   return { ctx, page };
 }
 
-for (const name of ["caught", "graduated", "topscore", "detention"]) {
+for (const name of ["caught", "graduated", "topscore", "detention", "struckout"]) {
   test(`parity: cheater vs masked cheater — ${name}`, async ({ browser }) => {
     const times = playheads(name);
     // Open both at the same moment so their entrance animations have equal age.

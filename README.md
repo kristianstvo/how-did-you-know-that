@@ -100,9 +100,11 @@ for the same seat as an innocent, and `&host=1` for host controls.
 
 ## Rules knobs
 
-Host-editable in the lobby: question timer, cheater threshold (default 1400),
-threshold drop per wrong banishment (default 200). Session point values live in
-`SESSION_POINTS` in `shared/protocol.ts`.
+Host-editable in the lobby: question timer, cheater threshold (default 2100),
+threshold drop per wrong banishment (default 200), and strikes: wrong
+detentions before the cheater graduates (default 2, 0 = off). Session point
+values live in `SESSION_POINTS` in `shared/protocol.ts`. Product decisions
+and the version history: `PRODUCT.md`, `CHANGELOG.md`.
 
 One deliberate interpretation of spec 03: banishment votes may target any
 **non-banished** player ("any player" in the spec, minus already-banished ones,

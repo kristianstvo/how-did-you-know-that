@@ -448,6 +448,7 @@ root.addEventListener("change", (ev) => {
   if (key === "questionTimerMs") session.engine.updateSettings({ questionTimerMs: Math.max(5, Math.min(60, num)) * 1000 });
   else if (key === "threshold") session.engine.updateSettings({ threshold: Math.max(200, num) });
   else if (key === "thresholdDrop") session.engine.updateSettings({ thresholdDrop: Math.max(0, num) });
+  else if (key === "strikes") session.engine.updateSettings({ strikes: Math.max(0, Math.min(3, Math.round(num))) });
 });
 
 function handIn(): void {

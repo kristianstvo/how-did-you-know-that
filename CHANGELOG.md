@@ -19,6 +19,41 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.4.0 — Two strikes · 2026-10-20 00:12
+
+**Why:** two balance problems, both measured. (1) A class could skip the whole
+game: send everyone to detention in turn right after Q1 and catch the cheater
+50–70% of the time with no deduction, because the falling line can't hurt a
+cheater with no points yet. (2) At the old default line (1400) a cheater who
+hides won 81–97% of simulated matches. Decision log: `PRODUCT.md`.
+
+**Added**
+- **Strikes:** every wrong detention is a strike. The **second strike makes the
+  cheater graduate on the spot**, whatever the score. Shown everywhere it
+  matters:
+  - chalk strike boxes next to the grade book
+  - "⚠ Last strike" on the vote screen
+  - "✗ strike 1 of 2" on the detention stamp
+  - its own ending, "Too many wrong detentions", with the fatal vote as the
+    final blow
+- A **Strikes** class rule for the host (0 turns it off), and a strikes chip for
+  guests.
+- `sim/tune-line.ts` picks the default line, and a new `struckout` replay
+  fixture is parity-tested.
+
+**Changed**
+- **Default graduation line 1400 → 2100.**
+- Bots and simulated players are more careful on the last strike.
+- Rules text, specs 02/03 and the playtest checklist updated.
+
+**Evidence**
+- A cheater who hides wins 34–56% at 6 players (target 35–55%), 31–60% at 4
+  or 8; obvious cheaters are caught (6–54%).
+- The blind sweep now loses: the cheater wins 62–80% in rooms of 5–10.
+- Deducing classes strike out in ≤3% of matches.
+- 30/30 browser tests, protocol and relay checks pass; parity has 0
+  differences across 5 matches.
+
 ## v0.3.0 — Phone play · 2026-10-19 23:55
 
 **Why:** the game is played on phones, in hand, often on cellular, and a phone

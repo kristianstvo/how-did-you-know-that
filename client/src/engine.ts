@@ -127,6 +127,7 @@ export class HostEngine {
   private botCheaterCareful = false;
   private qIdx = 0;
   private threshold = 0;
+  private wrongDetentions = 0; // strikes this match (settings.strikes ends it)
   private usedFallback = false;
   private questionDeadline = 0;
   private answers: Record<string, AnswerRecord>[] = []; // per question: playerId -> record
@@ -402,7 +403,10 @@ export class HostEngine {
         .sort((a, b) => b.s - a.s);
       if (!ranked.length) continue;
       const lead = ranked[0].s - (ranked[1]?.s ?? 0);
-      if (ranked[0].s >= BOT_TUNING.accuseAt && lead >= BOT_TUNING.minLead && Math.random() < BOT_TUNING.accuseChance) {
+      // On the last strike a wrong detention ends the match: be surer.
+      const lastStrike = this.settings.strikes > 0 && this.wrongDetentions === this.settings.strikes - 1;
+      const need = BOT_TUNING.accuseAt + (lastStrike ? 1 : 0);
+      if (ranked[0].s >= need && lead >= BOT_TUNING.minLead && Math.random() < BOT_TUNING.accuseChance * (lastStrike ? 0.5 : 1)) {
         this.after(wait + 1200 + Math.random() * 3500, () => {
           if (epoch !== this.botEpoch) return; // superseded (host skipped the show)
           const fresh = this.players.find((p) => p.id === bot.id);
@@ -458,6 +462,7 @@ export class HostEngine {
     this.matchNumber++;
     this.qIdx = 0;
     this.threshold = this.settings.threshold;
+    this.wrongDetentions = 0;
     this.answers = Array.from({ length: QUESTIONS_PER_MATCH }, () => ({}));
     this.reveal = null;
     this.vote = null;
@@ -681,6 +686,7 @@ export class HostEngine {
       banished.banished = true;
       banished.votingRights = false; // keeps answering & scoring, loses vote/accuse rights
       this.threshold -= this.settings.thresholdDrop; // loud public drop (spec 02)
+      this.wrongDetentions++;
       newThreshold = this.threshold;
       for (const [voterId, targetId] of Object.entries(votes)) {
         if (targetId === banishedId) this.addSessionPoints(voterId, SESSION_POINTS.votedToBanishInnocent);
@@ -703,6 +709,12 @@ export class HostEngine {
     if (!this.voteResult) return;
     if (this.voteResult.wasCheater) {
       this.endMatch("cheater_banished");
+      return;
+    }
+    // Strike out (v0.4): this many wrong detentions and the cheater graduates
+    // on the spot, whatever the score.
+    if (this.voteResult.banishedId && this.settings.strikes > 0 && this.wrongDetentions >= this.settings.strikes) {
+      this.endMatch("cheater_threshold", true);
       return;
     }
     // Threshold may have dropped to/below the cheater's public score —
@@ -734,7 +746,7 @@ export class HostEngine {
 
   // ---------------- Match end & session (spec 04) ----------------
 
-  private endMatch(reason: MatchEndReason): void {
+  private endMatch(reason: MatchEndReason, struckOut = false): void {
     let winnerIds: string[] = [];
     if (reason === "cheater_banished") {
       winnerIds = this.players.filter((p) => p.id !== this.cheaterId).map((p) => p.id);
@@ -749,7 +761,7 @@ export class HostEngine {
       for (const id of winnerIds) this.addSessionPoints(id, SESSION_POINTS.topScoreAtQ10);
       this.addSessionPoints(this.cheaterId, SESSION_POINTS.cheaterSurvivedToQ10);
     }
-    this.end = { reason, cheaterId: this.cheaterId, winnerIds, sessionDelta: { ...this.matchDelta } };
+    this.end = { reason, ...(struckOut ? { struckOut: true } : {}), cheaterId: this.cheaterId, winnerIds, sessionDelta: { ...this.matchDelta } };
     this.setPhase("matchEnd");
     this.broadcast();
     this.sendSecrets();
@@ -809,6 +821,7 @@ export class HostEngine {
             questionIdx: this.qIdx,
             questionCount: QUESTIONS_PER_MATCH,
             threshold: this.threshold,
+            wrongDetentions: this.wrongDetentions,
             question: showQuestion
               ? {
                   text: q.text,

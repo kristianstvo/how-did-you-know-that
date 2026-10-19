@@ -434,3 +434,11 @@
 @media (max-width: 359px) {
   .screen-reveal { --bar-w: 64px; }
 }
+
+/* Strikes (v0.4): one chalk box per allowed wrong detention, ✗ once used. */
+.screen-reveal .gb-strikes { display: inline-flex; gap: 3px; margin-left: 8px; vertical-align: middle; }
+.screen-reveal .gb-strikes i {
+  display: grid; place-items: center; width: 15px; height: 15px; border-radius: 3px;
+  border: 1.5px dashed var(--chalk-line); font: 900 0.66rem/1 system-ui, sans-serif; font-style: normal; color: var(--bad);
+}
+.screen-reveal .gb-strikes i.used { border-style: solid; border-color: var(--bad); background: rgba(255, 138, 101, 0.16); }

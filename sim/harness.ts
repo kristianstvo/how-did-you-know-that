@@ -106,7 +106,6 @@ export type Policy = "none" | "score" | "scoreAware" | "evidence" | "circle" | "
 export interface RuleVariant {
   onePerReveal?: boolean; // after a vote, ACCUSE stays closed until the next question
   accuseFromQ?: number; // no accusations before this question's reveal (0-based)
-  strikes?: number; // the cheater wins on this many wrong detentions
 }
 
 export interface Scenario {
@@ -118,7 +117,8 @@ export interface Scenario {
   matches: number;
   seed: number;
   mode: "clients" | "builtinBots";
-  threshold?: number; // override the lobby default (1400)
+  threshold?: number; // override the lobby default
+  strikes?: number; // override the lobby default (0 = the pre-v0.4 rules: no strike-out)
   questionSource?: "sim" | "local"; // "local" = real question text from the bundled pack
   names?: string[]; // display names by seat (host first)
   record?: boolean; // capture a replay tape of every state/secret
@@ -404,15 +404,17 @@ class SimPhone {
     const others = this.suspects(s);
     if (!others.length) return;
     let fire = false;
+    // On the last strike a wrong detention ends the match: people want more.
+    const lastStrike = s.settings.strikes > 0 && s.match!.wrongDetentions === s.settings.strikes - 1;
     if (policy === "score" || policy === "scoreAware") {
       const sorted = [...others].sort((a, b) => b.score - a.score);
       const lead = sorted[0].score - (sorted[1]?.score ?? 0);
-      fire = sorted[0].score >= 0.6 * s.match!.threshold && lead >= 200;
+      fire = sorted[0].score >= (lastStrike ? 0.75 : 0.6) * s.match!.threshold && lead >= (lastStrike ? 300 : 200);
     } else {
       const ranked = others.map((p) => ({ id: p.id, s: this.suspicion[p.id] ?? 0 })).sort((a, b) => b.s - a.s);
-      fire = ranked[0].s >= 3 && ranked[0].s - (ranked[1]?.s ?? 0) >= 1;
+      fire = ranked[0].s >= (lastStrike ? 4 : 3) && ranked[0].s - (ranked[1]?.s ?? 0) >= (lastStrike ? 1.5 : 1);
     }
-    if (fire && this.social() < 0.35) {
+    if (fire && this.social() < (lastStrike ? 0.2 : 0.35)) {
       // ACCUSE arms at the end of the reveal show; people react 1–4s later.
       const armed = Math.max(0, (s.match?.reveal?.accuseAt ?? Date.now()) - Date.now());
       setTimeout(() => this.send({ kind: "burnToken" }), armed + 1000 + this.social() * 3000);
@@ -496,26 +498,15 @@ function applyRules(engine: HostEngine, rules: RuleVariant): void {
   const e = engine as unknown as {
     qIdx: number;
     phase: string;
-    threshold: number;
-    voteResult: { banishedId: string | null; wasCheater: boolean } | null;
     onBurnToken(player: unknown): void;
-    resolveVote(): void;
   };
   let votedInQ = -1;
-  let wrong = 0;
   const burn = e.onBurnToken.bind(e);
   e.onBurnToken = (player) => {
     if (e.qIdx < (rules.accuseFromQ ?? 0)) return;
     if (rules.onePerReveal && votedInQ === e.qIdx) return;
     burn(player);
     if (e.phase === "vote") votedInQ = e.qIdx;
-  };
-  const resolve = e.resolveVote.bind(e);
-  e.resolveVote = () => {
-    resolve();
-    const vr = e.voteResult;
-    // Strike out: the line falls to zero, so the existing win check fires.
-    if (rules.strikes && vr?.banishedId && !vr.wasCheater && ++wrong >= rules.strikes) e.threshold = 0;
   };
 }
 
@@ -640,6 +631,7 @@ export async function runScenario(sc: Scenario, clock: VirtualClock): Promise<Ru
     }
 
     if (sc.threshold) engine.updateSettings({ threshold: sc.threshold });
+    if (sc.strikes !== undefined) engine.updateSettings({ strikes: sc.strikes });
     void engine.startMatch();
     await clock.runUntil(() => ended);
     // Engine ids carry a process-wide counter; rename them to seats so the

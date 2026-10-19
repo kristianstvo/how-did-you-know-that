@@ -183,3 +183,9 @@
   @keyframes vo-drain { from { opacity: 1; } to { opacity: 0.15; } }
   .vo-cell:active:not(:disabled) { transform: none; }
 }
+
+/* Last strike (v0.4): a wrong detention now ends the match. */
+.vo-sub.last-strike {
+  color: var(--accent); font-weight: 800; white-space: normal;
+  border: 1.5px dashed var(--accent); border-radius: 10px; padding: 2px 8px; margin-inline: 6px;
+}

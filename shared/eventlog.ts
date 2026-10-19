@@ -47,6 +47,7 @@ export type MatchEvent =
       type: "matchEnd";
       q: number;
       reason: MatchEndReason;
+      struckOut?: boolean;
       cheaterId: string;
       winnerIds: string[];
       scores: Record<string, number>;
@@ -136,6 +137,7 @@ export function createEventLogger(emit: (e: MatchEvent) => void): (s: PublicStat
         match,
         q: m.questionIdx,
         reason: m.end.reason,
+        ...(m.end.struckOut ? { struckOut: true } : {}),
         cheaterId: m.end.cheaterId,
         winnerIds: m.end.winnerIds,
         scores: Object.fromEntries(s.players.map((p) => [p.id, p.score])),

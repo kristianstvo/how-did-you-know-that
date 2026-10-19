@@ -10,9 +10,9 @@ the lines of **"no way you knew that!"** happen on their own.
 - **Players:** 4–8, ideally including at least two people who aren't you or
   your usual group (spec 00: "strangers to the dev"). Run 3 matches or more,
   with each person on their own phone and everyone on one voice call.
-- **Lines:** play 2 matches at the default line of 1400, then 2 matches at
-  **2000** (Lobby → Class rules). The simulator predicts a careful cheater wins
-  62–97% at 1400 and 43–64% at 2000.
+- **Lines:** play 2 matches at the default (line 2100, two strikes), then 2
+  matches at **1800** (Lobby → Class rules). The simulator predicts a cheater
+  who hides wins 34–56% at 2100 and 64–84% at 1800.
 - **Rules:** give one rules explanation only, the in-lobby "How to play".
   Answer no questions during play; write them down instead.
 - **Logging:** the host presses **⬇ Download match log** after every match (on
@@ -63,5 +63,5 @@ Note the audio time for each, then line it up with the log.
 | Banishing a CLEARED player | Never | 08 §1 (the CLEARED stamp should prevent it) |
 | PEEK caused by the UI (not by holding a phone up) | Never | Parity constraint |
 
-If the cheater wins far more often than 55% at 1400, but lands near the target
-at 2000, change the default line (spec 02 allows "raise the threshold").
+If the cheater wins far more often than 55% at the default line, raise it (spec
+02 allows "raise the threshold"); if they almost never win, lower it.

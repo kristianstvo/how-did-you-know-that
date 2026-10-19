@@ -138,11 +138,14 @@ export const voteResult: Screen = {
     const sealedSub =
       n === 0 ? "Not one ballot handed in." : flipped === 0 ? `🗳️ ${n} sealed ballot${n === 1 ? "" : "s"}` : flipped < n ? `Counting… ${flipped} of ${n}` : `All ${n} counted.`;
     const wasCleared = !!banished && m.cleared.includes(banished.id);
+    const strikes = s.settings.strikes;
+    const struckOut = outcome === "innocent" && strikes > 0 && m.wrongDetentions >= strikes;
+    const strikeTag = outcome === "innocent" && strikes > 0 ? ` · <span class="vr-strike">✗ strike ${m.wrongDetentions}${struckOut ? "" : ` of ${strikes}`}</span>` : "";
     const stamp =
       outcome === "caught"
         ? { l1: "CHEATER CAUGHT ✓", l2: `${banished ? av(banished, "vr-av") : ""}${nm(banished)}<span class="vr-l2t">→ detention</span>` }
         : outcome === "innocent"
-          ? { l1: `DETENTION: ${nm(banished)}`, l2: `<span class="vr-l2t">innocent ✗${wasCleared ? " · was CLEARED" : ""}</span>` }
+          ? { l1: `DETENTION: ${nm(banished)}`, l2: `<span class="vr-l2t">innocent ✗${strikeTag || (wasCleared ? " · was CLEARED" : "")}</span>` }
           : { l1: "TIE — NOBODY GOES", l2: `<span class="vr-l2t">${n === 0 ? "No votes, no detention." : `Tied at ${max} vote${max === 1 ? "" : "s"} each.`}</span>` };
     const verdictHtml = verdict
       ? `<div class="vr-verdict ${outcome}" id="vr-verdict" role="alert" ${enter(vAt, el)}>
@@ -152,7 +155,9 @@ export const voteResult: Screen = {
 
     // ---- Consequence slot (same reserved box in every outcome) ----
     let after = "";
-    if (verdict && dropped) {
+    if (verdict && struckOut) {
+      after = `<p class="vr-note vr-strikeout" id="vr-note" ${enter(vAt + 300, el)}>${"✗".repeat(strikes)} Strike ${m.wrongDetentions}. Too many innocents in detention: the cheater graduates.</p>`;
+    } else if (verdict && dropped) {
       const now = vr.newThreshold!;
       const drop = s.settings.thresholdDrop;
       const old = now + drop;

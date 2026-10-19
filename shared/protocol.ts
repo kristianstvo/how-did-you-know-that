@@ -37,8 +37,11 @@ export interface Settings {
   questionTimerMs: number; // default 15000
   revealMinMs: number; // default 8000
   voteWindowMs: number; // default 20000
-  threshold: number; // default 1400
+  threshold: number; // default 2100 (v0.4; was 1400)
   thresholdDrop: number; // default 200
+  /** The cheater graduates on this many wrong detentions, whatever their
+   *  score (v0.4). 0 = off. Stops "send everyone in turn" from being free. */
+  strikes: number; // default 2
   tierPoints: Record<Tier, number>; // 100 / 200 / 400
 }
 
@@ -46,8 +49,11 @@ export const DEFAULT_SETTINGS: Settings = {
   questionTimerMs: 15000,
   revealMinMs: 8000,
   voteWindowMs: 20000,
-  threshold: 1400,
+  // v0.4: 2100 with two strikes puts a cheater who hides at 35–55% wins
+  // (sim/tune-line.ts); 1400 let them win 81–97%.
+  threshold: 2100,
   thresholdDrop: 200,
+  strikes: 2,
   tierPoints: { easy: 100, medium: 200, hard: 400 },
 };
 
@@ -122,6 +128,7 @@ export interface PublicState {
     questionIdx: number; // 0-based
     questionCount: number;
     threshold: number; // current (drops on wrong banishments)
+    wrongDetentions: number; // innocents sent to detention this match (strikes)
     question: null | {
       text: string;
       options: string[];
@@ -158,6 +165,8 @@ export interface PublicState {
     };
     end: null | {
       reason: MatchEndReason;
+      /** cheater_threshold reached by striking out (too many wrong detentions). */
+      struckOut?: boolean;
       cheaterId: string;
       winnerIds: string[];
       sessionDelta: Record<string, number>; // playerId -> points earned this match
