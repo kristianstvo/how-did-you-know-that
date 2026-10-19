@@ -170,7 +170,7 @@
 
 /* ---- Dock: the host's Continue at "done" ---- */
 .vr-dock {
-  position: sticky; bottom: 0; margin-top: auto; min-height: 62px; padding: 10px 0 2px;
+  position: sticky; bottom: 0; margin-top: auto; min-height: 62px; padding: 10px 0 max(2px, env(safe-area-inset-bottom));
   background: linear-gradient(transparent, var(--bg) 30%);
 }
 .vr-continue { animation: hd-enter-up var(--t-base) var(--e-enter) var(--d, 0ms) backwards; }

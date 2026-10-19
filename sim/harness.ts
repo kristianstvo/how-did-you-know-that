@@ -93,7 +93,21 @@ export type Strategy = "naive" | "mimic" | "careful" | "sprint";
 // none: nobody accuses. score: suspect the leader. scoreAware: suspect the
 // leader but never a player the reveal has CLEARED. evidence: accumulate the
 // announced callouts (and respect CLEARED).
-export type Policy = "none" | "score" | "scoreAware" | "evidence";
+// circle: the whole class agrees to send everyone to detention in seat order,
+// ignoring the evidence, until the cheater is caught. Whoever is next accuses
+// themselves; if they won't (the cheater never volunteers), the next person
+// in line accuses instead. circleInformed: the same sweep, ordered by the
+// announced evidence and then by score instead of by seat. Both skip players
+// the reveal has CLEARED.
+export type Policy = "none" | "score" | "scoreAware" | "evidence" | "circle" | "circleInformed";
+
+/** Experimental rule variants, applied by the harness around the real engine
+ *  (sim only; the shipped rules are the defaults). */
+export interface RuleVariant {
+  onePerReveal?: boolean; // after a vote, ACCUSE stays closed until the next question
+  accuseFromQ?: number; // no accusations before this question's reveal (0-based)
+  strikes?: number; // the cheater wins on this many wrong detentions
+}
 
 export interface Scenario {
   name: string;
@@ -110,7 +124,11 @@ export interface Scenario {
   record?: boolean; // capture a replay tape of every state/secret
   human?: HumanModel;
   evidence?: EvidenceParams;
+  sweepFrom?: number; // circle policies: the first reveal (0-based question) the sweep runs in
+  rules?: RuleVariant;
 }
+
+const isCircle = (p: Policy) => p === "circle" || p === "circleInformed";
 
 const CALLOUT_WEIGHT: Record<CalloutKind, number> = {
   lone_correct: 2,
@@ -154,6 +172,7 @@ class SimPhone {
   private evidence: EvidenceTracker;
   private evidenceQ = new Set<number>();
   private suspicion: Record<string, number> = {};
+  private votedInQ = -1; // the question whose reveal last held a vote
 
   constructor(
     readonly socketId: string,
@@ -193,6 +212,8 @@ class SimPhone {
     this.state = s;
     const m = s.match;
     if (!m) return;
+    // Bump before planning, so timers set below see the new phase's number.
+    if (s.phase !== prev?.phase) this.phaseSeq++;
     if (s.phase === "question" && m.questionIdx !== this.plannedQ) {
       this.plannedQ = m.questionIdx;
       this.planAnswer(m.questionIdx, m.question!.tier, s.settings.questionTimerMs);
@@ -213,8 +234,10 @@ class SimPhone {
       // Back from a vote on the same reveal: the room may accuse again.
       this.planAccusation(s);
     }
-    if (s.phase === "vote" && prev?.phase !== "vote") this.planVote(s);
-    if (s.phase !== prev?.phase) this.phaseSeq++;
+    if (s.phase === "vote" && prev?.phase !== "vote") {
+      this.votedInQ = m.questionIdx;
+      this.planVote(s);
+    }
     if (this.isHost && s.phase !== prev?.phase) {
       const seq = this.phaseSeq;
       const advanceIfStill = (ms: number) =>
@@ -222,7 +245,9 @@ class SimPhone {
           if (this.phaseSeq === seq) this.hostAdvance(); // a real host taps what's on screen
         }, ms);
       if (s.phase === "reveal" && m.reveal) {
-        advanceIfStill(Math.max(0, m.reveal.minNextAt - Date.now()) + lognormal(this.social, this.human.hostAdvanceRt.median, this.human.hostAdvanceRt.sigma));
+        // A sweeping class holds the host until the next person in line has
+        // had their chance to accuse.
+        advanceIfStill(Math.max(0, m.reveal.minNextAt - Date.now(), this.sweepHoldMs(s)) + lognormal(this.social, this.human.hostAdvanceRt.median, this.human.hostAdvanceRt.sigma));
       }
       if (s.phase === "voteResult" && m.voteResult) {
         // The Continue button appears when the vote-result show ends.
@@ -321,8 +346,60 @@ class SimPhone {
     return s.players.filter((p) => p.id !== this.playerId && !p.banished && !(aware && this.evidence.cleared.has(p.id)));
   }
 
+  /** Can anyone accuse in this reveal under the scenario's rules? A real room
+   *  knows its own rules, so a sweeping class doesn't waste attempts. */
+  private accuseOpen(s: PublicState): boolean {
+    const m = s.match;
+    if (!m) return false;
+    const r = this.sc.rules ?? {};
+    if (m.questionIdx < (r.accuseFromQ ?? 0)) return false;
+    return !(r.onePerReveal && this.votedInQ === m.questionIdx);
+  }
+
+  /** The sweep's shared running order — every phone computes the same list
+   *  from public data. Banished and CLEARED players are skipped. */
+  private circleOrder(s: PublicState): string[] {
+    const live = s.players.filter((p) => !p.banished && !this.evidence.cleared.has(p.id));
+    if (this.sc.policy === "circleInformed") {
+      // Stable sort: equal suspicion and score fall back to seat order.
+      live.sort((a, b) => (this.suspicion[b.id] ?? 0) - (this.suspicion[a.id] ?? 0) || b.score - a.score);
+    }
+    return live.map((p) => p.id);
+  }
+
+  /** Who may step up to accuse, in line order starting from the target. */
+  private sweepAccusers(s: PublicState): string[] {
+    const order = this.circleOrder(s);
+    return order.map((id) => s.players.find((p) => p.id === id)!).filter((p) => !p.tokenUsed && !p.banished && p.votingRights).map((p) => p.id);
+  }
+
+  private sweepActive(s: PublicState): boolean {
+    const m = s.match;
+    return !!m && isCircle(this.sc.policy) && m.questionIdx >= (this.sc.sweepFrom ?? 0) && this.accuseOpen(s) && this.circleOrder(s).length >= 2;
+  }
+
+  /** How long the host should wait before tapping Next during a sweep. */
+  private sweepHoldMs(s: PublicState): number {
+    if (!this.sweepActive(s)) return 0;
+    const armed = Math.max(0, (s.match?.reveal?.accuseAt ?? Date.now()) - Date.now());
+    return armed + 600 + this.sweepAccusers(s).length * 2500 + 1500;
+  }
+
   private planAccusation(s: PublicState): void {
     const policy = this.sc.policy;
+    if (isCircle(policy)) {
+      if (this.secret.isCheater || !this.eligible() || !this.sweepActive(s)) return;
+      // The person on the spot accuses themselves; each later person in line
+      // waits a little longer, in case the ones before them won't.
+      const rank = this.sweepAccusers(s).indexOf(this.playerId);
+      if (rank < 0) return;
+      const armed = Math.max(0, (s.match?.reveal?.accuseAt ?? Date.now()) - Date.now());
+      const seq = this.phaseSeq;
+      setTimeout(() => {
+        if (this.phaseSeq === seq) this.send({ kind: "burnToken" });
+      }, armed + 600 + rank * 2500 + this.social() * 400);
+      return;
+    }
     if (policy === "none" || !this.eligible() || this.secret.isCheater) return;
     const others = this.suspects(s);
     if (!others.length) return;
@@ -345,6 +422,16 @@ class SimPhone {
   private planVote(s: PublicState): void {
     const me = this.me();
     if (!me || me.banished || !me.votingRights) return;
+    if (isCircle(this.sc.policy)) {
+      // Everyone votes for whoever is next in line. The person on the spot
+      // knows their own role and votes for the next one instead; the cheater
+      // happily helps send innocents to detention.
+      const order = this.circleOrder(s);
+      if (order.length < 2) return;
+      const target = order[0] === this.playerId ? order[1] : order[0];
+      setTimeout(() => this.send({ kind: "castVote", targetPlayerId: target }), 1500 + this.social() * 3000);
+      return;
+    }
     const others = this.suspects(s);
     if (!others.length) return;
     let target: string;
@@ -398,6 +485,37 @@ function localPackSource(): { source: QuestionSource; current: () => Question[] 
         return { questions: qs, usedFallback: false };
       },
     },
+  };
+}
+
+// ---------------- Rule variants (sim only) ----------------
+
+/** Wraps one engine instance so it plays by a variant rule set. The shipped
+ *  rules are untouched; this only exists to test proposed changes. */
+function applyRules(engine: HostEngine, rules: RuleVariant): void {
+  const e = engine as unknown as {
+    qIdx: number;
+    phase: string;
+    threshold: number;
+    voteResult: { banishedId: string | null; wasCheater: boolean } | null;
+    onBurnToken(player: unknown): void;
+    resolveVote(): void;
+  };
+  let votedInQ = -1;
+  let wrong = 0;
+  const burn = e.onBurnToken.bind(e);
+  e.onBurnToken = (player) => {
+    if (e.qIdx < (rules.accuseFromQ ?? 0)) return;
+    if (rules.onePerReveal && votedInQ === e.qIdx) return;
+    burn(player);
+    if (e.phase === "vote") votedInQ = e.qIdx;
+  };
+  const resolve = e.resolveVote.bind(e);
+  e.resolveVote = () => {
+    resolve();
+    const vr = e.voteResult;
+    // Strike out: the line falls to zero, so the existing win check fires.
+    if (rules.strikes && vr?.banishedId && !vr.wasCheater && ++wrong >= rules.strikes) e.threshold = 0;
   };
 }
 
@@ -507,6 +625,7 @@ export async function runScenario(sc: Scenario, clock: VirtualClock): Promise<Ru
     const host = mkPhone("local", true, 0);
     phones.set("local", host);
     engine = new HostEngine("SIMXX", sc.names?.[0] ?? "Host", AVATARS[0], transport, qs.source);
+    if (sc.rules) applyRules(engine, sc.rules);
     host.playerId = engine.hostPlayer.id;
     host.receive("state", { state: engine.publicState() });
 

@@ -8,6 +8,7 @@
 //   · the sticky Start dock gives ONE glow pulse when it becomes ready
 //   · the copy toast (app.ui.toast) slides up out of the dock
 // Desk numbers = seat order (players[] order), the order the vote grid uses.
+import { renderSVG } from "uqr";
 import { MAX_PLAYERS, MIN_PLAYERS } from "../../../shared/protocol";
 import { av, esc, playerBadges, sessionTab } from "./common";
 import type { Screen } from "./types";
@@ -33,6 +34,18 @@ if (typeof document !== "undefined") {
     true,
   );
 }
+
+// One QR per invite link, drawn once. Plain black on white, medium error
+// correction: what phone cameras read fastest from across a table.
+const qrCache = new Map<string, string>();
+const qrFor = (url: string) => {
+  let svg = qrCache.get(url);
+  if (!svg) {
+    svg = renderSVG(url, { ecc: "M", border: 2, pixelSize: 8, whiteColor: "#ffffff", blackColor: "#111111" });
+    qrCache.set(url, svg);
+  }
+  return svg;
+};
 
 const RULES = [
   "The class answers the same <b>10 questions</b>, each from a different school subject (100 → 200 → 400 points). One classmate is secretly <b>the cheater</b> and sees the correct answers.",
@@ -93,7 +106,23 @@ export const lobby: Screen = {
       <div class="roomcode" aria-hidden="true">${letters.map((ch, i) => `<span class="rc-l" style="--i:${i}">${esc(ch)}</span>`).join("")}</div>
       <div class="lb-tray" aria-hidden="true"><i class="lb-chalk"></i><i class="lb-chalk lb-chalk-y"></i><i class="lb-eraser"></i></div>
     </div>
-    <button class="btn secondary lb-share" id="lb-share" data-action="share" data-url="${esc(shareUrl)}"><span aria-hidden="true">📨</span> Share invite link</button>
+    <div class="lb-invite" id="lb-invite">
+      <button class="btn secondary lb-share" id="lb-share" data-action="share" data-url="${esc(shareUrl)}"><span aria-hidden="true">📨</span> Share invite</button>
+      <button class="btn secondary lb-qr-btn" id="lb-qr-btn" data-action="toggleQr" aria-haspopup="dialog" aria-expanded="${app.ui.qrOpen}"><span aria-hidden="true">📷</span> Show QR</button>
+    </div>
+    ${
+      app.ui.qrOpen
+        ? `<div class="overlay lb-qr" id="lb-qr" role="dialog" aria-modal="true" aria-labelledby="lb-qr-h" data-action="toggleQr">
+            <div class="lb-qr-card" data-action="noop">
+              <h2 id="lb-qr-h">Scan to join</h2>
+              <div class="lb-qr-code" role="img" aria-label="QR code for the classroom invite link">${qrFor(shareUrl)}</div>
+              <div class="lb-qr-room">Classroom <b>${esc(s.roomCode)}</b></div>
+              <p class="lb-qr-hint">Point a phone camera here: it opens this classroom with the code filled in.</p>
+            </div>
+            <button class="btn lb-qr-close" id="lb-qr-close" data-action="toggleQr">Done</button>
+          </div>`
+        : ""
+    }
 
     <div class="card lb-roster" id="lb-roster">
       <div class="lb-roster-head">

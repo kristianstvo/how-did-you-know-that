@@ -22,6 +22,7 @@ Not a friends-only toy: **shareable beyond the original friend group.** Other gr
 ## Known limitations (consciously accepted)
 1. **Host can peek.** Host-authority architecture means any lobby host can inspect dev tools and see the cheater's identity and answers. Mitigation is purely social: hosts are trusted by their own group. (Expanded from previous projects, where the dev was always the host.)
 2. **Host disconnect kills the session.** Consistent with the relay model; no host migration in v1.
+   *Softened since (10-phone-play.md): a dropped connection gets a 90-second grace period and the host's phone reclaims the room; closing or reloading the host's page still ends the session.*
 3. **Screen-share leakage.** The cheater's answer marker is deliberately subtle (see 07) but a careless screen-share can still reveal it.
 
 ## Glossary

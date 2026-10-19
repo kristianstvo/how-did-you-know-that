@@ -2,6 +2,9 @@
 // the candidates cascade in seat order, a compositor countdown drains, and a
 // "handed in" strip shows WHO has voted (never for whom). Nothing here reads
 // app.secret — the cheater's vote screen is identical to everyone else's.
+// Phone play: a tap only PICKS a classmate (a mis-tap is free to fix); the
+// ballot goes in from the sticky dock, in thumb reach. A pick that is never
+// handed in goes in by itself just before the vote closes (main.ts).
 import type { PublicPlayer, PublicState } from "../../../shared/protocol";
 import { av, esc, exhibitBadges, fmtTime, sessionTab } from "./common";
 import type { RenderCtx, Screen } from "./types";
@@ -57,6 +60,8 @@ export const vote: Screen = {
     const voted = !!self?.votedCurrent || myVote !== null;
     const rights = !!self && !self.banished && self.votingRights;
     const canVote = rights && !voted && !closed;
+    const sel = canVote ? app.ui.voteSel : null;
+    const selName = sel ? esc(playerOf(sel)?.name ?? "???") : "";
     const candidates = s.players.filter((p) => !p.banished);
     const eligible = s.players.filter((p) => !p.banished && p.votingRights);
     const inCount = eligible.filter((p) => p.votedCurrent).length;
@@ -65,30 +70,39 @@ export const vote: Screen = {
     const status = !self
       ? ""
       : self.banished
-        ? "You're in detention — no vote this time. Watch the ballots come in."
+        ? "In detention: no vote this time."
         : !self.votingRights
-          ? "You've lost your vote this match. Watch the ballots come in."
+          ? "You've lost your vote this match."
           : myVote
-            ? `You voted for ${esc(playerOf(myVote)?.name ?? "???")}. No take-backs.`
+            ? `Handed in: ${esc(playerOf(myVote)?.name ?? "???")}. No take-backs.`
             : self.votedCurrent
               ? "Ballot handed in. No take-backs."
               : closed
-                ? "⏰ Pencils down — counting the ballots…"
-                : "Tap a classmate to vote. No take-backs.";
+                ? "⏰ Pencils down. Counting the ballots…"
+                : sel
+                  ? `Picked ${selName}. Hand it in, or tap someone else.`
+                  : "Tap a classmate, then hand in your ballot.";
+    // The dock: the one button that sends the ballot, in thumb reach.
+    const dockInner = canVote
+      ? sel
+        ? `<button class="btn vo-go" id="vo-go" data-action="handIn"><span aria-hidden="true">🗳️ </span>Hand in: <b>${selName}</b></button>`
+        : `<button class="btn secondary vo-go" id="vo-go" disabled><span aria-hidden="true">👆 </span>Tap a classmate</button>`
+      : `<p class="vo-dock-note" id="vo-dock-note">${status}</p>`;
 
     const cell = (p: PublicPlayer, i: number) => {
       const picked = voted && myVote === p.id;
+      const chosen = !picked && sel === p.id;
       const isClear = cleared.has(p.id);
       const pick = pickChip(s, p.id);
       const ex = exhibitBadges(s, p.id);
       const tags = `${p.id === v.accuserId ? `<span class="vo-hand-tag" title="Raised the hand">🙋</span>` : ""}${p.id === app.selfId ? `<span class="vo-you">YOU</span>` : ""}`;
-      const aria = [`Vote for ${esc(p.name)}${p.id === app.selfId ? " (you)" : ""}.`, pick.aria, isClear ? "Cleared: proven innocent." : "", ex ? "Has exhibits." : ""].filter(Boolean).join(" ");
+      const aria = [`Pick ${esc(p.name)}${p.id === app.selfId ? " (you)" : ""}.`, pick.aria, isClear ? "Cleared: proven innocent." : "", ex ? "Has exhibits." : ""].filter(Boolean).join(" ");
       // The circle lives OUTSIDE the button: the shell morphs with
       // ignoreActiveValue, which never updates a focused (just-tapped)
       // element's children — only its attributes.
-      return `<div class="vo-wrap${picked ? " picked" : ""}" id="vw-${p.id}" ${enter(AT.grid + i * CELL_STAGGER, elapsed)}>
-        <button class="vo-cell${picked ? " picked" : ""}${isClear ? " cleared" : ""}" id="vc-${p.id}" data-action="vote" data-id="${p.id}"
-          aria-label="${aria}" aria-pressed="${picked}" ${canVote ? "" : "disabled"}>
+      return `<div class="vo-wrap${picked ? " picked" : chosen ? " sel" : ""}" id="vw-${p.id}" ${enter(AT.grid + i * CELL_STAGGER, elapsed)}>
+        <button class="vo-cell${picked ? " picked" : chosen ? " sel" : ""}${isClear ? " cleared" : ""}" id="vc-${p.id}" data-action="vote" data-id="${p.id}"
+          aria-label="${aria}" aria-pressed="${picked || chosen}" ${canVote ? "" : "disabled"}>
           ${av(p, "vo-av")}
           <span class="vo-nm" title="${esc(p.name)}">${esc(p.name)}</span>
           <span class="vo-tags">${tags}</span>
@@ -104,7 +118,7 @@ export const vote: Screen = {
         p.votedCurrent ? `<span class="vo-in" id="vi-${p.id}" aria-hidden="true">${p.avatar}</span>` : ""
       }</span>`;
 
-    const cls = ["screen", "screen-vote", ...[...b].map((x) => `b-${x}`), candidates.length <= 6 ? "roomy" : "", voted ? "has-voted" : "", rights ? "" : "no-rights"]
+    const cls = ["screen", "screen-vote", ...[...b].map((x) => `b-${x}`), candidates.length <= 6 ? "roomy" : "", voted ? "has-voted" : "", sel ? "has-sel" : "", rights ? "" : "no-rights"]
       .filter(Boolean)
       .join(" ");
     return `<section class="${cls}">
@@ -122,7 +136,7 @@ export const vote: Screen = {
       <div class="vo-track" aria-hidden="true"><div class="vo-drain" id="vo-drain" ${enter(0, elapsed, `--dur:${windowMs(s)}ms`)}></div></div>
       <span class="vo-num" data-count="${v.deadline}" role="timer" aria-label="Seconds left to vote"></span>
     </div>
-    <div class="vo-cap" id="vo-cap" ${enter(AT.grid - 80, elapsed)}><span>Q${m.questionIdx + 1} answer · exhibits</span><span>${canVote ? "tap to vote" : ""}</span></div>
+    <div class="vo-cap" id="vo-cap" ${enter(AT.grid - 80, elapsed)}><span>Q${m.questionIdx + 1} answer · exhibits</span><span>${canVote ? "tap to pick" : ""}</span></div>
     <div class="vo-grid" role="group" aria-label="Candidates">
       ${candidates.map(cell).join("")}
     </div>
@@ -131,7 +145,8 @@ export const vote: Screen = {
       <div class="vo-handin-head"><span>📥 Handed in</span><span class="vo-handin-n">${inCount}/${eligible.length}</span></div>
       <div class="vo-slots">${eligible.map(slot).join("")}</div>
     </div>
-    <p class="vo-status" id="vo-status" role="status" ${enter(AT.grid + candidates.length * CELL_STAGGER, elapsed)}>${status}</p>
+    <p class="sr-only" role="status">${status}</p>
+    <div class="vo-dock" id="vo-dock" ${enter(AT.grid + candidates.length * CELL_STAGGER, elapsed)}>${dockInner}</div>
     </section>`;
   },
 };

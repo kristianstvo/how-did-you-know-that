@@ -95,6 +95,13 @@ export function createRenderer(
     });
   };
 
+  // A new screen starts at its top. Without this, a phone that had scrolled
+  // down the grade book opens the vote with the accuser and the timer off
+  // screen. Instant, so it lands inside the View Transition's new snapshot.
+  const toTop = () => {
+    if (scrollY > 0 || scrollX > 0) window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
+  };
+
   const htmlFor = (screen: Screen, ctx: RenderCtx | null) =>
     ctx ? screen.render(ctx) : screen.render({ app, s: null as never, now: serverNow(), elapsed: 0, reduced: reducedMotion() });
 
@@ -116,6 +123,7 @@ export function createRenderer(
         // have arrived since the transition was requested).
         const fresh = router.screenFor(app, lastScreenKey === key ? "" : lastScreenKey);
         morph(fresh.key === key ? htmlFor(fresh.screen, fresh.ctx) : html);
+        toTop();
         if (doSettle) settle();
         afterRender();
       });
@@ -145,6 +153,7 @@ export function createRenderer(
       // Also during a running transition once its DOM update is done: the new
       // view is live, so beats keep their timing instead of waiting it out.
       morph(html);
+      if (screenChanged && lastScreenKey) toTop();
       if (doSettle) settle();
       afterRender();
     }

@@ -53,7 +53,24 @@
 .lb-chalk-y { left: calc(22% + 30px); width: 15px; background: var(--accent2); rotate: -6deg; }
 .lb-eraser { right: 16%; width: 36px; height: 11px; border-radius: 3px; background: linear-gradient(#3c2a1e 0 55%, #d9d4c5 55%); }
 
-.lb-share { margin: 0 0 14px; animation: hd-enter-up var(--t-scene) var(--e-enter) 120ms both; }
+/* Invite: share sheet + scan-to-join, side by side */
+.lb-invite { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin: 0 0 14px; animation: hd-enter-up var(--t-scene) var(--e-enter) 120ms both; }
+.lb-invite .btn { margin: 0; padding-inline: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Scan to join: a big, plain QR card (cameras read black on white best) */
+.overlay.lb-qr { align-items: center; justify-content: center; gap: 16px; padding: max(24px, env(safe-area-inset-top)) 18px max(20px, env(safe-area-inset-bottom)); }
+.lb-qr-card {
+  width: min(100%, 340px); padding: 16px 18px 14px; border-radius: 18px; text-align: center;
+  background: #fffcf2; color: #1d2547; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  animation: hd-enter-scale var(--t-scene) var(--e-enter) both;
+}
+.lb-qr-card h2 { font-family: var(--hand); font-size: 1.35rem; font-weight: 900; margin-bottom: 8px; }
+.lb-qr-code { background: #fff; border-radius: 8px; }
+.lb-qr-code svg { display: block; width: 100%; height: auto; }
+.lb-qr-room { margin-top: 10px; font-family: var(--hand); font-weight: 800; font-size: 1.05rem; }
+.lb-qr-room b { margin-left: 4px; font-size: 1.6rem; letter-spacing: 4px; color: #b02e2c; }
+.lb-qr-hint { margin-top: 4px; font-size: 0.85rem; line-height: 1.35; color: #4a5068; }
+.lb-qr-close { width: min(100%, 340px); }
 
 /* ---- Attendance (roster): dense rows, up to 10 ---- */
 .lb-roster { margin-inline: -4px; padding: 12px 12px 8px; animation: hd-enter-up var(--t-scene) var(--e-enter) 170ms both; }

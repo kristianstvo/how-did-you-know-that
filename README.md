@@ -62,6 +62,18 @@ npm run dev
 - **`shared/protocol.ts`** — types shared by relay, engine, and player UI;
   also the single table of default settings and session point values.
 
+## Phone play
+
+Measured and tuned for real phones (`10-phone-play.md`): the screen stays
+awake in a classroom, dropped connections recover by themselves (the host's
+too), a reload rejoins the same seat, votes are pick-then-hand-in, ACCUSE
+ignores fumbled double-taps, and the lobby shows a scan-to-join QR. Every
+screen keeps its main controls on screen from an iPhone SE upwards.
+
+```bash
+node tools/phone-audit.mjs --label mine   # measure every screen at 7 phone sizes → capture/phone/mine/
+```
+
 ## Show direction and proofs
 
 The design rationale, beat sheet, motion language and simulation findings are
@@ -69,7 +81,7 @@ in `08-reveal-direction.md`; the playtest procedure is in
 `09-playtest-checklist.md`.
 
 ```bash
-npm run test:e2e     # build, protocol check, then Playwright: parity, sync, perf, a11y (uses Edge)
+npm run test:e2e     # build, protocol + relay checks, then Playwright: parity, sync, perf, a11y, phone (uses Edge)
 npm run sim          # seeded headless match simulation, writes sim/out/
 npm run typecheck
 ```
@@ -81,7 +93,9 @@ for the same seat as an innocent, and `&host=1` for host controls.
 ## Known accepted limitations (spec 00)
 
 - The lobby host can open dev tools and see the cheater — hosts are trusted.
-- Host disconnect ends the session (no host migration).
+- If the host's phone drops out (screen lock, app switch, lost signal), the
+  room waits 90 seconds for it to come back; closing or reloading the host's
+  page still ends the session (no host migration).
 - Answer times are client-reported (clamped to the timer) — trust your friends.
 
 ## Rules knobs

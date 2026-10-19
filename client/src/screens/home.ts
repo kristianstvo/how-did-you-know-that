@@ -2,9 +2,10 @@
 // Beats (all on insertion; the shell morphs, so nothing replays per keystroke):
 //   title wobble-in at 0 · tagline 150 · name tag / Join / Start cards rise
 //   with the 50ms deco stagger from 200 · footer 400.
-// The "HELLO my name is" sticker previews the typed name live (the shell
-// stores app.home.name on every input and re-renders; the focused input itself
-// is never clobbered) and the chosen avatar, which pops on every pick.
+// You write your name straight onto the "HELLO my name is" sticker (the input
+// IS the sticker's name line; the focused input is never clobbered by a
+// re-render) next to the chosen avatar, which pops on every pick. Long names
+// shrink the marker as they are typed (data-size, set live below).
 // Errors shake (hd-shake) — and shake again on every Join/Create tap that
 // repeats the same error.
 import { AVATARS } from "../../../shared/protocol";
@@ -35,6 +36,8 @@ if (typeof document !== "undefined") {
     (ev) => {
       const el = ev.target as HTMLInputElement | null;
       if (el?.id === "joinCode") typedCode = el.value;
+      // The morph leaves a focused input alone, so size the marker here.
+      if (el?.id === "playerName") el.dataset.size = tagSize(el.value.trim());
     },
     true,
   );
@@ -56,16 +59,15 @@ export const home: Screen = {
     ${app.closedReason ? `<div class="warn hm-closed" id="hm-closed" role="status">🚪 ${esc(app.closedReason)}</div>` : ""}
 
     <div class="card hm-card hm-namecard ${needName ? "need-name" : ""}" id="hm-namecard">
-      <div class="hello" aria-hidden="true">
-        <div class="hello-band"><span class="hello-big">HELLO</span><span class="hello-small">my name is</span></div>
+      <div class="hello">
+        <div class="hello-band" aria-hidden="true"><span class="hello-big">HELLO</span><span class="hello-small">my name is</span></div>
         <div class="hello-body">
-          <span class="hello-av" id="hello-av-${keyOf(h.avatar)}">${h.avatar}</span>
-          <span class="hello-name ${name ? tagSize(name) : "empty"}">${name ? esc(name) : "your name here"}</span>
+          <span class="hello-av" id="hello-av-${keyOf(h.avatar)}" aria-hidden="true">${h.avatar}</span>
+          <label class="hm-sr" for="playerName">Your name</label>
+          <input id="playerName" class="hello-input" data-size="${tagSize(name)}" placeholder="your name here" maxlength="20" autocomplete="off"
+                 autocapitalize="words" spellcheck="false" enterkeyhint="${invited ? "go" : "done"}" value="${esc(h.name)}" />
         </div>
       </div>
-      <label class="hm-sr" for="playerName">Your name</label>
-      <input id="playerName" placeholder="Write your name" maxlength="20" autocomplete="off" autocapitalize="words"
-             enterkeyhint="done" value="${esc(h.name)}" />
       <div class="av-grid" role="group" aria-label="Pick your avatar">
         ${AVATARS.map(
           (a) =>

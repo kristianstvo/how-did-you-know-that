@@ -116,8 +116,8 @@
    tray overlaps its avatars. */
 .screen-reveal .tav-rank,
 .screen-reveal .tav-mark {
-  position: absolute; left: 50%; width: 13px; height: 13px; margin-left: -6.5px; border-radius: 50%;
-  display: grid; place-items: center; font: 900 0.52rem/1 system-ui, sans-serif; pointer-events: none;
+  position: absolute; left: 50%; width: 15px; height: 15px; margin-left: -7.5px; border-radius: 50%;
+  display: grid; place-items: center; font: 900 0.62rem/1 system-ui, sans-serif; pointer-events: none;
 }
 .screen-reveal .tav-rank { top: -7px; background: var(--accent2); color: #241300; box-shadow: 0 0 0 1.5px var(--card); }
 .screen-reveal .tav-mark { bottom: -7px; opacity: 0; transform: scale(0.3); }
@@ -213,7 +213,7 @@
 .screen-reveal.dense .ev-card { padding-top: 8px; padding-bottom: 7px; }
 .screen-reveal.dense .ev-line,
 .screen-reveal.dense .ev-ask { font-size: 0.76rem; }
-.screen-reveal .ev-foot { height: 15px; margin-top: 2px; line-height: 15px; text-align: right; font-family: var(--hand); font-size: 0.68rem; color: var(--dim); opacity: 0; }
+.screen-reveal .ev-foot { height: 15px; margin-top: 2px; line-height: 15px; text-align: right; font-family: var(--hand); font-size: 0.74rem; color: var(--dim); opacity: 0; }
 .screen-reveal.b-evidence .ev-foot { opacity: 1; transition: opacity var(--t-base) var(--e-standard) 250ms; }
 
 /* Class note (no callout): one line at the grade beat. */
@@ -253,7 +253,7 @@
 /* Rows are absolutely positioned; ranking = translateY (previous → new). */
 .screen-reveal .gb-row {
   position: absolute; left: 0; right: 0; top: 0; height: var(--rowh);
-  display: grid; grid-template-columns: 22px minmax(0, 1fr) 40px 34px var(--bar-w) 36px; align-items: center; gap: 4px; padding: 0 3px;
+  display: grid; grid-template-columns: 22px minmax(0, 1fr) 44px 38px var(--bar-w) 36px; align-items: center; gap: 4px; padding: 0 3px;
   transform: translateY(var(--y0));
 }
 .screen-reveal.b-grade .gb-row { transform: translateY(var(--y1)); transition: transform var(--t-drama) var(--e-standard); }
@@ -286,7 +286,8 @@
 /* VERDICT: time chips (⚡ = fastest correct) and +points. */
 .screen-reveal .gb-time,
 .screen-reveal .gb-pts {
-  font-size: 0.72rem; font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap;
+  /* Answer times are THE clue: readable at arm's length (≥12.8px). */
+  font-size: 0.8rem; font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap;
   opacity: 0; transform: translateY(6px) scale(0.7);
 }
 .screen-reveal .gb-time { color: var(--dim); }
@@ -340,12 +341,12 @@
 .screen-reveal .gb-line::before { content: ""; position: absolute; left: -1px; top: 18px; bottom: 2px; border-left: 2px dashed var(--accent2); opacity: 0.9; }
 .screen-reveal .gb-line-lbl {
   position: absolute; top: 2px; left: 0; transform: translateX(-50%); white-space: nowrap;
-  font: 800 0.66rem/16px var(--hand); color: var(--accent2);
+  font: 800 0.74rem/16px var(--hand); color: var(--accent2);
 }
 
 /* ---------------- ACCUSE dock (fixed height: no reflow on confirm) ---------------- */
 .screen-reveal .rv-dock {
-  position: sticky; bottom: 0; z-index: 40; margin-top: auto; padding: 12px 0 2px;
+  position: sticky; bottom: 0; z-index: 40; margin-top: auto; padding: 12px 0 max(2px, env(safe-area-inset-bottom));
   display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px;
   background: linear-gradient(transparent, var(--bg) 24%);
 }
@@ -427,4 +428,9 @@
   .screen-reveal.b-grade .gb-row { transition: transform 0s linear calc(var(--t-drama) / 2); }
   .screen-reveal.fx-grade .gb-row.moved { animation: rv-dip var(--t-drama) linear both; }
   @keyframes rv-dip { 0%, 100% { opacity: 1; } 45%, 55% { opacity: 0; } }
+}
+
+/* Narrow phones (320–359px): a shorter score bar leaves room for names. */
+@media (max-width: 359px) {
+  .screen-reveal { --bar-w: 64px; }
 }

@@ -18,7 +18,10 @@
   --cleared: #7cc4ff; /* chalk blue — always paired with the word CLEARED */
   --purple: #7cc4ff;
   --radius: 14px;
-  --hand: "Segoe Print", "Comic Sans MS", "Chalkboard SE", cursive;
+  /* No generic "cursive" at the end: on Android it is Dancing Script, a
+     joined-up script that is hard to read at a glance. "casual" is Android's
+     own plain handwriting face (Coming Soon); otherwise plain sans-serif. */
+  --hand: "Segoe Print", "Comic Sans MS", "Chalkboard SE", casual, sans-serif;
   font-size: 16px;
 
   /* Durations */

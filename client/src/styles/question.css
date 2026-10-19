@@ -184,6 +184,34 @@ hd-qsheet.qz { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 #app.settle .qz-tally { animation-duration: 200ms !important; animation-delay: var(--d) !important; }
 
 /* ---- Reduced motion: opacity only, identical instants. */
+/* ---- Short phones (an SE with Safari's bars showing is 460–553px tall):
+   all four answers above the fold. A slimmer subject card and timer, two
+   reserved lines of question instead of three, answers still ≥50px. ---- */
+@media (max-height: 580px) {
+  .qz-cardwrap { margin: 0 4px 8px; }
+  .qz-card { height: 46px; padding-top: 2px; gap: 10px; }
+  .qz-card-emoji { font-size: 1.45rem; }
+  .qz-card-name { font-size: 1.1rem; }
+  .qz-card-pts { width: 40px; height: 40px; font-size: 0.9rem; }
+  .qz-card-pts small { font-size: 0.55rem; }
+  .qz-timer { height: 38px; margin-bottom: 6px; }
+  .qz-count { width: 38px; height: 38px; font-size: 1.15rem; }
+  .qz-text { font-size: 1.1rem; min-height: calc(2 * 1.38em); margin-bottom: 10px; }
+  .qz-text.is-long { font-size: 1rem; min-height: calc(2 * 1.34em); }
+  .qz-board { gap: 7px; }
+  .screen-question .opt { min-height: 50px; padding-block: 6px; }
+}
+
+/* ---- Held sideways: question on the left, answers on the right ---- */
+@media (orientation: landscape) and (max-height: 500px) {
+  #app:has(.screen-question) { max-width: 920px; }
+  hd-qsheet.qz { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 20px; align-content: start; }
+  hd-qsheet.qz > * { grid-column: 1; }
+  /* Starts below the fixed 🎓 tab in the top-right corner. */
+  hd-qsheet.qz > .qz-board { grid-column: 2; grid-row: 1 / span 6; align-self: start; margin-top: 52px; }
+  .qz-text { min-height: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .qz-fill { display: none; }
   .qz-tallies { display: flex; }

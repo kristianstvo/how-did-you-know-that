@@ -241,7 +241,7 @@
 
 /* ---- Host dock (done beat): reserved from frame 0, pins to the bottom once
    it has buttons (the old build put "End the school day" below the fold). ---- */
-.me-dock { margin-top: auto; min-height: 52px; padding: 10px 0 2px; z-index: 6; }
+.me-dock { margin-top: auto; min-height: 52px; padding: 10px 0 max(2px, env(safe-area-inset-bottom)); z-index: 6; }
 .me-dock.host { min-height: 120px; }
 .b-done .me-dock.host { position: sticky; bottom: 0; background: linear-gradient(rgba(22, 40, 30, 0), var(--bg) 24%); }
 .me-dock .btn { animation: hd-enter-up var(--t-base) var(--e-enter) both; }

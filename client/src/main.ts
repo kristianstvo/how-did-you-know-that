@@ -17,7 +17,7 @@ import { AVATARS, type Intent, type PublicState, type SecretState } from "../../
 import { clockStatus, serverNow } from "./clock";
 import { startFixture } from "./fixture";
 import { buzz } from "./haptics";
-import { createHostSession, joinAsPlayer, type HostSession, type PlayerSession } from "./net";
+import { createHostSession, hasSeat, joinAsPlayer, type HostSession, type NetStatus, type PlayerSession } from "./net";
 import { createRenderer, reducedMotion, type Router, type TransitionKind } from "./render";
 import { home } from "./screens/home";
 import { lobby } from "./screens/lobby";
@@ -29,6 +29,7 @@ import { sessionEnd } from "./screens/sessionEnd";
 import type { App, Screen } from "./screens/types";
 import { vote } from "./screens/vote";
 import { voteResult } from "./screens/voteResult";
+import { awake, keepAwake } from "./wakelock";
 
 const root = document.getElementById("app")!;
 const params = new URLSearchParams(location.search);
@@ -42,11 +43,18 @@ const app: App = {
   error: null,
   closedReason: null,
   home: { name: "", code: "", avatar: "", busy: false },
-  ui: { accuseConfirm: false, myPick: null, myVote: null, boardOpen: false, toast: null },
+  ui: { accuseConfirm: false, myPick: null, voteSel: null, myVote: null, boardOpen: false, qrOpen: false, toast: null },
   fixture: false,
 };
 
 let session: HostSession | PlayerSession | null = null;
+/** When ACCUSE turned into "Burn your only token?" — a confirm tap that comes
+ *  sooner than ACCUSE_ARM_MS after it is the second half of a double-tap. */
+let accuseArmedAt = 0;
+const ACCUSE_ARM_MS = 450;
+/** A ballot that was picked but never handed in goes in this long before the
+ *  vote closes (the host counts at the deadline). */
+const AUTO_HAND_IN_MS = 1200;
 let questionShownAt = 0; // local monotonic ms when this phone first showed the question
 let lastPhase = "";
 let lastQuestionKey = "";
@@ -113,7 +121,7 @@ function onBeat(screenKey: string, beatKey: string, prev: string, settled: boole
 
 const renderer = createRenderer(root, router, app, tick, tick, onBeat);
 // Test hook: the sync test reads each phone's clock estimate.
-Object.assign(window.__hdykt!, { clock: clockStatus });
+Object.assign(window.__hdykt!, { clock: clockStatus, awake });
 const render = () => renderer.render();
 
 // ---------------- Session events ----------------
@@ -148,7 +156,11 @@ function onState(state: PublicState): void {
   }
   if (state.phase !== prevPhase) {
     app.ui.accuseConfirm = false;
-    if (state.phase === "vote") app.ui.myVote = null;
+    app.ui.qrOpen = false;
+    if (state.phase === "vote") {
+      app.ui.myVote = null;
+      app.ui.voteSel = null;
+    }
     if (state.phase === "lobby" || state.phase === "matchEnd") app.ui.boardOpen = false;
   }
   render();
@@ -161,11 +173,32 @@ function onSecret(secret: SecretState): void {
 
 function onClosed(reason: string): void {
   session = null;
+  keepAwake(false);
+  onNet("online");
   app.screen = "home";
   app.state = null;
   app.closedReason = reason;
   app.home.busy = false;
   render();
+}
+
+// ---------------- Connection banner (outside #app: never morphed) ----------------
+
+const NET_COPY: Record<NetStatus, string> = {
+  online: "",
+  reconnecting: "📶 Reconnecting… your seat is saved",
+  hostAway: "📵 The teacher's phone dropped out. Hang tight…",
+};
+const netEl = document.createElement("div");
+netEl.id = "net";
+netEl.setAttribute("role", "status");
+document.body.prepend(netEl);
+function onNet(status: NetStatus): void {
+  // The host sees its own reconnect as "reconnecting", never "teacher away".
+  const copy = status === "reconnecting" && session?.kind === "host" ? "📶 Reconnecting… the class is waiting for you" : NET_COPY[status];
+  netEl.textContent = copy;
+  netEl.classList.toggle("on", !!copy);
+  netEl.dataset.status = status;
 }
 
 function act(intent: Intent): void {
@@ -188,7 +221,8 @@ async function createLobby(): Promise<void> {
     // player in the lobby while active.
     const local = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
     const forceCheaterName = local ? (params.get("debugCheater") ?? undefined) : undefined;
-    session = await createHostSession(name, app.home.avatar, { onState, onSecret, onClosed }, { forceCheaterName });
+    session = await createHostSession(name, app.home.avatar, { onState, onSecret, onClosed, onNet }, { forceCheaterName });
+    keepAwake(true);
     app.isHost = true;
     app.selfId = session.selfId;
     app.screen = "game";
@@ -211,7 +245,8 @@ async function joinLobby(): Promise<void> {
   app.error = null;
   render();
   try {
-    session = await joinAsPlayer(code, name, app.home.avatar, { onState, onSecret, onClosed });
+    session = await joinAsPlayer(code, name, app.home.avatar, { onState, onSecret, onClosed, onNet });
+    keepAwake(true);
     app.isHost = false;
     app.selfId = session.selfId;
     app.screen = "game";
@@ -330,9 +365,11 @@ root.addEventListener("click", (ev) => {
       break;
     }
     case "accuse":
-      // Confirmation tap required: "Burn your only accusation?" (spec 07)
+      // Confirmation tap required: "Burn your only accusation?" (spec 07). A
+      // confirm tap within ACCUSE_ARM_MS is a fumbled double-tap: ignored.
       if (!app.ui.accuseConfirm) {
         app.ui.accuseConfirm = true;
+        accuseArmedAt = performance.now();
         render();
         setTimeout(() => {
           if (app.ui.accuseConfirm) {
@@ -340,20 +377,27 @@ root.addEventListener("click", (ev) => {
             render();
           }
         }, 3500);
-      } else {
+      } else if (performance.now() - accuseArmedAt >= ACCUSE_ARM_MS) {
         app.ui.accuseConfirm = false;
         buzz(40);
         act({ kind: "burnToken" });
       }
       break;
     case "vote": {
-      const id = btn.dataset.id!;
-      app.ui.myVote = id;
-      buzz(20);
-      act({ kind: "castVote", targetPlayerId: id });
+      // Tap = pick (changeable); the ballot only goes in with "Hand in".
+      if (app.ui.myVote) break;
+      app.ui.voteSel = btn.dataset.id!;
+      buzz(10);
       render();
       break;
     }
+    case "handIn":
+      handIn();
+      break;
+    case "toggleQr":
+      app.ui.qrOpen = !app.ui.qrOpen;
+      render();
+      break;
     case "toggleBoard":
       app.ui.boardOpen = !app.ui.boardOpen;
       render();
@@ -377,6 +421,23 @@ root.addEventListener("input", (ev) => {
   if (input.id === "joinCode") app.home.code = input.value.toUpperCase();
 });
 
+// Phone keyboards: "Go" on the classroom code joins. On the name, "Go" joins
+// when the code is already there (an invite link); otherwise it just closes
+// the keyboard so Join and Create come back into view.
+root.addEventListener("keydown", (ev) => {
+  if (ev.key !== "Enter" || app.home.busy) return;
+  const el = ev.target as HTMLInputElement;
+  if (el.id === "joinCode") {
+    ev.preventDefault();
+    void joinLobby();
+  } else if (el.id === "playerName") {
+    ev.preventDefault();
+    const code = (document.getElementById("joinCode") as HTMLInputElement | null)?.value.trim() ?? "";
+    if (code.length === 5) void joinLobby();
+    else el.blur();
+  }
+});
+
 // Host settings inputs (lobby only).
 root.addEventListener("change", (ev) => {
   const input = ev.target as HTMLInputElement;
@@ -389,6 +450,15 @@ root.addEventListener("change", (ev) => {
   else if (key === "thresholdDrop") session.engine.updateSettings({ thresholdDrop: Math.max(0, num) });
 });
 
+function handIn(): void {
+  const id = app.ui.voteSel;
+  if (!id || app.ui.myVote || app.state?.phase !== "vote") return;
+  app.ui.myVote = id;
+  buzz(20);
+  act({ kind: "castVote", targetPlayerId: id });
+  render();
+}
+
 // ---------------- Countdown ticker (text only; motion is CSS on the compositor) ----------------
 
 function tick(): void {
@@ -397,6 +467,9 @@ function tick(): void {
     const v = String(Math.max(0, Math.ceil((Number(el.dataset.count) - now) / 1000)));
     if (el.textContent !== v) el.textContent = v;
   });
+  // A picked-but-not-handed-in ballot goes in just before the vote closes.
+  const v = app.state?.phase === "vote" ? app.state.match?.vote : null;
+  if (v && app.ui.voteSel && !app.ui.myVote && now >= v.deadline - AUTO_HAND_IN_MS) handIn();
   // Host "Next" respects the reveal minimum (spec 01).
   root.querySelectorAll<HTMLButtonElement>("[data-min-next]").forEach((el) => {
     const off = now < Number(el.dataset.minNext);
@@ -406,6 +479,11 @@ function tick(): void {
 
 // Keyboard: Escape closes the semester standings sheet.
 document.addEventListener("keydown", (ev) => {
+  if (ev.key === "Escape" && app.ui.qrOpen) {
+    app.ui.qrOpen = false;
+    render();
+    document.getElementById("lb-qr-btn")?.focus();
+  }
   if (ev.key === "Escape" && app.ui.boardOpen) {
     app.ui.boardOpen = false;
     render();
@@ -429,4 +507,16 @@ if (fixtureMatch) {
   }).catch((e) => showError((e as Error).message));
 } else {
   render();
+  // Back on a classroom link with this phone's seat token — a reload, or the
+  // browser threw the tab away while it sat in the background: take the seat
+  // straight back instead of making them type it all again.
+  if (hashJoin && app.home.name && hasSeat(app.home.code, app.home.name)) void joinLobby();
 }
+
+// The host's page IS the game: leaving it (reload, closing the tab, a stray
+// swipe back) ends it for everyone, so the browser asks first.
+window.addEventListener("beforeunload", (ev) => {
+  if (session?.kind !== "host" || !app.state || app.state.phase === "sessionEnd") return;
+  ev.preventDefault();
+  ev.returnValue = "";
+});

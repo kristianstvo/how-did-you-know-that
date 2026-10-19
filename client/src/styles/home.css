@@ -32,7 +32,7 @@
 .hm-create { animation-delay: calc(200ms + 2 * var(--stagger-deco)); }
 .hm-foot { padding-top: 14px; animation: hd-fade-in var(--t-scene) var(--e-standard) 400ms both; }
 
-/* ---- The name tag: a "HELLO my name is" sticker + input + avatar sheet ---- */
+/* ---- The name tag: a "HELLO my name is" sticker you write on + avatar sheet ---- */
 .hm-namecard { padding: 14px 14px 0; }
 .hello {
   margin: 2px 4px 14px; padding: 5px 5px 9px; border-radius: 12px;
@@ -45,10 +45,17 @@
 .hello-small { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.6px; margin-top: 3px; }
 .hello-body { height: 56px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: 6px; background: #fffcf2; color: #1d2547; }
 .hello-av { flex: none; font-size: 1.85rem; line-height: 1; animation: hd-pop var(--t-stamp) var(--e-impact) both; }
-.hello-name { flex: 1; min-width: 0; font-family: var(--hand); font-weight: 900; font-size: 1.5rem; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hello-name.sm { font-size: 1.2rem; }
-.hello-name.xs { font-size: 1rem; }
-.hello-name.empty { color: rgba(29, 37, 71, 0.32); font-weight: 700; font-size: 1.15rem; }
+/* The sticker's name line is the input itself (≥16px: no iOS zoom). */
+.screen-home .hello-input {
+  flex: 1; min-width: 0; width: auto; height: 100%; min-height: 44px; padding: 0 2px;
+  background: none; border: none; border-radius: 0; outline: none;
+  font-family: var(--hand); font-weight: 900; font-size: 1.5rem; line-height: 1.2; color: #1d2547; caret-color: #d8423a;
+}
+.screen-home .hello-input[data-size="sm"] { font-size: 1.2rem; }
+.screen-home .hello-input[data-size="xs"] { font-size: 1rem; }
+.screen-home .hello-input::placeholder { color: rgba(29, 37, 71, 0.34); font-weight: 700; font-size: 1.15rem; }
+.screen-home .hello-input:focus, .screen-home .hello-input:focus-visible { outline: none; border: none; }
+.hello-body:focus-within { box-shadow: 0 0 0 3px var(--accent2); }
 
 /* Avatar sheet: flush with the card's inner edges, 8 per row at 380px
    (on narrower phones 7 per row, last row centred — targets never drop
@@ -97,6 +104,42 @@
    restarts it — so a repeated mistake still gets a shake. */
 .screen-home:has([data-action="join"]:active, [data-action="create"]:active) .hm-err,
 .screen-home:has([data-action="join"]:active, [data-action="create"]:active) .hm-namecard.need-name .hello { animation: none; }
+
+/* ---- Short phones (Safari's bars showing): Join and Create above the fold ----
+   The avatar sheet becomes one swipeable row (the sticker shows your pick),
+   and the title and tagline tighten. */
+@media (max-height: 760px) {
+  .hm-title { margin: 0 0 4px; }
+  .hm-t1 { font-size: 1.15rem; }
+  .hm-t2 { font-size: 1.8rem; }
+  .hm-tagline { font-size: 0.84rem; line-height: 1.35; margin-bottom: 10px; }
+  .hello { margin-bottom: 10px; }
+  .hello-big { font-size: 1.25rem; letter-spacing: 3px; }
+  .hello-band { padding: 2px 0 4px; }
+  .hello-body { height: 50px; }
+  .av-grid {
+    flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity; scrollbar-width: none; padding-inline: 6px;
+    /* A soft edge on the right says "there are more". */
+    -webkit-mask-image: linear-gradient(to right, #000 85%, transparent);
+    mask-image: linear-gradient(to right, #000 85%, transparent);
+  }
+  .av-grid::-webkit-scrollbar { display: none; }
+  .av-pick { width: 48px; scroll-snap-align: start; }
+}
+@media (max-height: 500px) {
+  .hm-tagline { display: none; }
+  .hm-create .hint { display: none; }
+}
+
+/* ---- Held sideways: name tag on the left, Join / Start on the right ---- */
+@media (orientation: landscape) and (max-height: 500px) {
+  #app:has(.screen-home) { max-width: 920px; }
+  .screen-home { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto auto 1fr auto; column-gap: 18px; align-content: start; }
+  .screen-home > * { grid-column: 1; }
+  .screen-home > .duo { grid-column: 2; grid-row: 1 / span 3; align-self: center; margin-bottom: 0; }
+  .screen-home > .hm-err, .screen-home > .hm-foot { grid-column: 2; }
+}
 
 /* ---- Reduced motion: opacity only, identical timings ---- */
 @media (prefers-reduced-motion: reduce) {

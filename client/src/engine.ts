@@ -856,6 +856,13 @@ export class HostEngine {
     return { ...s, _: " ".repeat(Math.max(0, SECRET_JSON_LEN - bare)) };
   }
 
+  /** The host's phone is back after dropping out: everyone gets the current
+   *  state and their own secret again (messages sent while away were lost). */
+  resync(): void {
+    this.broadcast();
+    this.sendSecrets();
+  }
+
   private broadcast(): void {
     const state = this.publicState();
     this.transport.toAll("state", { state });

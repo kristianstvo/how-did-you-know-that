@@ -37,6 +37,7 @@ Note the audio time for each, then line it up with the log.
 | **CONFUSED** | "Wait, what happened?", or someone asking what a stamp means | Comprehension failures |
 | **WAIT** | "Come on…", or anyone visibly waiting on the UI | Tempo problems; check the host's Skip usage |
 | **PEEK** | Anyone noticing something on another person's screen | Parity or screen-share leaks |
+| **DROP** | A "reconnecting" or "teacher's phone dropped out" banner: whose phone, why (lock, app switch, signal) and whether it came back | Phone resilience (10-phone-play.md) |
 | **TELL** | The cheater, afterwards, describing what they did to blend in | Real cheater strategies, to check against the simulator's naive / mimic / careful / sprint |
 
 ## Afterwards (15 minutes)

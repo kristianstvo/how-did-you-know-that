@@ -1,6 +1,6 @@
 // Generates replay fixtures (client/public/fixtures/*.json): seeded matches,
 // recorded state-by-state from the real engine, picked for the moments worth
-// reproducing. Usage: npx tsx sim/tape.ts
+// reproducing. Usage: npx tsx sim/tape.ts [name ...]   (default: all)
 import { mkdirSync, writeFileSync } from "node:fs";
 import { matchEndTimeline } from "../shared/choreo";
 import type { MatchEvent } from "../shared/eventlog";
@@ -11,6 +11,9 @@ const OUT = new URL("../client/public/fixtures/", import.meta.url);
 mkdirSync(OUT, { recursive: true });
 
 const NAMES = ["Kiko", "Maya", "Sam", "Priya", "Leo", "Ana"];
+// A full class with the longest names the name tag allows (20 characters):
+// the worst case for fitting a phone screen.
+const FULL_CLASS = ["Kiko", "Maya", "Sam", "Priya", "Leo", "Ana", "Maximilian", "Zoë", "Alexandrina Charlott", "Jo"];
 const clock = new VirtualClock();
 clock.install();
 
@@ -24,6 +27,7 @@ interface Want {
   strategy: Scenario["strategy"];
   policy: Scenario["policy"];
   threshold?: number;
+  names?: string[];
   test: (r: MatchRecord) => boolean;
 }
 
@@ -59,14 +63,24 @@ const WANTS: Want[] = [
     policy: "score",
     test: (r) => votes(r).some((v) => v.banishedId && !v.wasCheater) && endOf(r).q >= 7,
   },
+  {
+    name: "fullclass",
+    description: "Ten classmates, long names, a wrong detention: the phone-layout worst case.",
+    strategy: "careful",
+    policy: "score",
+    names: FULL_CLASS,
+    test: (r) => votes(r).some((v) => v.banishedId && !v.wasCheater) && endOf(r).q >= 6,
+  },
 ];
 
-for (const want of WANTS) {
+const only = process.argv.slice(2);
+
+for (const want of WANTS.filter((w) => !only.length || only.includes(w.name))) {
   let found: MatchRecord | null = null;
   for (let batch = 0; batch < 20 && !found; batch++) {
     const sc: Scenario = {
       name: `tape-${want.name}`,
-      players: 6,
+      players: want.names?.length ?? 6,
       accuracy: "mid",
       strategy: want.strategy,
       policy: want.policy,
@@ -74,7 +88,7 @@ for (const want of WANTS) {
       seed: hashSeed("tape", want.name, batch),
       mode: "clients",
       questionSource: "local",
-      names: NAMES,
+      names: want.names ?? NAMES,
       record: true,
       threshold: want.threshold,
     };

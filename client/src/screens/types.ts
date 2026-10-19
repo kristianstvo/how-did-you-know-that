@@ -8,8 +8,13 @@ import type { PublicState, SecretState } from "../../../shared/protocol";
 export interface UiFlags {
   accuseConfirm: boolean;
   myPick: number | null;
+  /** Classmate tapped on the vote screen but not handed in yet. */
+  voteSel: string | null;
+  /** Ballot handed in (sent to the host). No take-backs after this. */
   myVote: string | null;
   boardOpen: boolean;
+  /** Lobby: the big "scan to join" QR card is up. */
+  qrOpen: boolean;
   toast: string | null;
 }
 

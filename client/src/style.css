@@ -5,7 +5,16 @@
 html, body { height: 100%; }
 /* clip (not hidden) so a stamp starting at 2.2× scale can never widen a
    phone's layout viewport, while sticky docks keep working. */
-html { overflow-x: clip; }
+html {
+  overflow-x: clip;
+  /* Phone play: no double-tap zoom on a fast second tap (pinch zoom still
+     works), no pull-to-refresh or rubber-banding (a refresh can end the game
+     for the host), and no font inflation in landscape. */
+  touch-action: manipulation;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
 body {
   background: radial-gradient(120% 90% at 50% 0%, var(--bg2) 0%, var(--bg) 60%);
   color: var(--ink);
@@ -14,7 +23,13 @@ body {
   overflow-x: clip;
 }
 
-#app { overflow-x: clip; max-width: 480px; margin: 0 auto; min-height: 100dvh; display: flex; flex-direction: column; padding: max(12px, env(safe-area-inset-top)) 14px max(16px, env(safe-area-inset-bottom)); }
+#app {
+  overflow-x: clip; max-width: 480px; margin: 0 auto; min-height: 100dvh; display: flex; flex-direction: column;
+  padding: max(12px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  /* A press-and-hold on a button must not select text or pop the callout menu. */
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+#app input, #app textarea { -webkit-user-select: text; user-select: text; }
 @media (min-width: 720px) { #app { max-width: 560px; } }
 .screen { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 
@@ -25,6 +40,7 @@ input {
   font: inherit; color: var(--ink); width: 100%;
   background: var(--card); border: 2px dashed var(--chalk-line); border-radius: 12px;
   padding: 12px 14px; outline: none; min-height: 44px;
+  font-size: max(16px, 1em); /* iOS zooms the whole page into any field under 16px */
 }
 input:focus { border-color: var(--accent2); }
 
@@ -37,6 +53,7 @@ input:focus { border-color: var(--accent2); }
 }
 .tagline { text-align: center; color: var(--dim); margin-bottom: 22px; font-size: 0.95rem; font-family: var(--hand); line-height: 1.5; }
 .hint { color: var(--dim); font-size: 0.85rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 .card {
   background: var(--card);
@@ -76,6 +93,21 @@ input:focus { border-color: var(--accent2); }
   padding: 10px 16px; border-radius: 999px; animation: hd-enter-up var(--t-base) var(--e-enter);
 }
 
+/* Connection banner (outside #app): this phone reconnecting, or the host's
+   phone away. Never blocks a tap. */
+#net {
+  position: fixed; z-index: 100; left: 0; right: 0; top: max(8px, env(safe-area-inset-top)); margin: 0 auto;
+  width: max-content; max-width: calc(100% - 112px); /* clear of the 🎓 tab */
+  padding: 8px 14px; border-radius: 18px; background: var(--accent2); color: #2a1d00;
+  font-weight: 800; font-size: 0.86rem; line-height: 1.3; text-align: center;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45); pointer-events: none;
+  opacity: 0; transform: translateY(-140%);
+  transition: opacity var(--t-base) var(--e-standard), transform var(--t-base) var(--e-enter);
+}
+#net.on { opacity: 1; transform: none; }
+#net[data-status="hostAway"] { background: var(--bad); color: #2a0e00; }
+@media (prefers-reduced-motion: reduce) { #net { transform: none; } }
+
 /* Avatars */
 .av { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: rgba(244, 241, 232, 0.1); font-size: 1.05rem; flex: none; }
 
@@ -86,7 +118,7 @@ input:focus { border-color: var(--accent2); }
 .player-li .nm { font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .player-li .rank { width: 22px; color: var(--dim); font-weight: 800; flex: none; }
 .player-li .pts { font-weight: 900; font-variant-numeric: tabular-nums; }
-.badge { font-size: 0.62rem; font-weight: 800; padding: 2px 7px; border-radius: 6px; flex: none; font-family: var(--hand); }
+.badge { font-size: 0.68rem; font-weight: 800; padding: 2px 7px; border-radius: 6px; flex: none; font-family: var(--hand); }
 .badge.host { background: var(--purple); color: #10241a; }
 .badge.bot { background: var(--card2); color: var(--dim); border: 1px dashed var(--chalk-line); }
 .badge.banished { background: #574632; color: #ffd9a8; }
