@@ -106,6 +106,7 @@ input:focus { border-color: var(--accent2); }
 }
 #net.on { opacity: 1; transform: none; }
 #net[data-status="hostAway"] { background: var(--bad); color: #2a0e00; }
+#net[data-status="hallway"] { background: var(--cleared); color: #0b2233; }
 @media (prefers-reduced-motion: reduce) { #net { transform: none; } }
 
 /* Avatars */

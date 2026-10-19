@@ -16,6 +16,8 @@ import type { Screen } from "./types";
 // Same emoji on both: a yellow 😎 vs white 👀 was readable from across a room.
 export const CHEATER_LINE = "It's you. Play it cool. 🤫";
 export const INNOCENT_LINE = "Not you. Watch closely. 🤫";
+/** In the hallway (v0.7): not playing this period, so no role at all. */
+export const HALLWAY_LINE = "Hallway. Watch and learn. 👀";
 
 /** When each group's motion has certainly finished. Later renders (and late
  *  joins) drop those animations; keyframes are from-only, so the resting look
@@ -33,7 +35,7 @@ const DUST: [number, number, number, number, number][] = [
 
 export const role: Screen = {
   beatKey: ({ elapsed }) => [...reached(ROLE_TIMELINE, elapsed)].join(","),
-  render({ app, elapsed }) {
+  render({ app, s, elapsed }) {
     const b = reached(ROLE_TIMELINE, elapsed);
     const cls = [...b].map((x: RoleBeat) => `b-${x}`);
     for (const [k, at] of Object.entries(DONE_AT)) if (elapsed >= at) cls.push(`d-${k}`);
@@ -41,7 +43,8 @@ export const role: Screen = {
     // becomes a newline (white-space: pre-line) so each note is exactly two
     // lines in a full-width block: identical boxes whatever the glyph widths,
     // no extra element, same text length.
-    const line = (app.secret.isCheater ? CHEATER_LINE : INNOCENT_LINE).replace(". ", ".\n");
+    const seated = s.players.some((p) => p.id === app.selfId);
+    const line = (!seated ? HALLWAY_LINE : app.secret.isCheater ? CHEATER_LINE : INNOCENT_LINE).replace(". ", ".\n");
     const dust = DUST.map(([x, top, d, s, y]) => `<i style="--x:${x}%;--top:${top}%;--d:${d}ms;--s:${s}px;--y:${y}px"></i>`).join("");
     return `<section class="screen screen-role ${cls.join(" ")}">
       <hd-roleroom class="rl">

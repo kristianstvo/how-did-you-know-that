@@ -191,6 +191,35 @@ test("phone: pointing at a suspect is free, public and changeable", async ({ bro
   await close();
 });
 
+test("phone: someone arriving mid-period watches from the hallway, without answering", async ({ browser }) => {
+  const { host, code, close } = await classroom(browser, [], 3);
+  await host.page.waitForSelector("button.opt:not([disabled])", { timeout: 30000 });
+  const late = await phone(browser, `/#/join/${code}`);
+  await late.page.fill("#playerName", "Eve");
+  await late.page.click('[data-action="join"]');
+  // In, watching the period: not turned away, not on the home screen.
+  await expect(late.page.locator(".screen-question, .screen-reveal").first()).toBeVisible({ timeout: 15000 });
+  await expect.poll(async () => (await banner(late.page)).status, { timeout: 5000 }).toBe("hallway");
+  // Watching, not playing: the answers are closed to them.
+  if (await late.page.locator(".screen-question").count()) {
+    expect(await late.page.locator("button.opt:not([disabled])").count()).toBe(0);
+  }
+  // The teacher's phone counts them in the hallway, not in the class.
+  await expect.poll(() => host.page.evaluate(() => document.querySelectorAll(".gb-row, [id^=qz-desk-]").length)).toBeGreaterThan(0);
+  await late.ctx.close();
+  await close();
+});
+
+test("phone: Practice with bots puts a solo player in a ready classroom", async ({ browser }) => {
+  const { ctx, page } = await phone(browser);
+  await page.fill("#playerName", "Solo");
+  await page.click("#hm-practice");
+  await page.waitForSelector(".screen-lobby");
+  await expect(page.locator(".lb-row.is-bot")).toHaveCount(5);
+  await expect(page.locator("#lb-start:not([disabled])")).toBeVisible();
+  await ctx.close();
+});
+
 test("phone: the screen stays awake in a classroom; the host's page asks before leaving mid-game", async ({ browser }) => {
   const home = await phone(browser);
   expect(await home.page.evaluate(() => (window as unknown as { __wake: { requests: number } }).__wake.requests)).toBe(0);
@@ -270,6 +299,19 @@ test("phone: game-show sound plays on the beats, the same for the cheater, and o
   await page.click(".qz-head");
   await page.waitForTimeout(9000);
   expect(await page.evaluate(() => (window.__hdykt as unknown as { sounds?: string[] }).sounds ?? [])).toEqual([]);
+  await ctx.close();
+});
+
+test("phone: the first period teaches in Act I (Teacher's notes), then gets out of the way", async ({ browser }) => {
+  const at = (q: number) => phaseAt("caught", "reveal", q) + 9000;
+  const { ctx, page } = await phone(browser, `/#/fixture/caught?as=innocent&t=${at(0)}&paused=1&ui=0`);
+  await page.waitForFunction(() => !!window.__fixture);
+  await expect(page.locator(".ev-teach")).toContainText("Teacher's note");
+  const box = (await page.locator(".ev-teach").boundingBox())!;
+  expect(box.width).toBeGreaterThan(200);
+  await page.evaluate((t) => window.__fixture!.seek(t), at(4));
+  await page.waitForTimeout(600);
+  expect(await page.locator(".ev-teach").count(), "no notes after Act I").toBe(0);
   await ctx.close();
 });
 

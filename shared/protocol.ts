@@ -125,6 +125,8 @@ export interface PublicState {
   matchNumber: number; // 1-based, 0 = none played yet
   offlineQuestions: boolean; // fallback pack active this match (spec 06)
   loadingQuestions: boolean; // host is fetching questions at match start
+  /** v0.7 the hallway: arrived mid-period, watching, seated at the next one. */
+  hallway?: { id: string; name: string; avatar: string }[];
   debugForcedCheater?: boolean; // test hook active: the cheater is not random (shown to everyone)
   match: null | {
     questionIdx: number; // 0-based

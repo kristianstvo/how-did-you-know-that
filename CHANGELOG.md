@@ -19,6 +19,32 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.7.0 — First game night · 2026-10-20 01:58
+
+**Why:** the first real session decides whether a group comes back, and three
+things went wrong in it. Nobody reads a rules block before they play. A late
+arrival was turned away with an error and saw nothing until the period ended.
+Trying the game alone took five taps of setup.
+
+**Added**
+- **Teacher's notes:** in the first period, the first three reveals teach one
+  thing each: answer times are clues, 👉 points, ACCUSE costs your one
+  accusation (and two strikes end it). They use the space easy questions
+  almost never fill with evidence, then get out of the way.
+- **The hallway:** someone arriving mid-period is let in to watch, with a
+  banner ("You're in the hallway…"). The answer buttons are closed to them,
+  and their role note reads "Hallway. Watch and learn." They get a seat when
+  the class is back in homeroom, never as the cheater and never on this
+  period's report card.
+- **Practice with bots** on Home: one tap to a classroom with five bot
+  classmates.
+
+**Evidence**
+- `sim/hallway-check.ts` (8 checks on the real engine): let in, hallway not
+  match, never the cheater, unique names, leaving frees the place, seated in
+  homeroom with a fresh semester line.
+- Phone tests for the hallway, Practice and Teacher's notes.
+
 ## v0.6.0 — Game-show sound · 2026-10-20 01:13
 
 **Why:** the reveal was built as a game show but played in silence. The

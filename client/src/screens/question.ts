@@ -87,7 +87,8 @@ export const question: Screen = {
     const myPick = app.ui.myPick;
     // Locked the instant this phone taps (before the host echoes it back).
     const locked = myPick !== null || !!self?.answeredCurrent;
-    const closed = locked || c.pencils;
+    const watching = !self; // in the hallway: watching, not playing
+    const closed = locked || c.pencils || watching;
     const cheatIdx = app.secret.correctIdx; // -1 for innocents
     const act = actOf(m.questionIdx);
     const answered = s.players.filter((p) => p.answeredCurrent || (p.id === app.selfId && locked));
@@ -133,7 +134,7 @@ export const question: Screen = {
       })
       .join("");
 
-    const lockLabel = c.pencils ? "Pencils down!" : locked ? "Locked in. Waiting for the class…" : "Locked in";
+    const lockLabel = c.pencils ? "Pencils down!" : watching ? "👀 Watching from the hallway" : locked ? "Locked in. Waiting for the class…" : "Locked in";
     const status = c.pencils
       ? "Pencils down."
       : locked

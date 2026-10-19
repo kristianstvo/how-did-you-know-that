@@ -147,3 +147,6 @@
   @keyframes hm-pick { from { opacity: 0.4; } }
   .av-face { transition: none; }
 }
+
+/* Practice with bots (v0.7): a quiet third way in, under Join / Start. */
+.hm-practice { margin: 0 0 6px; min-height: 44px; font-size: 0.95rem; animation: hd-fade-in var(--t-scene) var(--e-standard) 350ms both; }

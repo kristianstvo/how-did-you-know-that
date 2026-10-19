@@ -78,7 +78,9 @@ test("reduced motion: no transform animations, same beats", async ({ browser }) 
         }
         await new Promise((r) => setTimeout(r, 100));
       }
-      const beats = window.__hdykt!.beats.filter((b) => b.key.startsWith("reveal-")).map((b) => `${b.key}@${Math.round(b.server / 50) * 50}`);
+      // Timed beats only: an entry render with no beat yet ("reveal-…|") marks
+      // when the frame happened to render, not a beat (same rule as sync.spec).
+      const beats = window.__hdykt!.beats.filter((b) => b.key.startsWith("reveal-") && !b.key.endsWith("|")).map((b) => `${b.key}@${Math.round(b.server / 50) * 50}`);
       return { moving: [...moving], beats };
     });
     await ctx.close();

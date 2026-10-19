@@ -181,6 +181,7 @@ function onState(state: PublicState): void {
   }
   app.state = state;
   lastPhase = state.phase;
+  banner();
   if (state.phase === "question" && state.match?.question) {
     const qk = `${state.matchNumber}:${state.match.questionIdx}`;
     if (qk !== lastQuestionKey) {
@@ -234,9 +235,20 @@ const netEl = document.createElement("div");
 netEl.id = "net";
 netEl.setAttribute("role", "status");
 document.body.prepend(netEl);
+let netStatus: NetStatus = "online";
 function onNet(status: NetStatus): void {
+  netStatus = status;
+  banner();
+}
+/** Connection trouble wins; otherwise tell a late arrival they're in the hallway. */
+function banner(): void {
   // The host sees its own reconnect as "reconnecting", never "teacher away".
-  const copy = status === "reconnecting" && session?.kind === "host" ? "📶 Reconnecting… the class is waiting for you" : NET_COPY[status];
+  let copy = netStatus === "reconnecting" && session?.kind === "host" ? "📶 Reconnecting… the class is waiting for you" : NET_COPY[netStatus];
+  let status: string = netStatus;
+  if (!copy && session && app.state?.hallway?.some((h) => h.id === app.selfId)) {
+    copy = "🚪 You're in the hallway: watch this period, you'll get a seat at the next one";
+    status = "hallway";
+  }
   netEl.textContent = copy;
   netEl.classList.toggle("on", !!copy);
   netEl.dataset.status = status;
@@ -250,7 +262,7 @@ function act(intent: Intent): void {
 
 // ---------------- Actions ----------------
 
-async function createLobby(): Promise<void> {
+async function createLobby(bots = 0): Promise<void> {
   const name = (document.getElementById("playerName") as HTMLInputElement).value.trim();
   if (!name) return showError("Write your name on the name tag first.");
   saveName(name);
@@ -264,6 +276,8 @@ async function createLobby(): Promise<void> {
     const forceCheaterName = local ? (params.get("debugCheater") ?? undefined) : undefined;
     session = await createHostSession(name, app.home.avatar, { onState, onSecret, onClosed, onNet }, { forceCheaterName });
     keepAwake(true);
+    // Practice: five bot classmates, so a solo player can start right away.
+    for (let i = 0; i < bots; i++) session.engine.addBot();
     app.isHost = true;
     app.selfId = session.selfId;
     app.screen = "game";
@@ -357,6 +371,9 @@ root.addEventListener("click", (ev) => {
       break;
     case "join":
       void joinLobby();
+      break;
+    case "practice":
+      void createLobby(5);
       break;
     case "share":
       void shareLink(btn.dataset.url!);

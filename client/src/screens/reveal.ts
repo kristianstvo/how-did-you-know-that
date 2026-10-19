@@ -143,6 +143,16 @@ export const reveal: Screen = {
       const fast = fastestCorrect ? ` <span class="ev-fast">⚡ Fastest: ${nameOf(s, fastestCorrect)} ${fmtTime(rowOf.get(fastestCorrect)!.timeMs)}</span>` : "";
       classNote = `${head}${fast}`;
     }
+    // First period only, Q1–Q3 (Act I: easy questions rarely carry evidence).
+    // Public data only, so every phone shows the same note at the same beat.
+    const k0 = s.settings.strikes;
+    const strikeRule = k0 > 0 ? `${k0 === 1 ? "One wrong detention" : `${k0 === 2 ? "Two" : k0} wrong detentions`} and the cheater graduates.` : "A wrong detention lowers the cheater's line.";
+    const TEACHER_NOTES = [
+      "The board shows every answer <b>and its time</b>. Right and fast on a hard one? Suspicious.",
+      "Suspect someone? Tap <b>👉</b> to point at them. It's free, and the whole class sees it.",
+      `<b>🙋 ACCUSE</b> spends your one accusation on a class vote. ${strikeRule}`,
+    ];
+    const teach = !callout && s.matchNumber === 1 ? TEACHER_NOTES[m.questionIdx] : undefined;
     const evidence = callout
       ? `<div class="ev-slot has-card" id="ev-slot">
           <span class="ev-ph" aria-hidden="true">📁 case file</span>
@@ -157,7 +167,9 @@ export const reveal: Screen = {
           </div>
         </div>
         <p class="ev-foot" id="ev-foot">Evidence, not proof.</p>`
-      : `<div class="ev-slot has-note" id="ev-slot"><p class="ev-note" id="ev-note" aria-hidden="${b.has("grade") ? "false" : "true"}">📝 ${classNote}</p></div>`;
+      : `<div class="ev-slot has-note${teach ? " has-teach" : ""}" id="ev-slot"><p class="ev-note" id="ev-note" aria-hidden="${b.has("grade") ? "false" : "true"}">📝 ${classNote}</p>${
+          teach ? `<p class="ev-teach" id="ev-teach-${m.questionIdx}" aria-hidden="${b.has("grade") ? "false" : "true"}"><span class="ev-teach-h">🍎 Teacher's note</span><span class="ev-teach-t">${teach}</span></p>` : ""
+        }</div>`;
 
     // ---- LAST BELL ----
     const bellLine = r.lastBell.length ? lastBellLine(s, r.lastBell) : "";
@@ -244,6 +256,7 @@ export const reveal: Screen = {
     if (b.has("answer")) said.push(`Answer: ${LETTERS[r.correctIdx]}, ${esc(q.options[r.correctIdx])}. ${correct.length} of ${rows.length} got it.`);
     if (callout && b.has("evidence")) said.push(`Exhibit: ${esc(callout.title)}. ${callout.line} ${esc(callout.ask)}`);
     if (!callout && b.has("grade")) said.push(classNote.replace(/<[^>]+>/g, ""));
+    if (teach && b.has("grade")) said.push(`Teacher's note: ${teach.replace(/<[^>]+>/g, "")}`);
     if (armed && canAccuse) said.push("Accusations are open.");
     const narration = said.map((x, i) => `<span id="rv-say-${i}">${x} </span>`).join("");
     const alert = bellLine && b.has("grade") ? bellLine : "";

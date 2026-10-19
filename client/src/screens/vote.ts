@@ -69,7 +69,7 @@ export const vote: Screen = {
     const cleared = new Set(m.cleared);
 
     const status = !self
-      ? ""
+      ? "👀 Watching from the hallway."
       : self.banished
         ? "In detention: no vote this time."
         : !self.votingRights

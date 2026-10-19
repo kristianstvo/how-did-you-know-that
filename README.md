@@ -10,6 +10,17 @@ Built from the specs in `00-overview.md` … `07-ui-screens.md`.
 
 ## Extras beyond the specs
 
+Newest first (details in `CHANGELOG.md`, decisions in `PRODUCT.md`):
+
+- **The hallway** (v0.7) — arriving mid-period, you watch it and get a seat at
+  the next one. **Teacher's notes** teach the rules inside the first period.
+  **Practice with bots** is one tap from Home.
+- **Game-show sound** (v0.6) — synthesized, on the synced beats; one switch.
+- **Point at a suspect** (v0.5) — 👉: free, public, not a vote.
+- **Two strikes** (v0.4) — the 2nd wrong detention graduates the cheater;
+  default line 2100.
+- **Phone play** (v0.3) — see `10-phone-play.md`.
+
 - **Bots** — the teacher (host) can add bot classmates in the lobby to fill
   seats for solo testing. Bots answer with tier-scaled accuracy (a bot cheater
   "reads the marker"), vote in every detention vote, and occasionally burn

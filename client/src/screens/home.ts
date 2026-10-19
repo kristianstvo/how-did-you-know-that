@@ -91,6 +91,7 @@ export const home: Screen = {
         <button class="btn secondary ${h.busy ? "hm-busy" : ""}" data-action="create" ${h.busy ? "disabled" : ""}><span>${h.busy ? "Creating…" : "Create"}</span></button>
       </div>
     </div>
+    <button class="btn ghost hm-practice" id="hm-practice" data-action="practice" ${h.busy ? "disabled" : ""}><span aria-hidden="true">🤖 </span>Practice with bots</button>
     ${app.error ? `<div class="err hm-err" id="hm-err-${keyOf(app.error)}" role="alert">✏️ ${esc(app.error)}</div>` : ""}
     <p class="footer-note hm-foot" id="hm-foot">3–10 classmates · phones out · one voice call · bots welcome</p>
     </section>`;

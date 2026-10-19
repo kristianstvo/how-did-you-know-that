@@ -455,3 +455,22 @@
   .screen-reveal .rv-dock.host { grid-template-columns: 52px minmax(0, 1fr) 92px; }
   .screen-reveal .btn.accuse { font-size: 0.98rem; }
 }
+
+/* Teacher's note (v0.7): first period, Q1–Q3 — a sticky note under the class
+   note, in a box reserved from frame 0 (no reflow when it appears). */
+.screen-reveal .ev-slot.has-teach { height: 124px; }
+.screen-reveal .ev-slot.has-teach .ev-note { bottom: auto; height: 40px; }
+.screen-reveal .ev-teach {
+  position: absolute; left: 8px; right: 8px; top: 42px; height: 74px; margin: 0; padding: 5px 10px;
+  display: flex; flex-direction: column; justify-content: center; gap: 1px;
+  border-radius: 6px; background: #fff3c4; color: #3b2b0e; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+  font-size: 0.8rem; line-height: 1.25; rotate: -0.6deg; overflow: hidden;
+  opacity: 0; transform: translateY(8px);
+}
+.screen-reveal .ev-teach-h { font-family: var(--hand); font-weight: 900; font-size: 0.78rem; line-height: 1.1; color: #8a5a00; }
+.screen-reveal .ev-teach-t { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.screen-reveal.b-grade .ev-teach { opacity: 1; transform: none; transition: transform var(--t-base) var(--e-enter) 250ms, opacity var(--t-base) var(--e-standard) 250ms; }
+@media (prefers-reduced-motion: reduce) {
+  .screen-reveal .ev-teach { transform: none; }
+  .screen-reveal.b-grade .ev-teach { transition: opacity var(--t-base) var(--e-standard) 250ms; }
+}

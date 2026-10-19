@@ -134,6 +134,8 @@ export class HostEngine {
   private qIdx = 0;
   private threshold = 0;
   private wrongDetentions = 0; // strikes this match (settings.strikes ends it)
+  /** v0.7: late arrivals watching this period; seated back in homeroom. */
+  private hallway: InternalPlayer[] = [];
   private usedFallback = false;
   private questionDeadline = 0;
   private answers: Record<string, AnswerRecord>[] = []; // per question: playerId -> record
@@ -231,16 +233,32 @@ export class HostEngine {
       this.broadcast();
       return;
     }
-    if (this.phase !== "lobby" && this.phase !== "matchEnd") {
-      this.transport.toPlayer(socketId, "joinRejected", { reason: "A match is in progress — join between matches." });
+    // The hallway (v0.7): mid-period (or while the quiz prints) a newcomer
+    // watches this period and takes a seat at the next one, instead of being
+    // turned away.
+    const midPeriod = (this.phase !== "lobby" && this.phase !== "matchEnd") || this.loadingQuestions;
+    if (midPeriod) {
+      const waiting = this.hallway.find((h) => h.name.toLowerCase() === name.toLowerCase());
+      if (waiting && waiting.connected && !(token && token === waiting.token)) {
+        this.transport.toPlayer(socketId, "joinRejected", { reason: `"${waiting.name}" is already in the hallway. Pick another name.` });
+        return;
+      }
+      if (!waiting && this.players.length + this.hallway.length >= MAX_PLAYERS) {
+        this.transport.toPlayer(socketId, "joinRejected", { reason: `Room is full (${MAX_PLAYERS} players max).` });
+        return;
+      }
+      const h = waiting ?? this.newPlayer(name, avatar, socketId, false);
+      if (waiting) {
+        waiting.socketId = socketId;
+        waiting.connected = true;
+        if (avatar) waiting.avatar = avatar;
+      } else this.hallway.push(h);
+      this.transport.toPlayer(socketId, "joined", { playerId: h.id, state: this.publicState(), secret: this.paddedSecret(h.id), token: h.token });
+      this.broadcast();
       return;
     }
-    if (this.players.length >= MAX_PLAYERS) {
+    if (this.players.length + this.hallway.length >= MAX_PLAYERS) {
       this.transport.toPlayer(socketId, "joinRejected", { reason: `Room is full (${MAX_PLAYERS} players max).` });
-      return;
-    }
-    if (this.loadingQuestions) {
-      this.transport.toPlayer(socketId, "joinRejected", { reason: "The bell just rang — join after this period." });
       return;
     }
     const player = this.newPlayer(name, avatar, socketId, false);
@@ -256,6 +274,12 @@ export class HostEngine {
   }
 
   handlePeerDisconnected(socketId: string): void {
+    // Someone in the hallway left: they never sat down, so they simply go.
+    if (this.hallway.some((h) => h.socketId === socketId)) {
+      this.hallway = this.hallway.filter((h) => h.socketId !== socketId);
+      this.broadcast();
+      return;
+    }
     const player = this.players.find((p) => p.socketId === socketId);
     if (!player) return;
     player.connected = false;
@@ -450,8 +474,19 @@ export class HostEngine {
     this.broadcast();
   }
 
+  /** Late arrivals take their seats once the class is between periods. */
+  private seatHallway(): void {
+    const ready = this.hallway.filter((h) => h.connected);
+    this.hallway = [];
+    for (const h of ready) {
+      this.players.push(h);
+      this.sessionBoard[h.id] = 0;
+    }
+  }
+
   async startMatch(): Promise<void> {
     if (this.phase !== "lobby" && this.phase !== "matchEnd") return;
+    this.seatHallway(); // starting straight from the report card
     const present = this.players.filter((p) => p.connected);
     if (present.length < MIN_PLAYERS || this.loadingQuestions) return;
 
@@ -521,6 +556,7 @@ export class HostEngine {
       if (now >= this.phaseStartedAt + tl.end) this.afterVoteResult();
     } else if (this.phase === "matchEnd" && this.end) {
       if (now >= this.phaseStartedAt + matchEndTimeline(this.end.reason).end) {
+        this.seatHallway();
         this.setPhase("lobby");
         this.broadcast();
       }
@@ -897,6 +933,7 @@ export class HostEngine {
           }
         : null,
       loadingQuestions: this.loadingQuestions,
+      hallway: this.hallway.filter((h) => h.connected).map((h) => ({ id: h.id, name: h.name, avatar: h.avatar })),
       debugForcedCheater: !!this.forceCheaterName,
     };
   }
