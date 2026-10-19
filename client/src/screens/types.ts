@@ -15,6 +15,8 @@ export interface UiFlags {
   boardOpen: boolean;
   /** Lobby: the big "scan to join" QR card is up. */
   qrOpen: boolean;
+  /** Reveal: the "point at a suspect" sheet is up (v0.5). */
+  pointOpen: boolean;
   toast: string | null;
 }
 

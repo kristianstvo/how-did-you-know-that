@@ -229,6 +229,7 @@ class SimPhone {
         activeIds: s.players.filter((p) => !p.banished).map((p) => p.id),
       });
       if (res.selected) for (const id of res.selected.subjectIds) this.suspicion[id] = (this.suspicion[id] ?? 0) + CALLOUT_WEIGHT[res.selected.kind];
+      this.planPointer(s);
       this.planAccusation(s);
     } else if (s.phase === "reveal" && prev?.phase === "voteResult") {
       // Back from a vote on the same reveal: the room may accuse again.
@@ -383,6 +384,31 @@ class SimPhone {
     if (!this.sweepActive(s)) return 0;
     const armed = Math.max(0, (s.match?.reveal?.accuseAt ?? Date.now()) - Date.now());
     return armed + 600 + this.sweepAccusers(s).length * 2500 + 1500;
+  }
+
+  /** v0.5: point at the top suspect once the board is graded (the cheater
+   *  bluffs the same way). Deterministic, no randomness drawn: pointing never
+   *  changes an outcome, so balance results stay comparable. */
+  private planPointer(s: PublicState): void {
+    const policy = this.sc.policy;
+    const me = this.me();
+    if (policy === "none" || isCircle(policy) || !me) return;
+    const others = this.suspects(s);
+    if (!others.length) return;
+    let top: string | null = null;
+    if (policy === "evidence") {
+      const ranked = others.map((p) => ({ id: p.id, s: this.suspicion[p.id] ?? 0 })).sort((a, b) => b.s - a.s);
+      if (ranked[0].s >= 1) top = ranked[0].id;
+    } else {
+      const lead = [...others].sort((a, b) => b.score - a.score)[0];
+      if (lead.score >= 0.5 * s.match!.threshold) top = lead.id;
+    }
+    if (!top || top === (me.pointingAt ?? null)) return;
+    const armed = Math.max(0, (s.match?.reveal?.accuseAt ?? Date.now()) - Date.now());
+    const seq = this.phaseSeq;
+    setTimeout(() => {
+      if (this.phaseSeq === seq) this.send({ kind: "point", targetPlayerId: top });
+    }, armed + 400);
   }
 
   private planAccusation(s: PublicState): void {

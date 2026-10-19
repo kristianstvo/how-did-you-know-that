@@ -164,6 +164,33 @@ test("phone: a fumbled double-tap on ACCUSE does nothing; a vote tap only picks;
   await close();
 });
 
+test("phone: pointing at a suspect is free, public and changeable", async ({ browser }) => {
+  const { host, players, close } = await classroom(browser, ["Bea"], 2);
+  const bea = players[0].page;
+  await answer(host.page);
+  await answer(bea);
+  await host.page.waitForSelector("#rv-host", { timeout: 40000 });
+  await host.page.click("#rv-host"); // skip to the accuse beat
+  await bea.waitForSelector("#rv-point:not([disabled])", { timeout: 15000 });
+  // Bea points at Hana from the sheet (52px rows, thumb reach)…
+  await bea.click("#rv-point");
+  const row = bea.locator(".pt-row", { hasText: "Hana" });
+  expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(48);
+  await row.click();
+  await expect(bea.locator("#pt-sheet")).toHaveCount(0);
+  // …everyone sees it on the grade book, and her button shows whom she points at.
+  await expect(host.page.locator(".gb-row", { hasText: "Hana" }).locator(".ptr")).toHaveText("👉1", { timeout: 5000 });
+  await expect(bea.locator("#rv-point.on")).toBeVisible();
+  // It costs nothing: her accusation is untouched.
+  await expect(bea.locator("#rv-accuse.st-go")).toBeVisible();
+  // And it is changeable: stop pointing clears it for everyone.
+  await bea.waitForTimeout(400); // the engine ignores changes closer than 350ms
+  await bea.click("#rv-point");
+  await bea.click("#pt-stop");
+  await expect(host.page.locator(".gb-row", { hasText: "Hana" }).locator(".ptr")).toHaveCount(0, { timeout: 5000 });
+  await close();
+});
+
 test("phone: the screen stays awake in a classroom; the host's page asks before leaving mid-game", async ({ browser }) => {
   const home = await phone(browser);
   expect(await home.page.evaluate(() => (window as unknown as { __wake: { requests: number } }).__wake.requests)).toBe(0);

@@ -16,7 +16,7 @@
 // short window after their beat — a pure function of the shared clock.
 import { REVEAL_TIMING, reached, revealTimeline, slapAt, type RevealBeat, type Timeline } from "../../../shared/choreo";
 import { TIER_PLAN, type PublicPlayer, type RevealRow } from "../../../shared/protocol";
-import { actOf, calloutCopy, CALLOUT_ICON, esc, exhibitBadges, fmtTime, lastBellLine, LETTERS, nameOf, sessionTab, speedOrder, tierTicks } from "./common";
+import { actOf, calloutCopy, CALLOUT_ICON, esc, exhibitBadges, fmtTime, lastBellLine, LETTERS, nameOf, pointerChip, pointSheet, sessionTab, speedOrder, tierTicks } from "./common";
 import type { RenderCtx, Screen } from "./types";
 
 function timeline(ctx: RenderCtx): Timeline<RevealBeat> {
@@ -200,7 +200,7 @@ export const reveal: Screen = {
         return `<div class="${cls}" id="gb-${p.id}" title="${esc(p.name)}${!p.connected && !p.isBot ? " (reconnecting…)" : ""}"
             style="--y0:${y0}px;--y1:${y1}px;--s0:${share(p0 / max)};--s1:${share(p.score / max)};--dr:${Math.round(prevRank.get(p.id)! * decoStep(players.length))}ms">
           <span class="av" aria-hidden="true">${p.avatar}</span>
-          <span class="gb-name"><span class="gb-nm">${esc(p.name)}</span>${exhibitBadges(s, p.id, m.questionIdx - 1)}${newEx}</span>
+          <span class="gb-name"><span class="gb-nm">${esc(p.name)}</span>${exhibitBadges(s, p.id, m.questionIdx - 1)}${newEx}${pointerChip(s, p.id)}</span>
           <span class="gb-time${p.id === fastestCorrect ? " fast" : ""}">${time}</span>
           <span class="gb-pts${row.pointsGained > 0 ? " pos" : ""}">${pts}</span>
           <span class="gb-bar" aria-hidden="true"><span class="gb-fill now"></span><span class="gb-fill prev"></span>${stamps}</span>
@@ -218,13 +218,18 @@ export const reveal: Screen = {
         ? `<span class="gb-strikes" role="img" aria-label="Wrong detentions: ${w} of ${k}" title="${w} of ${k} strikes. At ${k}, the cheater graduates">${Array.from({ length: k }, (_, i) => `<i class="${i < w ? "used" : ""}">${i < w ? "✗" : ""}</i>`).join("")}</span>`
         : "";
 
+    // ---- 👉 Point (v0.5): free and public; opens the sheet ----
+    const myPtr = self?.pointingAt ? s.players.find((p) => p.id === self.pointingAt) : undefined;
+    const pointBtn = `<button class="btn secondary rv-point${myPtr ? " on" : ""}" id="rv-point" data-action="pointSheet" aria-haspopup="dialog" aria-expanded="${app.ui.pointOpen}" ${self ? "" : "disabled"}
+        aria-label="${myPtr ? `Pointing at ${esc(myPtr.name)}. Change` : "Point at a suspect"}"><span aria-hidden="true">👉${myPtr ? `<span class="rv-point-av">${myPtr.avatar}</span>` : ""}</span></button>`;
+
     // ---- ACCUSE dock ----
     const armed = b.has("accuse");
     const blocked = !self ? "Watching" : self.banished ? "In detention" : self.tokenUsed ? "Accusation used ✋" : !self.votingRights ? "No accusing" : "";
     const canAccuse = armed && !blocked;
     const confirm = canAccuse && app.ui.accuseConfirm;
     const accState = blocked ? "off" : confirm ? "confirm" : armed ? "go" : "wait";
-    const accLabel = { off: blocked, confirm: "Burn your only token?", go: "🙋 ACCUSE", wait: "Watch the board…" }[accState];
+    const accLabel = { off: blocked, confirm: "Use your only accusation? Tap again to confirm.", go: "🙋 ACCUSE", wait: "Watch the board…" }[accState];
     const accTitle = self?.banished ? "You're in detention — no accusing" : self?.tokenUsed ? "You already used your accusation" : !armed ? "Opens when the board is graded" : "";
     const lastQ = m.questionIdx + 1 >= m.questionCount;
     const hostBtn = app.isHost
@@ -288,15 +293,17 @@ export const reveal: Screen = {
     <p class="sr-only" role="alert">${alert}</p>
 
     <div class="rv-dock${app.isHost ? " host" : ""}">
+      ${pointBtn}
       <button class="btn accuse st-${accState}" id="rv-accuse" data-action="accuse" ${canAccuse ? "" : "disabled"} aria-label="${esc(accLabel)}" ${accTitle ? `title="${esc(accTitle)}"` : ""}>
         <span class="ac-bg go"></span><span class="ac-bg confirm"></span><span class="ac-glow"></span>
         <span class="ac-l wait" aria-hidden="true">Watch the board…</span>
         <span class="ac-l go" aria-hidden="true">🙋 ACCUSE</span>
-        <span class="ac-l confirm" aria-hidden="true">Burn your only token?</span>
+        <span class="ac-l confirm" aria-hidden="true">Sure? Tap again</span>
         <span class="ac-l off" aria-hidden="true">${esc(blocked || "—")}</span>
       </button>
       ${hostBtn}
     </div>
+    ${pointSheet(app, s)}
     </section>`;
   },
 };

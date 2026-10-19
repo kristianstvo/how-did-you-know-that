@@ -6,7 +6,7 @@
 // ballot goes in from the sticky dock, in thumb reach. A pick that is never
 // handed in goes in by itself just before the vote closes (main.ts).
 import type { PublicPlayer, PublicState } from "../../../shared/protocol";
-import { av, esc, exhibitBadges, fmtTime, sessionTab } from "./common";
+import { av, esc, exhibitBadges, fmtTime, pointerChip, sessionTab } from "./common";
 import type { RenderCtx, Screen } from "./types";
 
 /** Entrance beats, ms from the vote phase start. Local to this screen: the
@@ -107,7 +107,7 @@ export const vote: Screen = {
           ${av(p, "vo-av")}
           <span class="vo-nm" title="${esc(p.name)}">${esc(p.name)}</span>
           <span class="vo-tags">${tags}</span>
-          <span class="vo-meta">${pick.html}${ex}</span>
+          <span class="vo-meta">${pick.html}${pointerChip(s, p.id)}${ex}</span>
           ${isClear ? `<span class="vo-clear-row"><span class="vo-cleared">CLEARED</span><span class="vo-proven">proven<br />innocent</span></span>` : ""}
         </button>
         ${picked ? CHALK_CIRCLE : ""}

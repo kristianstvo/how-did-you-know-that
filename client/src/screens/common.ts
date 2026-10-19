@@ -79,6 +79,47 @@ export function exhibitBadges(s: PublicState, playerId: string, upToQ = Infinity
   return icons.length ? `<span class="exhibits" role="img" aria-label="${icons.length} exhibit${icons.length === 1 ? "" : "s"}">${icons.join("")}</span>` : "";
 }
 
+// ---- Pointing (v0.5): free, public "I suspect you" ----
+
+/** Everyone currently pointing at this player. */
+export const pointersAt = (s: PublicState, id: string) => s.players.filter((p) => (p.pointingAt ?? null) === id);
+
+/** "👉3" with who is pointing in the tooltip; "" when nobody is. */
+export function pointerChip(s: PublicState, id: string): string {
+  const by = pointersAt(s, id);
+  if (!by.length) return "";
+  const names = esc(by.map((p) => p.name).join(", "));
+  return `<span class="ptr" role="img" aria-label="${by.length} pointing: ${names}" title="Pointed at by ${names}">👉${by.length}</span>`;
+}
+
+/** The sheet behind the 👉 button: one 52px row per classmate (thumb-sized),
+ *  with who already points at them. A tap points and closes. */
+export function pointSheet(app: App, s: PublicState): string {
+  if (!app.ui.pointOpen) return "";
+  const mine = s.players.find((p) => p.id === app.selfId)?.pointingAt ?? null;
+  const rows = s.players
+    .filter((p) => p.id !== app.selfId && !p.banished)
+    .map((p) => {
+      const by = pointersAt(s, p.id);
+      const on = mine === p.id;
+      return `<button class="pt-row${on ? " on" : ""}" id="pt-${p.id}" data-action="point" data-id="${p.id}" aria-pressed="${on}" aria-label="Point at ${esc(p.name)}${by.length ? `, ${by.length} already pointing` : ""}">
+        ${av(p)}<span class="pt-nm">${esc(p.name)}</span>${exhibitBadges(s, p.id)}
+        <span class="pt-by" aria-hidden="true">${by.map((x) => `<span class="pt-by-av" title="${esc(x.name)}">${x.avatar}</span>`).join("")}</span>
+        ${on ? `<span class="pt-on" aria-hidden="true">👉 you</span>` : ""}
+      </button>`;
+    })
+    .join("");
+  return `<div class="overlay pt-sheet" id="pt-sheet" role="dialog" aria-modal="true" aria-labelledby="pt-h" data-action="pointSheet">
+    <div class="pt-card" data-action="noop">
+      <h2 id="pt-h">👉 Point at a suspect</h2>
+      <p class="pt-sub">Free, public, changeable. Not a vote: it shows the class who you suspect.</p>
+      <div class="pt-list">${rows}</div>
+      ${mine ? `<button class="btn ghost pt-stop" id="pt-stop" data-action="point" data-id="">Stop pointing</button>` : ""}
+    </div>
+    <button class="btn secondary pt-close" id="pt-close" data-action="pointSheet">Close</button>
+  </div>`;
+}
+
 /** The three acts the data produces: ~0% / ~73% / ~95% of reveals carry
  *  evidence on easy / medium / hard questions. */
 export function actOf(questionIdx: number): { n: string; name: string } {

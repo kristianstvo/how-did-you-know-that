@@ -19,6 +19,40 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.5.0 — Point at a suspect · 2026-10-20 00:58
+
+**Why:** the north star is accusations happening on their own. Until now the
+only way to say "I suspect you" on screen was to spend your one accusation, so
+most players just watched. Pointing gives everyone a free, public, changeable
+way to show suspicion. A pile of 👉 on one name is what makes someone raise a
+hand.
+
+**Added**
+- 👉 next to ACCUSE on the reveal. It opens a bottom sheet of classmates
+  (52px rows, with their exhibits and who already points at them); tap one to
+  point. Your 👉 button then shows whom you point at, and "Stop pointing" takes
+  it back.
+- 👉 counts on the grade book and on the vote cards.
+- Everyone may point, players in detention included (pointing is not a vote).
+  The cheater can bluff-point.
+- Bots point at their top suspect, so solo test rooms have a live pointer
+  board.
+- Pointers clear when their target goes to detention, and at every new match.
+- Point events in the match log, to measure whether pointing leads to
+  accusations.
+
+**Changed**
+- The ACCUSE confirm label is now "Sure? Tap again", so it fits beside 👉 on
+  a 320px phone.
+- How to play explains pointing.
+- `tools/shot.mjs --click` taps an element before the screenshot.
+
+**Evidence**
+- 31 browser tests including a new pointing test, plus the protocol and relay
+  checks.
+- Parity has 0 differences, with pointers now in the recorded matches.
+- Pointing never changes an outcome: the same seeds pick the same matches.
+
 ## v0.4.0 — Two strikes · 2026-10-20 00:12
 
 **Why:** two balance problems, both measured. (1) A class could skip the whole

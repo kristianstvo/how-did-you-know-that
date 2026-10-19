@@ -57,6 +57,9 @@ interface InternalPlayer {
   speed: number;
   /** Seat token: only the phone holding it may take this seat over mid-match. */
   token: string;
+  /** v0.5: whom this player points at (public, free, not a vote). */
+  pointingAt: string | null;
+  pointedAt: number; // last change, for the flood guard
 }
 
 interface AnswerRecord {
@@ -93,6 +96,9 @@ const genToken = () => Array.from({ length: 4 }, () => Math.random().toString(36
 
 /** Phases in which a secret may say "you are the cheater". */
 const SECRET_PHASES = new Set<Phase>(["role", "question", "reveal", "vote", "voteResult"]);
+/** When pointing is open (v0.5), and the minimum gap between changes. */
+const POINT_PHASES = new Set<Phase>(["question", "reveal", "vote", "voteResult"]);
+const POINT_GUARD_MS = 350;
 /** Every secret serializes to exactly this many characters. */
 const SECRET_JSON_LEN = 56;
 
@@ -184,6 +190,8 @@ export class HostEngine {
       ability: normal(Math.random) * DEFAULT_HUMAN.abilitySd,
       speed: normal(Math.random) * DEFAULT_HUMAN.speedSd,
       token: socketId === "bot" ? "" : genToken(),
+      pointingAt: null,
+      pointedAt: 0,
     };
   }
 
@@ -282,6 +290,9 @@ export class HostEngine {
         break;
       case "castVote":
         this.onCastVote(player, intent.targetPlayerId);
+        break;
+      case "point":
+        this.onPoint(player, intent.targetPlayerId);
         break;
       case "requestFullState":
         this.sendSnapshotTo(player);
@@ -478,6 +489,7 @@ export class HostEngine {
       p.votingRights = true;
       p.answeredCurrent = false;
       p.votedCurrent = false;
+      p.pointingAt = null;
     }
     // Cheater: uniform random among players present at match start (spec 02).
     const forced = this.forceCheaterName && present.find((p) => p.name.toLowerCase() === this.forceCheaterName!.toLowerCase());
@@ -528,6 +540,7 @@ export class HostEngine {
     this.phaseStartedAt -= delta;
     this.broadcast();
     this.scheduleBotAccusations(); // re-rolls once; the earlier roll is invalidated
+    this.scheduleBotPointers();
   }
 
   endSession(): void {
@@ -622,6 +635,45 @@ export class HostEngine {
     this.broadcast();
     this.sendSecrets(); // clears the cheater marker outside questions
     this.scheduleBotAccusations();
+    this.scheduleBotPointers();
+  }
+
+  // ---------------- Pointing (v0.5) ----------------
+
+  /** Point at a suspect (or stop, with null). Free, public, changeable, and
+   *  not a vote: it lets the class see who suspects whom before anyone
+   *  spends an accusation. Anyone in the match may point, detention included. */
+  private onPoint(player: InternalPlayer, targetId: string | null): void {
+    if (!POINT_PHASES.has(this.phase)) return;
+    const now = this.now();
+    if (now - player.pointedAt < POINT_GUARD_MS) return; // flood guard
+    const target = targetId ? this.players.find((p) => p.id === targetId) : null;
+    if (targetId && (!target || target.id === player.id || target.banished)) return;
+    const next = target ? target.id : null;
+    if (player.pointingAt === next) return;
+    player.pointingAt = next;
+    player.pointedAt = now;
+    this.broadcast();
+  }
+
+  /** Bots point at their top suspect once the board is graded (the cheater
+   *  bot bluffs the same way), so a solo test room has a live pointer board. */
+  private scheduleBotPointers(): void {
+    if (!this.reveal) return;
+    const wait = Math.max(0, this.reveal.accuseAt - this.now());
+    const epoch = this.botEpoch;
+    for (const bot of this.bots()) {
+      const ranked = this.suspects(bot.id)
+        .map((p) => ({ p, s: this.suspicionOf(p.id) }))
+        .sort((a, b) => b.s - a.s);
+      const top = ranked[0];
+      if (!top || top.s < 1 || bot.pointingAt === top.p.id) continue;
+      this.after(wait + 300 + Math.random() * 2500, () => {
+        if (epoch !== this.botEpoch) return;
+        const fresh = this.players.find((p) => p.id === bot.id);
+        if (fresh) this.onPoint(fresh, top.p.id);
+      });
+    }
   }
 
   // ---------------- Accusations & voting (spec 03) ----------------
@@ -687,6 +739,7 @@ export class HostEngine {
       banished.votingRights = false; // keeps answering & scoring, loses vote/accuse rights
       this.threshold -= this.settings.thresholdDrop; // loud public drop (spec 02)
       this.wrongDetentions++;
+      for (const p of this.players) if (p.pointingAt === banishedId) p.pointingAt = null; // they're out
       newThreshold = this.threshold;
       for (const [voterId, targetId] of Object.entries(votes)) {
         if (targetId === banishedId) this.addSessionPoints(voterId, SESSION_POINTS.votedToBanishInnocent);
@@ -742,6 +795,7 @@ export class HostEngine {
     this.setPhase("reveal");
     this.broadcast();
     this.scheduleBotAccusations();
+    this.scheduleBotPointers();
   }
 
   // ---------------- Match end & session (spec 04) ----------------
@@ -803,6 +857,7 @@ export class HostEngine {
       votingRights: p.votingRights,
       answeredCurrent: p.answeredCurrent,
       votedCurrent: p.votedCurrent,
+      pointingAt: p.pointingAt,
     }));
     const inMatch = this.phase !== "lobby" && this.phase !== "sessionEnd" && this.matchNumber > 0;
     const q = this.questions[this.qIdx];

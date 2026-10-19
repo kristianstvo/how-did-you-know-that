@@ -81,6 +81,8 @@ export type Phase =
 export type MatchEndReason = "cheater_banished" | "cheater_threshold" | "top_score";
 
 export interface PublicPlayer {
+  /** Whom this player is pointing at (v0.5): free, public, not a vote. */
+  pointingAt: string | null;
   id: string;
   name: string;
   avatar: string; // school-themed emoji
@@ -189,6 +191,7 @@ export type Intent =
   | { kind: "answer"; questionIdx: number; optionIdx: number; clientElapsedMs: number }
   | { kind: "burnToken" }
   | { kind: "castVote"; targetPlayerId: string }
+  | { kind: "point"; targetPlayerId: string | null }
   | { kind: "requestFullState" };
 
 // ---- Relay wire events (the only things the server understands) ----

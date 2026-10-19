@@ -28,11 +28,12 @@ their own, in a 3–4 minute match, with phones in hand.
 |---|---|---|
 | v0.3.0 | Phone play | shipped |
 | v0.4.0 | Balance: two strikes, line 2100 | shipped |
-| v0.5.0 | Suspicion pointers: point at a suspect for free, before spending your accusation | planned |
-| v0.6.0 | Game-show sound: synthesized, synced to the beats, one mute | planned |
-| v0.7.0 | Report-card awards: superlatives per period and per day | planned |
-| v0.8.0 | Lobby presets instead of raw numbers; host tools | planned |
-| v0.9.0 | First-timer onboarding; a better detention experience | planned |
+| v0.5.0 | Point at a suspect: free, public, changeable, before spending your accusation | shipped |
+| v0.6.0 | Game-show sound: synthesized, synced to the beats, one switch | planned |
+| v0.7.0 | First game night: Teacher's notes in the first period; Practice with bots | planned |
+| v0.8.0 | Yearbook superlatives at the end of every period | planned |
+| v0.9.0 | The hallway: late arrivals watch, then get a seat at the next period | planned |
+| later | Lobby presets instead of raw numbers; day awards; bot difficulty | ideas |
 
 Later versions take the best of what playtests and audits turn up.
 
@@ -48,3 +49,7 @@ Later versions take the best of what playtests and audits turn up.
 | v0.4.0 | ❌ One accusation per question (as the sweep fix) | No effect at 4–6 players: the 1-vs-1 tie at the end decides the sweep, not timing |
 | v0.4.0 | ❌ No accusations before Q4 | A blind sweep still won 51% at 6 players |
 | v0.4.0 | ❌ Spyfall rule (one wrong detention = cheater wins) | Makes every early accusation all-or-nothing; two strikes already kills the sweep |
+| v0.5.0 | ✅ Pointing at a suspect, attributed (everyone sees who points at whom) | Attribution starts conversations, the same reason spec 03 reveals who voted for whom; anonymous counts would hide the social signal |
+| v0.5.0 | ✅ Detention players may point | They lose their vote, not their voice; keeps them in the game |
+| v0.5.0 | ❌ Pointing UI on the question screen | The question screen stays about the question; pointing lives on the reveal, where the talking happens |
+| v0.5.0 | ❌ A cost or a limit on pointing | It must be cheaper than an accusation to do its job; a 350ms flood guard is the only limit |

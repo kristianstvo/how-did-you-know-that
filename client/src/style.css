@@ -156,3 +156,41 @@ input:focus { border-color: var(--accent2); }
 #scrubber input[type="range"] { flex: 1 1 140px; min-height: 24px; padding: 0; border: none; background: none; }
 #scrubber .fx-note { flex-basis: 100%; opacity: 0.7; }
 html.fixture #app { padding-bottom: 90px; }
+
+/* Pointers (v0.5): "👉3" = three classmates point at this player. */
+.ptr {
+  flex: none; display: inline-block; height: 17px; padding: 0 5px; border-radius: 9px;
+  font: 800 0.7rem/15px system-ui, sans-serif; white-space: nowrap; font-variant-numeric: tabular-nums;
+  color: var(--accent2); background: rgba(255, 209, 102, 0.14); border: 1px solid rgba(255, 209, 102, 0.5);
+}
+
+/* The "point at a suspect" sheet: a bottom sheet, in thumb reach. */
+.overlay.pt-sheet { justify-content: flex-end; align-items: center; gap: 10px; padding: max(24px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom)); }
+.pt-card {
+  width: min(100%, 480px); max-height: 72dvh; overflow-y: auto; overscroll-behavior: contain;
+  padding: 14px 12px 8px; border-radius: 18px; background: var(--card); border: 2px dashed var(--chalk-line);
+  animation: hd-enter-up var(--t-base) var(--e-enter) both;
+}
+.pt-card h2 { font-family: var(--hand); font-size: 1.15rem; margin: 0 2px 2px; }
+.pt-sub { color: var(--dim); font-size: 0.85rem; line-height: 1.35; margin: 0 2px 10px; }
+.pt-list { display: flex; flex-direction: column; gap: 6px; }
+.pt-row {
+  display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 10px; text-align: left;
+  border-radius: 12px; background: var(--card2); border: 2px solid transparent;
+  transition: transform var(--t-tap) var(--e-standard);
+}
+.pt-row:active { transform: scale(0.98); }
+.pt-row.on { border-color: var(--accent2); }
+.pt-nm { flex: 1; min-width: 0; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pt-by { display: inline-flex; padding-left: 6px; }
+.pt-by-av {
+  width: 24px; height: 24px; margin-left: -6px; display: grid; place-items: center; border-radius: 50%;
+  font-size: 0.82rem; background: #2b4a39; box-shadow: 0 0 0 2px var(--card2);
+}
+.pt-on { font-size: 0.75rem; font-weight: 900; color: var(--accent2); white-space: nowrap; }
+.pt-stop { margin-top: 6px; }
+.pt-close { width: min(100%, 480px); }
+@media (prefers-reduced-motion: reduce) {
+  .pt-row { transition: none; }
+  .pt-row:active { transform: none; opacity: 0.85; }
+}

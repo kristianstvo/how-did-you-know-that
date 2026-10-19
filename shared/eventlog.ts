@@ -44,6 +44,12 @@ export type MatchEvent =
       newThreshold: number | null;
     })
   | (Base & {
+      type: "point";
+      q: number;
+      from: string;
+      to: string | null;
+    })
+  | (Base & {
       type: "matchEnd";
       q: number;
       reason: MatchEndReason;
@@ -63,6 +69,7 @@ export function createEventLogger(emit: (e: MatchEvent) => void): (s: PublicStat
   let voteKey = "";
   let resultKey = "";
   let locked = new Set<string>();
+  let pointers = new Map<string, string | null>(); // v0.5: who points at whom
 
   const revealEvent = (s: PublicState, t: number) => {
     const m = s.match!;
@@ -100,6 +107,16 @@ export function createEventLogger(emit: (e: MatchEvent) => void): (s: PublicStat
         threshold: m?.threshold ?? s.settings.threshold,
         questionTimerMs: s.settings.questionTimerMs,
       });
+      pointers = new Map(s.players.map((p) => [p.id, null]));
+    }
+    if (m && s.phase !== "matchEnd") {
+      for (const p of s.players) {
+        const to = p.pointingAt ?? null;
+        if ((pointers.get(p.id) ?? null) !== to) {
+          pointers.set(p.id, to);
+          emit({ type: "point", t, match, q: m.questionIdx, from: p.id, to });
+        }
+      }
     }
     if (m && s.phase === "question") {
       if (m.questionIdx !== lastQ) {

@@ -52,6 +52,7 @@ const RULES = [
   "The cheater <b>graduates instantly</b> by reaching the public score line on the grade book. Everyone else wins by catching them first.",
   "After every question, everyone's picks and <b>answer times</b> go up on the board. Suspicious? Each player holds <b>one accusation</b> per period — raise your hand during a reveal to force a vote. Plurality goes to <b>detention</b>.",
   "Detention for the cheater → class wins. Detention for an innocent → they keep answering but lose their vote, and the cheater's graduation line <b>drops by {drop}</b>.{strikes} Ties send nobody.",
+  "Suspect someone? <b>Point 👉</b> at them during a reveal: free, changeable, and the whole class sees it. It isn't a vote.",
   "Anyone who reaches the line and <b>no siren goes off</b> is proven innocent — <b>cleared</b>.",
   "If nobody wins by question 10, <b>top of the class</b> takes the period — whoever they are. Semester points add up across periods.",
 ];

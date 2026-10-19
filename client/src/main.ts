@@ -43,7 +43,7 @@ const app: App = {
   error: null,
   closedReason: null,
   home: { name: "", code: "", avatar: "", busy: false },
-  ui: { accuseConfirm: false, myPick: null, voteSel: null, myVote: null, boardOpen: false, qrOpen: false, toast: null },
+  ui: { accuseConfirm: false, myPick: null, voteSel: null, myVote: null, boardOpen: false, qrOpen: false, pointOpen: false, toast: null },
   fixture: false,
 };
 
@@ -157,6 +157,7 @@ function onState(state: PublicState): void {
   if (state.phase !== prevPhase) {
     app.ui.accuseConfirm = false;
     app.ui.qrOpen = false;
+    app.ui.pointOpen = false;
     if (state.phase === "vote") {
       app.ui.myVote = null;
       app.ui.voteSel = null;
@@ -394,6 +395,17 @@ root.addEventListener("click", (ev) => {
     case "handIn":
       handIn();
       break;
+    case "pointSheet":
+      app.ui.pointOpen = !app.ui.pointOpen;
+      render();
+      break;
+    case "point":
+      // Free and public; "" = stop pointing.
+      app.ui.pointOpen = false;
+      buzz(10);
+      act({ kind: "point", targetPlayerId: btn.dataset.id || null });
+      render();
+      break;
     case "toggleQr":
       app.ui.qrOpen = !app.ui.qrOpen;
       render();
@@ -480,6 +492,11 @@ function tick(): void {
 
 // Keyboard: Escape closes the semester standings sheet.
 document.addEventListener("keydown", (ev) => {
+  if (ev.key === "Escape" && app.ui.pointOpen) {
+    app.ui.pointOpen = false;
+    render();
+    document.getElementById("rv-point")?.focus();
+  }
   if (ev.key === "Escape" && app.ui.qrOpen) {
     app.ui.qrOpen = false;
     render();

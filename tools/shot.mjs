@@ -2,6 +2,7 @@
 // replay frozen at an exact playhead) in headless Edge at phone size.
 //   node tools/shot.mjs --url "http://localhost:5181/#/fixture/caught?as=innocent&t=80000&paused=1&ui=0" \
 //        --out capture/shots/reveal/high.png [--reduced] [--width 380] [--height 800] [--wait 600] [--cpu 4] [--full]
+//        [--click "#rv-point"]   (taps that element first, e.g. to open a sheet)
 import { chromium } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
@@ -34,6 +35,10 @@ page.on("pageerror", (e) => errors.push(e.message));
 page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
 await page.goto(args.url);
 await page.waitForTimeout(Number(args.wait ?? 600));
+if (args.click) {
+  await page.click(args.click);
+  await page.waitForTimeout(500);
+}
 mkdirSync(dirname(args.out), { recursive: true });
 await page.screenshot({ path: args.out, fullPage: args.full === "true" });
 const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);

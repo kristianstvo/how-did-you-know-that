@@ -347,10 +347,10 @@
 /* ---------------- ACCUSE dock (fixed height: no reflow on confirm) ---------------- */
 .screen-reveal .rv-dock {
   position: sticky; bottom: 0; z-index: 40; margin-top: auto; padding: 12px 0 max(2px, env(safe-area-inset-bottom));
-  display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px;
+  display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 8px;
   background: linear-gradient(transparent, var(--bg) 24%);
 }
-.screen-reveal .rv-dock.host { grid-template-columns: minmax(0, 1fr) 108px; }
+.screen-reveal .rv-dock.host { grid-template-columns: 60px minmax(0, 1fr) 108px; }
 .screen-reveal .rv-dock .btn + .btn { margin-top: 0; }
 .screen-reveal .btn.accuse {
   position: relative; isolation: isolate; display: grid; place-items: center; height: 56px; min-height: 56px; padding: 0 12px; overflow: hidden;
@@ -442,3 +442,16 @@
   border: 1.5px dashed var(--chalk-line); font: 900 0.66rem/1 system-ui, sans-serif; font-style: normal; color: var(--bad);
 }
 .screen-reveal .gb-strikes i.used { border-style: solid; border-color: var(--bad); background: rgba(255, 138, 101, 0.16); }
+
+/* 👉 Point (v0.5): left of ACCUSE, same height; shows whom you point at. */
+.screen-reveal .rv-point {
+  display: grid; place-items: center; height: 56px; min-height: 56px; padding: 0;
+  font-size: 1.3rem; line-height: 1; white-space: nowrap;
+}
+.screen-reveal .rv-point.on { border-style: solid; border-color: var(--accent2); }
+.screen-reveal .rv-point-av { font-size: 1rem; margin-left: -1px; }
+@media (max-width: 359px) {
+  .screen-reveal .rv-dock { grid-template-columns: 52px minmax(0, 1fr); }
+  .screen-reveal .rv-dock.host { grid-template-columns: 52px minmax(0, 1fr) 92px; }
+  .screen-reveal .btn.accuse { font-size: 0.98rem; }
+}
