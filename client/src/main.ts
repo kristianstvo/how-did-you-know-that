@@ -13,10 +13,12 @@ import "./styles/voteResult.css";
 import "./styles/matchEnd.css";
 import "./styles/sessionEnd.css";
 import "./styles/transitions.css";
+import { REVEAL_TIMING } from "../../shared/choreo";
 import { AVATARS, type Intent, type PublicState, type SecretState } from "../../shared/protocol";
 import { clockStatus, serverNow } from "./clock";
 import { startFixture } from "./fixture";
 import { buzz } from "./haptics";
+import { setSound, sfx, soundOn } from "./sound";
 import { createHostSession, hasSeat, joinAsPlayer, type HostSession, type NetStatus, type PlayerSession } from "./net";
 import { createRenderer, reducedMotion, type Router, type TransitionKind } from "./render";
 import { home } from "./screens/home";
@@ -109,14 +111,52 @@ const router: Router = {
 
 // Haptic punctuation (Android only; always mirrors something on screen —
 // never for beats that rendered already settled).
+let beatScreen = ""; // the screen the last beat belonged to
 function onBeat(screenKey: string, beatKey: string, prev: string, settled: boolean): void {
+  // "Entered" = a new screen, not merely its first beat (a screen can show
+  // during its beat lead with no beat yet, then reach beat 0).
+  const entered = screenKey !== beatScreen;
+  beatScreen = screenKey;
   if (settled) return;
   const added = beatKey.split(",").filter((b) => b && !prev.split(",").includes(b));
-  if (screenKey.startsWith("vote-") && !prev) buzz([60, 40, 60]);
-  if (screenKey.startsWith("matchEnd") && !prev) buzz([90, 50, 90]);
+  if (screenKey.startsWith("vote-") && entered) buzz([60, 40, 60]);
+  if (screenKey.startsWith("matchEnd") && entered) buzz([90, 50, 90]);
   if (added.includes("answer")) buzz(25);
   if (added.includes("verdict") && screenKey.startsWith("voteResult")) buzz(70);
   if (added.includes("unmask")) buzz([40, 30, 120]);
+  beatSounds(screenKey, added, entered);
+}
+
+/** Game-show sound on the same shared-clock beats as the motion (v0.6). Only
+ *  public data decides what plays: the cheater's phone sounds the same. */
+function beatSounds(screenKey: string, added: string[], entered: boolean): void {
+  const phase = screenKey === "session" ? "sessionEnd" : screenKey.split("-")[0];
+  const m = app.state?.match;
+  if (phase === "role" && added.includes("bell")) sfx.bell();
+  if (phase === "question") {
+    if (entered) sfx.pop();
+    if (added.some((b) => /^u\d+$/.test(b)) && !added.includes("pencils")) sfx.tick();
+    if (added.includes("pencils")) sfx.whistle();
+  }
+  if (phase === "reveal" && m?.reveal) {
+    const t = REVEAL_TIMING[m.reveal.stakes];
+    if (added.includes("slap")) sfx.slaps(m.reveal.rows.length, t.slapStagger);
+    if (added.includes("drumroll")) sfx.drumroll(t.drumroll);
+    if (added.includes("answer")) sfx.sting();
+    if (added.includes("evidence")) sfx.stamp();
+    if (added.includes("grade") && m.reveal.lastBell.length) sfx.bell();
+  }
+  if (phase === "vote" && entered) sfx.gavel();
+  if (phase === "voteResult") {
+    if (added.includes("verdict")) sfx.stamp();
+    if (added.includes("drop")) sfx.slide();
+  }
+  if (phase === "matchEnd" && entered && m?.end) {
+    if (m.end.reason === "cheater_threshold") sfx.siren();
+    else if (m.end.reason === "cheater_banished") sfx.fanfare();
+    else sfx.bell();
+  }
+  if (phase === "sessionEnd" && entered) sfx.fanfare();
 }
 
 const renderer = createRenderer(root, router, app, tick, tick, onBeat);
@@ -355,6 +395,7 @@ root.addEventListener("click", (ev) => {
       const idx = Number(btn.dataset.idx);
       app.ui.myPick = idx;
       buzz(15);
+      sfx.click();
       act({
         kind: "answer",
         questionIdx: app.state?.match?.questionIdx ?? 0,
@@ -403,7 +444,12 @@ root.addEventListener("click", (ev) => {
       // Free and public; "" = stop pointing.
       app.ui.pointOpen = false;
       buzz(10);
+      sfx.click();
       act({ kind: "point", targetPlayerId: btn.dataset.id || null });
+      render();
+      break;
+    case "toggleSound":
+      setSound(!soundOn());
       render();
       break;
     case "toggleQr":
@@ -468,6 +514,7 @@ function handIn(): void {
   if (!id || app.ui.myVote || app.state?.phase !== "vote") return;
   app.ui.myVote = id;
   buzz(20);
+  sfx.stamp();
   act({ kind: "castVote", targetPlayerId: id });
   render();
 }

@@ -10,7 +10,7 @@
 // Desk numbers = seat order (players[] order), the order the vote grid uses.
 import { renderSVG } from "uqr";
 import { MAX_PLAYERS, MIN_PLAYERS } from "../../../shared/protocol";
-import { av, esc, playerBadges, sessionTab } from "./common";
+import { av, esc, playerBadges, sessionTab, soundToggle } from "./common";
 import type { Screen } from "./types";
 
 const keyOf = (str: string) => {
@@ -96,6 +96,7 @@ export const lobby: Screen = {
 
     return `<section class="screen screen-lobby ${app.isHost ? "is-host" : "is-guest"} ${between ? "between" : ""}" id="scr-lobby">
     ${sessionTab(app, s)}
+    ${soundToggle("lb-snd")}
     <header class="lb-head" id="lb-head"><span aria-hidden="true">🏫 </span>How Did You Know That?!</header>
     ${s.debugForcedCheater ? `<div class="warn" id="lb-debug" role="status">🧪 Test mode: the cheater is fixed, not random.</div>` : ""}
 
@@ -110,7 +111,7 @@ export const lobby: Screen = {
       <div class="lb-tray" aria-hidden="true"><i class="lb-chalk"></i><i class="lb-chalk lb-chalk-y"></i><i class="lb-eraser"></i></div>
     </div>
     <div class="lb-invite" id="lb-invite">
-      <button class="btn secondary lb-share" id="lb-share" data-action="share" data-url="${esc(shareUrl)}"><span aria-hidden="true">📨</span> Share invite</button>
+      <button class="btn secondary lb-share" id="lb-share" data-action="share" data-url="${esc(shareUrl)}"><span aria-hidden="true">📨</span> Invite</button>
       <button class="btn secondary lb-qr-btn" id="lb-qr-btn" data-action="toggleQr" aria-haspopup="dialog" aria-expanded="${app.ui.qrOpen}"><span aria-hidden="true">📷</span> Show QR</button>
     </div>
     ${

@@ -19,6 +19,43 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.6.0 — Game-show sound · 2026-10-20 01:13
+
+**Why:** the reveal was built as a game show but played in silence. The
+drumroll, the stamp and the siren are half the drama, and every phone already
+hits each beat within a few milliseconds, so in one room the class hears each
+moment land together.
+
+**Added**
+- Synthesized sounds (no audio files, nothing to download), on the same synced
+  beats as the motion:
+  - the school bell on the role screen
+  - a pop when a question lands
+  - ticks for the last five seconds, then a whistle at pencils down
+  - avatar slaps in speed order, a drumroll as long as the stakes deserve, a ta-da
+    sting for the answer, a rubber stamp for evidence
+  - a bell for LAST BELL
+  - a gavel when a hand goes up, a stamp for the verdict, a slide whistle when
+    the line drops
+  - a siren when the cheater graduates, a fanfare when they're caught
+  - small clicks for your own taps
+- 🔊/🔇: one switch, in the lobby and the 🎓 standings sheet, remembered on
+  each phone. On iPhones the audio is "ambient": it respects the silent switch
+  and mixes with a voice call instead of cutting it off.
+
+**Changed**
+- "Share invite" became "📨 Invite" (it was clipped on 320px phones).
+
+**Fixed**
+- A screen's first beat no longer counts as entering it again, which buzzed
+  twice at match end.
+
+**Evidence**
+- A new test hears a question and its reveal from the cheater's seat and from
+  the same seat masked: the same sounds, in beat order.
+- The sound switch silences everything and survives a reload.
+- No console errors.
+
 ## v0.5.0 — Point at a suspect · 2026-10-20 00:58
 
 **Why:** the north star is accusations happening on their own. Until now the
@@ -88,7 +125,7 @@ hides won 81–97% of simulated matches. Decision log: `PRODUCT.md`.
 - 30/30 browser tests, protocol and relay checks pass; parity has 0
   differences across 5 matches.
 
-## v0.3.0 — Phone play · 2026-10-19 23:55
+## v0.3.0 — Phone play · 2026-10-19 23:57
 
 **Why:** the game is played on phones, in hand, often on cellular, and a phone
 that locks or drops signal ended the whole game. Measured first, at seven real

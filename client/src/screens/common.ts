@@ -1,5 +1,6 @@
 // Shared pieces used by several screens. Pure string builders.
 import type { CaseEntry, PublicPlayer, PublicState } from "../../../shared/protocol";
+import { soundOn } from "../sound";
 import type { App } from "./types";
 
 export const esc = (s: string) =>
@@ -164,12 +165,18 @@ export function sessionRows(s: PublicState, delta?: (id: string) => string): str
 /** Floating semester-standings tab + overlay sheet. Hidden during a vote and
  *  its result: session points for the vote land before the verdict stamp, so
  *  live totals would give the outcome away. */
+/** 🔊 / 🔇 — one switch for every game sound (remembered on this phone). */
+export function soundToggle(extra = ""): string {
+  const on = soundOn();
+  return `<button class="snd ${extra}" id="snd-${extra || "btn"}" data-action="toggleSound" aria-pressed="${on}" aria-label="Sound ${on ? "on" : "off"}" title="Sound ${on ? "on" : "off"}"><span aria-hidden="true">${on ? "🔊" : "🔇"}</span></button>`;
+}
+
 export function sessionTab(app: App, s: PublicState): string {
   if (s.matchNumber === 0 || s.phase === "vote" || s.phase === "voteResult") return "";
   const open = app.ui.boardOpen;
   const overlay = open
     ? `<div class="overlay" data-action="toggleBoard" role="dialog" aria-modal="true" aria-label="Semester standings">
-        <div class="card sheet"><h2>📊 Semester standings</h2>${sessionRows(s)}
+        <div class="card sheet"><h2>📊 Semester standings ${soundToggle("in-sheet")}</h2>${sessionRows(s)}
           <button class="btn secondary" data-action="toggleBoard" autofocus>Close</button>
         </div>
       </div>`

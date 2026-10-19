@@ -29,7 +29,7 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.3.0 | Phone play | shipped |
 | v0.4.0 | Balance: two strikes, line 2100 | shipped |
 | v0.5.0 | Point at a suspect: free, public, changeable, before spending your accusation | shipped |
-| v0.6.0 | Game-show sound: synthesized, synced to the beats, one switch | planned |
+| v0.6.0 | Game-show sound: synthesized, synced to the beats, one switch | shipped |
 | v0.7.0 | First game night: Teacher's notes in the first period; Practice with bots | planned |
 | v0.8.0 | Yearbook superlatives at the end of every period | planned |
 | v0.9.0 | The hallway: late arrivals watch, then get a seat at the next period | planned |
@@ -53,3 +53,6 @@ Later versions take the best of what playtests and audits turn up.
 | v0.5.0 | ✅ Detention players may point | They lose their vote, not their voice; keeps them in the game |
 | v0.5.0 | ❌ Pointing UI on the question screen | The question screen stays about the question; pointing lives on the reveal, where the talking happens |
 | v0.5.0 | ❌ A cost or a limit on pointing | It must be cheaper than an accusation to do its job; a 350ms flood guard is the only limit |
+| v0.6.0 | ✅ Synthesized sound instead of recorded samples | Nothing to download or license, instant on cellular, and every sound is tunable in code |
+| v0.6.0 | ✅ Sound on by default, one switch per phone, "ambient" on iOS | The show needs it; the silent switch and voice calls are respected, and anyone can turn it off in one tap |
+| v0.6.0 | ❌ Role-specific sounds | A different sound for the cheater would be a tell across the room (parity) |

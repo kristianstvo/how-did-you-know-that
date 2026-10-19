@@ -240,6 +240,39 @@ function phaseAt(name: string, phase: string, qi?: number): number {
   return Math.round(f.state.phaseStartedAt - t.t0);
 }
 
+test("phone: game-show sound plays on the beats, the same for the cheater, and one switch silences it", async ({ browser }) => {
+  const from = phaseAt("caught", "question", 3) + 9000; // the end of Q4, then its reveal
+  const hear = async (view: string) => {
+    const { ctx, page } = await phone(browser, `/#/fixture/caught?as=cheater${view}&t=${from}&ui=0`);
+    await page.waitForFunction(() => !!window.__fixture);
+    await page.click(".qz-head"); // a first tap unlocks audio on phones
+    await page.waitForTimeout(9000);
+    const sounds = await page.evaluate(() => (window.__hdykt as unknown as { sounds?: string[] }).sounds ?? []);
+    await ctx.close();
+    return sounds;
+  };
+  const real = await hear("");
+  const masked = await hear("&mask=1");
+  // The show in order: pencils down, slaps, drumroll, the answer sting.
+  const order = ["whistle", "slaps", "drumroll", "sting"].map((x) => real.indexOf(x));
+  expect(order.every((i) => i >= 0), `heard: ${real.join(",")}`).toBe(true);
+  expect(order, "in beat order").toEqual([...order].sort((a, b) => a - b));
+  expect(masked, "the cheater's phone sounds exactly like an innocent's").toEqual(real);
+
+  // One switch, remembered on this phone.
+  const { ctx, page } = await phone(browser, "/#/fixture/caught?as=innocent&t=-1500&paused=1&ui=0");
+  await page.waitForFunction(() => !!window.__fixture);
+  await page.click("#snd-lb-snd");
+  await expect(page.locator("#snd-lb-snd")).toHaveAttribute("aria-pressed", "false");
+  await page.goto(`/#/fixture/caught?as=innocent&t=${from}&ui=0`);
+  await page.reload();
+  await page.waitForFunction(() => !!window.__fixture);
+  await page.click(".qz-head");
+  await page.waitForTimeout(9000);
+  expect(await page.evaluate(() => (window.__hdykt as unknown as { sounds?: string[] }).sounds ?? [])).toEqual([]);
+  await ctx.close();
+});
+
 test("phone: every new screen starts at its top", async ({ browser }) => {
   const { ctx, page } = await phone(browser, `/#/fixture/fullclass?as=innocent&t=${phaseAt("fullclass", "vote") - 2500}&paused=1&ui=0`);
   await page.waitForFunction(() => !!window.__fixture);

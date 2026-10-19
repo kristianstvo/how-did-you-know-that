@@ -194,3 +194,11 @@ html.fixture #app { padding-bottom: 90px; }
   .pt-row { transition: none; }
   .pt-row:active { transform: none; opacity: 0.85; }
 }
+
+/* Sound switch (v0.6) */
+.snd { width: 44px; height: 44px; display: inline-grid; place-items: center; border-radius: 50%; font-size: 1.15rem; background: var(--card2); border: 2px dashed var(--chalk-line); }
+.snd[aria-pressed="false"] { opacity: 0.75; }
+.snd.lb-snd { position: absolute; top: max(10px, env(safe-area-inset-top)); left: 10px; z-index: 50; }
+.snd.in-sheet { margin-left: 8px; font-size: 1rem; }
+.screen-lobby .lb-head { margin-inline: 50px; } /* clear of 🔊 (left) and 🎓 (right) */
+.sheet h2 { display: flex; align-items: center; justify-content: space-between; }
