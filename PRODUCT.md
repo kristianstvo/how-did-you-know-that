@@ -33,7 +33,8 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.7.0 | First game night: Teacher's notes, the hallway for late arrivals, Practice with bots | shipped |
 | v0.8.0 | The yearbook: superlatives every period, the day's yearbook, Share the day | shipped |
 | v0.9.0 | Question bank 2.0: 189 curated questions, a fetcher that stops getting rate-limited | shipped |
-| later | Lobby presets instead of raw numbers; day awards; bot difficulty | ideas |
+| v0.10.0 | Hosting made easy: pace presets, New day same class, clear a seat | shipped |
+| later | Bot difficulty; a "how to play" picture card; accessibility pass on the new screens | ideas |
 
 Later versions take the best of what playtests and audits turn up.
 
@@ -66,3 +67,6 @@ Later versions take the best of what playtests and audits turn up.
 | v0.9.0 | ✅ Curate 104 questions by hand rather than pull more from the API | Quality and the points ramp (easy must really be easy) matter more than volume; the API stays for variety |
 | v0.9.0 | ✅ Start wait 8s → 3s | Waiting 8s for one or two online questions wasn't worth it once the pack could cover a whole period |
 | v0.9.0 | ❌ Drop the online questions entirely | They add thousands of questions of variety; with the queue fixed they are a good second source |
+| v0.10.0 | ✅ Presets change the pace only | The line and strikes are balance (simulated); a preset that quietly changed them would undo v0.4's tuning |
+| v0.10.0 | ✅ New day keeps the room and the code | Rejoining with a new code was the biggest reason a good night ended |
+| v0.10.0 | ❌ Kicking someone who is still connected | Too easy to abuse in a party game; only seats of people who left can be cleared |

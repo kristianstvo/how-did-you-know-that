@@ -113,3 +113,6 @@
 /* The day's yearbook (v0.8); rows reuse the period superlatives (.me-aw-*). */
 .se-yearbook { margin-top: 12px; }
 .se-yearbook h2 { font-family: var(--hand); margin-bottom: 4px; }
+
+/* New day, same class (v0.10) */
+.se-note { text-align: center; color: var(--dim); font-size: 0.85rem; margin-top: 8px; font-family: var(--hand); }

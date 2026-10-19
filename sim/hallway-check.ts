@@ -53,4 +53,17 @@ st = engine.publicState();
 const eve = st.players.find((p) => p.name === "Eve");
 check(!!eve && (st.hallway ?? []).length === 0, "back in homeroom, the hallway takes its seats");
 check(!!eve && st.sessionBoard[eve.id] === 0, "with a fresh line on the semester board");
+
+// v0.10: between periods the host clears the seat of someone who left —
+// never someone still here, never the host.
+const host = st.players.find((p) => p.isHost)!;
+const bea = st.players.find((p) => p.name === "Bea")!;
+engine.removePlayer(bea.id);
+check(engine.publicState().players.some((p) => p.id === bea.id), "a classmate who is still here can't be removed");
+engine.removePlayer(host.id);
+check(engine.publicState().players.some((p) => p.id === host.id), "the teacher can't be removed");
+engine.handlePeerDisconnected("s1"); // Bea leaves for good
+engine.removePlayer(bea.id);
+st = engine.publicState();
+check(!st.players.some((p) => p.id === bea.id) && !(bea.id in st.sessionBoard), "the seat of someone who left can be cleared");
 process.exit(failures ? 1 : 0);

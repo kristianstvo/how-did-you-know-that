@@ -134,8 +134,10 @@ export const sessionEnd: Screen = {
       : "";
 
     const dock = b.has("done")
-      ? `<button class="btn" data-action="home" id="se-home">🏫 Back to school</button>
+      ? `${app.isHost ? `<button class="btn" data-action="newDay" id="se-again">🔁 New day, same class</button>` : ""}
+         <button class="btn${app.isHost ? " secondary" : ""}" data-action="home" id="se-home">🏫 Back to school</button>
          <button class="btn secondary" data-action="shareDay" id="se-share">📤 Share the day</button>
+         ${app.isHost ? "" : `<p class="se-note">Stay here if the teacher starts a new day: you keep your seat.</p>`}
          ${app.isHost ? `<button class="btn ghost" data-action="downloadLog" id="se-log">⬇ Download session log</button>` : ""}`
       : "";
 

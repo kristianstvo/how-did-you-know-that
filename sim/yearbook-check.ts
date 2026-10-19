@@ -47,4 +47,12 @@ const day = st.dayAwards ?? [];
 console.log(`  the day: ${day.map((a) => `${a.icon} ${a.title} (${a.why})`).join(" · ") || "nothing earned"}`);
 check(st.phase === "sessionEnd" && Array.isArray(st.dayAwards), "the day's yearbook is published at session end");
 check(day.length <= 4 && new Set(day.map((a) => a.playerId)).size === day.length, "at most 4 day awards, one per player");
+
+// v0.10: the same class starts a new day — same room, fresh standings.
+const before = st.players.map((p) => p.id).join(",");
+engine.newDay();
+const fresh = engine.publicState();
+check(fresh.phase === "lobby" && fresh.matchNumber === 0, "New day: back in homeroom, period count reset");
+check(fresh.players.map((p) => p.id).join(",") === before, "…with the same class in the same seats");
+check(fresh.players.every((p) => fresh.sessionBoard[p.id] === 0 && p.score === 0) && !fresh.dayAwards, "…and fresh standings, no old awards");
 process.exit(failures ? 1 : 0);

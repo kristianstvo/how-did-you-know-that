@@ -47,6 +47,13 @@ const qrFor = (url: string) => {
   return svg;
 };
 
+// v0.10: pace presets — one tap instead of typing seconds on a phone.
+const PACES = [
+  { icon: "⚡", label: "Quick", ms: 10_000 },
+  { icon: "🎓", label: "Classic", ms: 15_000 },
+  { icon: "🧘", label: "Relaxed", ms: 25_000 },
+] as const;
+
 const RULES = [
   "The class answers the same <b>10 questions</b>, each from a different school subject (100 → 200 → 400 points). One classmate is secretly <b>the cheater</b> and sees the correct answers.",
   "The cheater <b>graduates instantly</b> by reaching the public score line on the grade book. Everyone else wins by catching them first.",
@@ -78,8 +85,8 @@ export const lobby: Screen = {
           ${me ? `<span class="badge you">YOU</span>` : ""}${playerBadges(p)}
           ${between ? `<span class="lb-pts">${s.sessionBoard[p.id] ?? 0}<small> pts</small></span>` : ""}
           ${
-            app.isHost && p.isBot
-              ? `<button class="bot-x" data-action="removeBot" data-id="${p.id}" aria-label="Remove ${esc(p.name)}"><span aria-hidden="true">✕</span></button>`
+            app.isHost && !p.isHost && (p.isBot || !p.connected)
+              ? `<button class="bot-x" data-action="removePlayer" data-id="${p.id}" aria-label="${p.isBot ? "Remove" : "Clear the seat of"} ${esc(p.name)}"><span aria-hidden="true">✕</span></button>`
               : ""
           }
         </div>`;
@@ -155,6 +162,12 @@ export const lobby: Screen = {
       app.isHost
         ? `<div class="card lb-rules" id="lb-rules">
             <h2>⚙️ Class rules <span class="chip">teacher only</span></h2>
+            <div class="lb-pace" role="group" aria-label="Pace">${PACES.map((p) => {
+              const on = s.settings.questionTimerMs === p.ms;
+              return `<button class="lb-pace-btn${on ? " on" : ""}" id="pace-${p.label.toLowerCase()}" data-action="pace" data-ms="${p.ms}" aria-pressed="${on}"><span class="lb-pace-ic" aria-hidden="true">${p.icon}</span><b>${p.label}</b><small>${p.ms / 1000}s a question</small></button>`;
+            }).join("")}</div>
+            <details class="lb-adv" id="lb-adv">
+              <summary><span>Advanced</span><span class="lb-adv-sum">line ${s.settings.threshold} · −${s.settings.thresholdDrop} · ${k} strike${k === 1 ? "" : "s"}</span><span class="lb-chev" aria-hidden="true">▾</span></summary>
             <div class="settings-grid">
               <label for="set-timer">Question timer<small>seconds per question (5–60)</small></label>
               <input id="set-timer" data-setting="questionTimerMs" type="number" inputmode="numeric" min="5" max="60" value="${s.settings.questionTimerMs / 1000}" />
@@ -165,6 +178,7 @@ export const lobby: Screen = {
               <label for="set-strikes">Strikes<small>wrong detentions before the cheater graduates (0 = off)</small></label>
               <input id="set-strikes" data-setting="strikes" type="number" inputmode="numeric" min="0" max="3" value="${s.settings.strikes}" />
             </div>
+            </details>
           </div>
           ${between ? `<button class="btn ghost lb-end" id="lb-end" data-action="endSession">🏁 End the school day · final report cards</button>` : ""}`
         : `<div class="lb-rules-ro" id="lb-rules">

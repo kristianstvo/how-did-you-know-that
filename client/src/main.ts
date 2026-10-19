@@ -410,7 +410,14 @@ root.addEventListener("click", (ev) => {
       host?.engine.addBot();
       break;
     case "removeBot":
-      host?.engine.removeBot(btn.dataset.id!);
+    case "removePlayer":
+      host?.engine.removePlayer(btn.dataset.id!);
+      break;
+    case "pace":
+      host?.engine.updateSettings({ questionTimerMs: Number(btn.dataset.ms) });
+      break;
+    case "newDay":
+      host?.engine.newDay();
       break;
     case "start":
       if (host) void host.engine.startMatch();

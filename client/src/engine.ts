@@ -364,11 +364,34 @@ export class HostEngine {
   }
 
   removeBot(botId: string): void {
+    this.removePlayer(botId);
+  }
+
+  /** Between periods the host can clear a bot's seat, or the seat of a
+   *  classmate who left for good (disconnected) — never someone still here. */
+  removePlayer(id: string): void {
     if ((this.phase !== "lobby" && this.phase !== "matchEnd") || this.loadingQuestions) return;
-    const idx = this.players.findIndex((p) => p.id === botId && p.isBot);
+    const idx = this.players.findIndex((p) => p.id === id && !p.isHost && (p.isBot || !p.connected));
     if (idx === -1) return;
-    delete this.sessionBoard[botId];
+    delete this.sessionBoard[id];
     this.players.splice(idx, 1);
+    this.broadcast();
+  }
+
+  /** v0.10: the same class starts a new day — fresh standings, same room,
+   *  same code, nobody has to rejoin. */
+  newDay(): void {
+    if (this.phase !== "sessionEnd") return;
+    for (const p of this.players) {
+      this.sessionBoard[p.id] = 0;
+      p.score = 0;
+    }
+    this.sessionStats = {};
+    this.dayAwards = [];
+    this.matchNumber = 0;
+    this.end = null;
+    this.seatHallway();
+    this.setPhase("lobby");
     this.broadcast();
   }
 

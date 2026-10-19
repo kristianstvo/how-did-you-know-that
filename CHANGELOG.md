@@ -19,6 +19,32 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.10.0 — Hosting made easy · 2026-10-20 03:13
+
+**Why:** the teacher runs the night from a phone. Typing seconds into a number
+field to change the pace was fiddly, and the balance numbers (line, drop,
+strikes) looked like homework next to it. A group that wanted to keep playing
+after "End the day" had to make a new room and rejoin with a new code. And a
+friend who left for good stayed on the roster forever as "reconnecting".
+
+**Added**
+- **Pace presets:** ⚡ Quick (10s), 🎓 Classic (15s), 🧘 Relaxed (25s). Big
+  buttons, and every phone's rules chips update.
+- **Advanced:** the line, drop, strikes and a custom timer, folded under one
+  row that summarizes them ("line 2100 · −200 · 2 strikes").
+- **🔁 New day, same class** at session end, for the host: back to homeroom
+  with fresh standings, same room, same code, nobody rejoins. Players see
+  "Stay here if the teacher starts a new day".
+- **Clear a seat:** between periods the host can remove a classmate who left
+  for good (disconnected), just like a bot. Never someone still here, never
+  the host.
+
+**Evidence**
+- Engine checks: New day resets the standings and keeps the class.
+- Removing works only for someone who left.
+- A phone test sets the pace in one tap and sees it on a guest's phone.
+- The full suite passes.
+
 ## v0.9.0 — Question bank 2.0 · 2026-10-20 02:58
 
 **Why:** a quiz game lives on its questions.

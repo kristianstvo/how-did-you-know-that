@@ -135,7 +135,7 @@
 .screen-lobby details.how summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; font-family: var(--hand); font-weight: 800; cursor: pointer; }
 .screen-lobby details.how summary::-webkit-details-marker { display: none; }
 .lb-chev { display: inline-block; color: var(--dim); font-size: 1.1rem; width: 24px; text-align: center; rotate: -90deg; transition: rotate var(--t-base) var(--e-standard); }
-.screen-lobby details.how[open] .lb-chev { rotate: 0deg; }
+.screen-lobby details.how[open] .lb-chev, .screen-lobby details.lb-adv[open] .lb-chev { rotate: 0deg; }
 .screen-lobby details.how p { color: var(--dim); font-size: 0.9rem; margin: 0 0 10px; line-height: 1.5; }
 .screen-lobby details.how p:last-child { margin-bottom: 14px; }
 .screen-lobby details.how[open] p { animation: hd-enter-up var(--t-base) var(--e-enter) both; animation-delay: calc(var(--i) * var(--stagger-deco)); }
@@ -202,3 +202,25 @@
   .lb-chev, .bot-x span, .lb-addbot { transition: none; }
   .lb-clock i { animation: none; }
 }
+
+/* Pace presets (v0.10): three big buttons instead of typing seconds. */
+.lb-pace { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 2px 0 10px; }
+.lb-pace-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 1px; min-height: 64px; padding: 6px 4px;
+  border-radius: 12px; background: var(--card2); border: 2px dashed var(--chalk-line); line-height: 1.15;
+  transition: transform var(--t-tap) var(--e-standard);
+}
+.lb-pace-btn:active { transform: scale(0.97); }
+.lb-pace-btn.on { border-style: solid; border-color: var(--accent2); background: rgba(255, 209, 102, 0.12); }
+.lb-pace-ic { font-size: 1.2rem; }
+.lb-pace-btn b { font-family: var(--hand); font-size: 0.98rem; }
+.lb-pace-btn small { color: var(--dim); font-size: 0.72rem; }
+/* Advanced: the balance numbers, folded away. */
+.lb-adv summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; cursor: pointer;
+  font-weight: 700; color: var(--dim); list-style: none;
+}
+.lb-adv summary::-webkit-details-marker { display: none; }
+.lb-adv-sum { margin-left: auto; font-size: 0.78rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.lb-adv[open] .settings-grid { margin-top: 6px; }
+@media (prefers-reduced-motion: reduce) { .lb-pace-btn:active { transform: none; opacity: 0.85; } }

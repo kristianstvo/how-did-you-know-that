@@ -210,6 +210,25 @@ test("phone: someone arriving mid-period watches from the hallway, without answe
   await close();
 });
 
+test("phone: the teacher sets the pace with one tap, and everyone sees it", async ({ browser }) => {
+  const host = await phone(browser);
+  await host.page.fill("#playerName", "Hana");
+  await host.page.click('[data-action="create"]');
+  const code = (await host.page.locator(".roomcode").innerText({ timeout: 15000 })).replace(/\s/g, "");
+  const guest = await phone(browser, `/#/join/${code}`);
+  await guest.page.fill("#playerName", "Bea");
+  await guest.page.click('[data-action="join"]');
+  await guest.page.waitForSelector(".screen-lobby");
+  expect((await host.page.locator("#pace-quick").boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await host.page.click("#pace-quick");
+  await expect(host.page.locator("#pace-quick")).toHaveAttribute("aria-pressed", "true");
+  await expect(guest.page.locator(".lb-rules-ro")).toContainText("10s");
+  // The balance numbers stay one tap away, folded.
+  await expect(host.page.locator("#lb-adv")).not.toHaveAttribute("open", "");
+  await host.ctx.close();
+  await guest.ctx.close();
+});
+
 test("phone: Practice with bots puts a solo player in a ready classroom", async ({ browser }) => {
   const { ctx, page } = await phone(browser);
   await page.fill("#playerName", "Solo");
