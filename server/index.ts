@@ -187,5 +187,8 @@ io.on("connection", (socket: Socket) => {
 });
 
 httpServer.listen(PORT, () => {
-  console.log(`How Did You Know That — relay listening on http://localhost:${PORT}`);
+  // The real port (PORT=0 asks the OS for a free one: the relay check does).
+  const addr = httpServer.address();
+  const port = typeof addr === "object" && addr ? addr.port : PORT;
+  console.log(`How Did You Know That — relay listening on http://localhost:${port}`);
 });

@@ -5,17 +5,18 @@
 //   2. Only the host's key takes the room back; then the held messages arrive
 //      in order and the class is told (hostBack).
 //   3. A host that never comes back: the room closes after the grace period.
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { io, type Socket } from "socket.io-client";
 
-const PORT = 3990 + Math.floor(Math.random() * 9);
 const GRACE = 1500;
-const URL = `http://localhost:${PORT}`;
-const server = spawn("npx tsx server/index.ts", { shell: true, env: { ...process.env, PORT: String(PORT), HOST_GRACE_MS: String(GRACE) }, stdio: ["ignore", "pipe", "inherit"] });
+let URL = "";
+const server = spawn("npx tsx server/index.ts", { shell: true, env: { ...process.env, PORT: "0", HOST_GRACE_MS: String(GRACE) }, stdio: ["ignore", "pipe", "inherit"] });
 await new Promise<void>((resolve, reject) => {
   const t = setTimeout(() => reject(new Error("relay did not start")), 20000);
   server.stdout!.on("data", (d: Buffer) => {
-    if (d.toString().includes("listening")) {
+    const port = /localhost:(\d+)/.exec(d.toString())?.[1];
+    if (port) {
+      URL = `http://localhost:${port}`;
       clearTimeout(t);
       resolve();
     }
@@ -94,7 +95,9 @@ try {
   check(!lateTry.ok, "a host coming back after the room closed is told so");
   for (const s of [p2, late]) s.disconnect();
 } finally {
-  server.kill();
-  if (process.platform === "win32" && server.pid) spawn("taskkill", ["/pid", String(server.pid), "/T", "/F"], { stdio: "ignore" });
+  // Kill the whole tree (shell → npx → node) and wait for it, or a stray relay
+  // keeps running after this check exits.
+  if (process.platform === "win32" && server.pid) spawnSync("taskkill", ["/pid", String(server.pid), "/T", "/F"], { stdio: "ignore" });
+  else server.kill();
 }
 process.exit(failures ? 1 : 0);

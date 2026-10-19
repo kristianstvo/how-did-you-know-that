@@ -9,7 +9,9 @@ import { LOCAL_PACK, type RawQuestion } from "./localPack";
 type SubjectDef = (typeof SUBJECTS)[number];
 
 const REQUEST_SPACING_MS = 5200; // OpenTDB: ~1 request / 5s per IP
-const MATCH_START_WAIT_MS = 8000; // max wait at match start before local-filling
+// v0.9: the curated pack (189 questions) is a good fallback now, so "Printing
+// the quiz…" waits at most 3s for online slots instead of 8s.
+const MATCH_START_WAIT_MS = 3000; // max wait at match start before local-filling
 
 function shuffle<T>(arr: readonly T[]): T[] {
   const a = arr.slice();
@@ -84,12 +86,27 @@ interface OtdbResponse {
 
 let sessionToken: string | null = null;
 let lastRequestAt = 0;
+// v0.9: OpenTDB allows ~1 request per 5s per IP, shared by everyone on the same
+// network. When it says "too many" (HTTP 429), double the gap (up to a
+// minute) instead of hammering it; ease back once requests go through.
+let spacing = REQUEST_SPACING_MS;
+const MAX_SPACING_MS = 60_000;
 
-async function spacedFetch(url: string): Promise<Response> {
-  const wait = lastRequestAt + REQUEST_SPACING_MS - Date.now();
-  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-  lastRequestAt = Date.now();
-  return fetch(url, { signal: AbortSignal.timeout(8000) });
+// One queue for every request: two callers used to read the same
+// lastRequestAt, wait the same time and fire together (a 429 every time).
+let queue: Promise<unknown> = Promise.resolve();
+
+function spacedFetch(url: string): Promise<Response> {
+  const run = queue.then(async () => {
+    const wait = lastRequestAt + spacing - Date.now();
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    lastRequestAt = Date.now();
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    spacing = res.status === 429 ? Math.min(MAX_SPACING_MS, spacing * 2) : Math.max(REQUEST_SPACING_MS, Math.round(spacing * 0.8));
+    return res;
+  });
+  queue = run.catch(() => {});
+  return run;
 }
 
 async function ensureToken(): Promise<string | null> {
@@ -140,6 +157,8 @@ interface Prefetch {
   plan: { subject: SubjectDef; tier: Tier }[];
   slots: (Question | null)[]; // filled progressively as fetches complete
   promise: Promise<void>;
+  /** The match started without waiting for the rest: stop fetching (v0.9). */
+  done: boolean;
 }
 
 let prefetched: Prefetch | null = null;
@@ -150,8 +169,10 @@ function startPrefetch(): Prefetch {
     .slice(0, TIER_PLAN.length)
     .map((subject, i) => ({ subject, tier: TIER_PLAN[i] }));
   const slots: (Question | null)[] = plan.map(() => null);
-  const promise = (async () => {
+  const p: Prefetch = { plan, slots, promise: Promise.resolve(), done: false };
+  p.promise = (async () => {
     for (let i = 0; i < plan.length; i++) {
+      if (p.done) return; // its match already started with the local pack
       try {
         slots[i] = await fetchOne(plan[i].subject, plan[i].tier);
       } catch {
@@ -159,7 +180,7 @@ function startPrefetch(): Prefetch {
       }
     }
   })();
-  return { plan, slots, promise };
+  return p;
 }
 
 /** Kick off fetching the next match's questions in the background
@@ -174,6 +195,7 @@ export async function getMatchQuestions(): Promise<MatchQuestions> {
   const p = prefetched ?? startPrefetch();
   prefetched = null;
   await Promise.race([p.promise, new Promise((r) => setTimeout(r, MATCH_START_WAIT_MS))]);
+  p.done = true; // whatever isn't here now comes from the pack: stop fetching
   let usedFallback = false;
   const taken = new Set(p.plan.map((s) => s.subject.label));
   const questions = p.plan.map(({ subject, tier }, i) => {

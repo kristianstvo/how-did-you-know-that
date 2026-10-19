@@ -32,7 +32,7 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.6.0 | Game-show sound: synthesized, synced to the beats, one switch | shipped |
 | v0.7.0 | First game night: Teacher's notes, the hallway for late arrivals, Practice with bots | shipped |
 | v0.8.0 | The yearbook: superlatives every period, the day's yearbook, Share the day | shipped |
-| v0.9.0 | (the hallway moved into v0.7.0) | — |
+| v0.9.0 | Question bank 2.0: 189 curated questions, a fetcher that stops getting rate-limited | shipped |
 | later | Lobby presets instead of raw numbers; day awards; bot difficulty | ideas |
 
 Later versions take the best of what playtests and audits turn up.
@@ -63,3 +63,6 @@ Later versions take the best of what playtests and audits turn up.
 | v0.8.0 | ✅ Awards computed by the host and published with the result | Every phone shows the same yearbook (parity), and only the host has the full answer history |
 | v0.8.0 | ✅ At most 4, one per person | More would be noise; spreading them lets more people feel seen |
 | v0.8.0 | ❌ Harsh awards | Party games roast lightly; "Last pencil down" is as mean as it gets |
+| v0.9.0 | ✅ Curate 104 questions by hand rather than pull more from the API | Quality and the points ramp (easy must really be easy) matter more than volume; the API stays for variety |
+| v0.9.0 | ✅ Start wait 8s → 3s | Waiting 8s for one or two online questions wasn't worth it once the pack could cover a whole period |
+| v0.9.0 | ❌ Drop the online questions entirely | They add thousands of questions of variety; with the queue fixed they are a good second source |

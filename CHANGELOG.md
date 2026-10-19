@@ -19,6 +19,41 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.9.0 — Question bank 2.0 · 2026-10-20 02:58
+
+**Why:** a quiz game lives on its questions.
+- The curated school pack had 86 questions, skewed to Science and Geography
+  (Film Studies and Civics had three each), so offline periods started
+  repeating within a few rounds.
+- Online questions come from a free API that rate-limits by IP, and our own
+  fetcher fired two requests at once whenever a match started early. So it got
+  rate-limited, then fell back to the thin pack.
+
+**Added**
+- **104 new curated questions (189 total).** Every subject now has 4–6 of each
+  difficulty. Facts are double-checked, the wrong answers are clearly wrong,
+  and film questions name the film.
+- `sim/pack-check.ts` (in `test:e2e`) checks:
+  - valid tiers and subjects
+  - three distinct wrong answers, none equal to the right one
+  - no duplicates
+  - at least 4 questions per subject per tier
+  - five offline periods with no repeats and the points ramp intact
+
+**Fixed**
+- Online questions go through one request queue. Two loops used to fire
+  together, which guaranteed a "too many requests".
+- A match that starts early stops its leftover fetches.
+- On a rate limit the gap doubles, up to a minute, instead of hammering.
+
+**Changed**
+- "Printing the quiz…" waits at most 3s for online questions (was 8s); the
+  curated pack covers the rest.
+
+**Evidence**
+- pack-check: 6 of 6 pass, including 5 offline periods with 0 repeats.
+- The full browser suite plus all engine and relay checks pass.
+
 ## v0.8.0 — The yearbook · 2026-10-20 02:13
 
 **Why:** endings are where a party game earns the next round. The report card
