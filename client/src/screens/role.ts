@@ -21,6 +21,8 @@ export const CHEATER_LINE = "It's you. Find the dot. 🤫";
 export const INNOCENT_LINE = "Not you. Watch closely. 🤫";
 /** In the hallway (v0.7): not playing this period, so no role at all. */
 export const HALLWAY_LINE = "Hallway. Watch and learn. 👀";
+/** v0.16: the big screen, for the whole room. */
+export const TV_LINE = "Phones out. Eyes on the board. 👀";
 
 /** When each group's motion has certainly finished. Later renders (and late
  *  joins) drop those animations; keyframes are from-only, so the resting look
@@ -47,7 +49,7 @@ export const role: Screen = {
     // lines in a full-width block: identical boxes whatever the glyph widths,
     // no extra element, same text length.
     const seated = s.players.some((p) => p.id === app.selfId);
-    const line = (!seated ? HALLWAY_LINE : app.secret.isCheater ? CHEATER_LINE : INNOCENT_LINE).replace(". ", ".\n");
+    const line = (app.tv ? TV_LINE : !seated ? HALLWAY_LINE : app.secret.isCheater ? CHEATER_LINE : INNOCENT_LINE).replace(". ", ".\n");
     const dust = DUST.map(([x, top, d, s, y]) => `<i style="--x:${x}%;--top:${top}%;--d:${d}ms;--s:${s}px;--y:${y}px"></i>`).join("");
     return `<section class="screen screen-role ${cls.join(" ")}">
       <hd-roleroom class="rl">
@@ -63,7 +65,7 @@ export const role: Screen = {
           <p class="rl-l2">Someone in this class is cheating…</p>
           <div class="rl-slot">${
             b.has("role")
-              ? `<div class="rl-note" id="rl-note"><span class="rl-note-tag">📝 Psst… your note</span><span class="rl-line">${line}</span></div>`
+              ? `<div class="rl-note" id="rl-note"><span class="rl-note-tag">${app.tv ? "📺 For the whole class" : "📝 Psst… your note"}</span><span class="rl-line">${line}</span></div>`
               : ""
           }</div>
         </div>

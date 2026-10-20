@@ -31,6 +31,8 @@ export interface App {
   home: { name: string; code: string; avatar: string; busy: boolean; resuming?: string };
   ui: UiFlags;
   fixture: boolean; // replaying a recorded match (no network)
+  /** v0.16: this page is a big screen (#/tv/CODE): it watches, never plays. */
+  tv?: boolean;
 }
 
 export interface RenderCtx {

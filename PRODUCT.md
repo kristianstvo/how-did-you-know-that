@@ -39,7 +39,8 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.13.0 | Rules at a glance: four cards, open for first-timers | shipped |
 | v0.14.0 | The unkillable host: a reload takes the class back | shipped |
 | v0.15.0 | Fresh eyes: an independent review's fixes; ⭐ gold stars | shipped |
-| later | A TV / big-screen view for in-person nights | ideas |
+| v0.16.0 | The big screen: a TV or laptop shows the show for the room | shipped |
+| later | A big-screen layout that uses the width (side-by-side reveal) | ideas |
 
 Later versions take the best of what playtests and audits turn up.
 
@@ -93,3 +94,6 @@ Later versions take the best of what playtests and audits turn up.
 | v0.15.0 | ✅ Gold stars ⭐ as the day's unit | "pts" meant two different things; a teacher's gold star is on theme |
 | v0.15.0 | ✅ Playtest tools behind `?playtest` | Event-log downloads are for tuning the game, not for a class at a party |
 | v0.15.0 | ❌ Custom questions written by the teacher | The teacher always plays: they'd know every answer, and their own lone right answers would read as cheating |
+| v0.16.0 | ✅ The big screen reuses the phone layout, scaled | Every screen and beat already works and is tested; a TV-specific layout is a later step, not a prerequisite |
+| v0.16.0 | ✅ A big screen is never a player | It can't hold a secret or a vote, so it can't change the game: parity and balance are untouched |
+| v0.16.0 | ❌ Making the big screen required | Phone first: the game must stay complete on phones alone, for remote classes on a call |

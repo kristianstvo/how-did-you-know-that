@@ -21,6 +21,7 @@ import {
   AVATARS,
   DEFAULT_SETTINGS,
   MAX_PLAYERS,
+  MAX_SCREENS,
   MIN_PLAYERS,
   QUESTIONS_PER_MATCH,
   SESSION_POINTS,
@@ -192,6 +193,9 @@ export class HostEngine {
   private wrongDetentions = 0; // strikes this match (settings.strikes ends it)
   /** v0.7: late arrivals watching this period; seated back in homeroom. */
   private hallway: InternalPlayer[] = [];
+  /** v0.16: sockets of big screens (TV, laptop). Never players, never saved:
+   *  a screen asks again when the host's phone comes back. */
+  private watchers = new Set<string>();
   private pointBroadcastAt = 0; // pointer changes share broadcasts (v0.11)
   private pointBroadcastPending = false;
   private usedFallback = false;
@@ -264,7 +268,19 @@ export class HostEngine {
 
   // ---------------- Joining (spec 05) ----------------
 
-  handleJoinRequest(socketId: string, rawName: string, avatar = "", token = ""): void {
+  handleJoinRequest(socketId: string, rawName: string, avatar = "", token = "", watch = false): void {
+    // v0.16: a big screen watches the show. Not a player, not in the
+    // hallway, never the cheater: it only ever gets the public state.
+    if (watch) {
+      if (!this.watchers.has(socketId) && this.watchers.size >= MAX_SCREENS) {
+        this.transport.toPlayer(socketId, "joinRejected", { reason: `This classroom already has ${MAX_SCREENS} big screens.` });
+        return;
+      }
+      this.watchers.add(socketId);
+      this.transport.toPlayer(socketId, "joined", { playerId: "", state: this.publicState(), secret: this.paddedSecret(""), token: "" });
+      this.broadcast();
+      return;
+    }
     const name = rawName.trim().slice(0, 20);
     if (!name) {
       this.transport.toPlayer(socketId, "joinRejected", { reason: "Pick a name first." });
@@ -340,6 +356,10 @@ export class HostEngine {
   }
 
   handlePeerDisconnected(socketId: string): void {
+    if (this.watchers.delete(socketId)) {
+      this.broadcast();
+      return;
+    }
     // Someone in the hallway dropped out: keep their place (connected=false)
     // so the same phone coming back keeps the same id; seatHallway() only
     // seats people who are here.
@@ -1183,6 +1203,7 @@ export class HostEngine {
         : null,
       loadingQuestions: this.loadingQuestions,
       hallway: this.hallway.filter((h) => h.connected).map((h) => ({ id: h.id, name: h.name, avatar: h.avatar })),
+      ...(this.watchers.size ? { screens: this.watchers.size } : {}),
       debugForcedCheater: !!this.forceCheaterName,
     };
   }

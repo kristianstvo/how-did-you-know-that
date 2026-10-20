@@ -19,6 +19,46 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.16.0 — The big screen · 2026-10-20 06:13
+
+**Why:** at an in-person game night, the best moments happen when everyone
+looks at the same grade book and points. Until now, each of those moments
+lived on ten small screens. A TV or a laptop on the table can be the room's
+shared stage.
+
+**Added**
+- **📺 Big screen.** On a TV or laptop, open the game at `#/tv/CODE` and that
+  screen shows the whole show for the room:
+  - the lobby, with a large QR code and the code to type
+  - every question, reveal, vote, result and report card, on the same synced
+    beats as the phones
+  - the sound, from the best speaker in the room (after one click: browsers
+    only start sound after a click, and the screen says so)
+- The big screen is never a player: it takes no desk, never enters the
+  hallway, is never the cheater, and gets only the public state. A classroom
+  can have up to 3.
+- The layout is the phone's, scaled to fit the screen, with nothing to tap:
+  no answer buttons, no ACCUSE, no docks.
+- The teacher finds the link on the QR card ("📺 Big screen? …"). The
+  attendance shows a 📺 while one is watching.
+- When the teacher's phone comes back from a reload (v0.14), the big screen
+  rejoins by itself.
+
+**Evidence**
+- `sim/hallway-check.ts` gains 5 checks:
+  - a big screen joins with no player id, no desk and no hallway place
+  - it is never told it's the cheater
+  - a classroom takes at most 3
+  - one that leaves stops counting
+- New phone test: a 1280×720 "TV" joins a classroom. It shows the QR and the
+  code, and none of the invite buttons. The teacher sees a 📺 and still one
+  desk taken. The TV follows the period to the reveal with no answer buttons
+  and no ACCUSE, and the teacher's grade book still has three rows.
+- Screenshots at 1920×1080 (lobby, role, question, reveal). The column
+  scales 1.23×, a six-player reveal fits on screen, nothing scrolls
+  sideways, and there are no page errors.
+- The full suite passes.
+
 ## v0.15.0 — Fresh eyes · 2026-10-20 05:58
 
 **Why:** after fourteen versions of features, I had an independent reviewer go

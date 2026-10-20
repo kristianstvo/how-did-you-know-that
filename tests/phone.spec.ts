@@ -13,6 +13,7 @@
 //   · the screen is kept awake in a classroom; the host's page asks before
 //     leaving mid-game
 //   · your report card counts a finished period once, across a reload (v0.12)
+//   · a big screen (#/tv/CODE) shows the show without joining the class (v0.16)
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 
@@ -271,6 +272,38 @@ test("phone: your report card counts a finished period once, across a reload", a
   expect(c.sum).toContain("1 period");
   expect(c.cells.join("|").replace(/\s+/g, " ")).toContain("1 cheater caught");
   for (const p of [host, bea, cy]) await p.ctx.close();
+});
+
+test("big screen: a TV shows the show without joining the class", async ({ browser }) => {
+  const host = await phone(browser);
+  await host.page.fill("#playerName", "Hana");
+  await host.page.click('[data-action="create"]');
+  const code = (await host.page.locator(".roomcode").innerText({ timeout: 15000 })).replace(/\s/g, "");
+  const tvCtx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const tv = await tvCtx.newPage();
+  await tv.goto(`/#/tv/${code}`);
+  // The way in, large: the QR and the code. Nothing to tap.
+  await expect(tv.locator("#lb-tvjoin")).toBeVisible({ timeout: 15000 });
+  await expect(tv.locator("#lb-tvjoin")).toContainText(code);
+  await expect(tv.locator("#lb-invite")).toBeHidden();
+  // Never in the class: the teacher sees a 📺, and still one desk taken.
+  await expect(host.page.locator(".lb-screens")).toBeVisible({ timeout: 10000 });
+  await expect(host.page.locator(".lb-row")).toHaveCount(1);
+  for (let i = 0; i < 2; i++) {
+    await host.page.click("#lb-addbot");
+    await host.page.waitForTimeout(120);
+  }
+  await host.page.click("#lb-start");
+  // The show reaches the big screen: the question, with nothing to answer…
+  await expect(tv.locator(".screen-question")).toBeVisible({ timeout: 30000 });
+  expect(await tv.locator("button.opt:not([disabled])").count()).toBe(0);
+  // …then the reveal, with no dock to accuse from; the class is still three.
+  await answer(host.page).catch(() => {});
+  await expect(tv.locator(".screen-reveal")).toBeVisible({ timeout: 40000 });
+  await expect(tv.locator("#rv-accuse")).toBeHidden();
+  await expect(host.page.locator(".gb-row")).toHaveCount(3);
+  await tvCtx.close();
+  await host.ctx.close();
 });
 
 test("phone: someone arriving mid-period watches from the hallway, without answering", async ({ browser }) => {

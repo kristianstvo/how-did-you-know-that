@@ -134,7 +134,7 @@ export const question: Screen = {
       })
       .join("");
 
-    const lockLabel = c.pencils ? "Pencils down!" : watching ? "👀 Watching from the hallway" : locked ? "Locked in. Waiting for the class…" : "Locked in";
+    const lockLabel = c.pencils ? "Pencils down!" : app.tv ? "Locked in so far" : watching ? "👀 Watching from the hallway" : locked ? "Locked in. Waiting for the class…" : "Locked in";
     const status = c.pencils
       ? "Pencils down."
       : locked

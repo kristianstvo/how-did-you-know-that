@@ -139,6 +139,14 @@ export const lobby: Screen = {
       <div class="roomcode" aria-hidden="true">${letters.map((ch, i) => `<span class="rc-l" style="--i:${i}">${esc(ch)}</span>`).join("")}</div>
       <div class="lb-tray" aria-hidden="true"><i class="lb-chalk"></i><i class="lb-chalk lb-chalk-y"></i><i class="lb-eraser"></i></div>
     </div>
+    ${
+      app.tv
+        ? `<div class="card lb-tvjoin" id="lb-tvjoin">
+            <div class="lb-qr-code" role="img" aria-label="QR code for the classroom invite link">${qrFor(shareUrl)}</div>
+            <p>📱 Scan to join, or open <b>${esc(location.host)}</b> and type <b>${esc(s.roomCode)}</b></p>
+          </div>`
+        : ""
+    }
     <div class="lb-invite" id="lb-invite">
       <button class="btn secondary lb-share" id="lb-share" data-action="share" data-url="${esc(shareUrl)}"><span aria-hidden="true">📨</span> Invite</button>
       <button class="btn secondary lb-qr-btn" id="lb-qr-btn" data-action="toggleQr" aria-haspopup="dialog" aria-expanded="${app.ui.qrOpen}"><span aria-hidden="true">📷</span> Show QR</button>
@@ -151,6 +159,7 @@ export const lobby: Screen = {
               <div class="lb-qr-code" role="img" aria-label="QR code for the classroom invite link">${qrFor(shareUrl)}</div>
               <div class="lb-qr-room">Classroom <b>${esc(s.roomCode)}</b></div>
               <p class="lb-qr-hint">Point a phone camera here: it opens this classroom with the code filled in.</p>
+              ${app.isHost ? `<p class="lb-qr-tv">📺 Big screen? On a TV or laptop open <b>${esc(location.host)}${esc(location.pathname === "/" ? "" : location.pathname)}/#/tv/${esc(s.roomCode)}</b></p>` : ""}
             </div>
             <button class="btn lb-qr-close" id="lb-qr-close" data-action="toggleQr">Done</button>
           </div>`
@@ -160,7 +169,7 @@ export const lobby: Screen = {
     <div class="card lb-roster" id="lb-roster">
       <div class="lb-roster-head">
         <h2>📋 Attendance</h2>
-        <span class="lb-count"><b id="lb-count-${s.players.length}">${s.players.length}</b>/${MAX_PLAYERS} desks</span>
+        <span class="lb-count">${s.screens ? `<span class="lb-screens" title="Big screens watching">📺${s.screens > 1 ? ` ${s.screens}` : ""}</span> ` : ""}<b id="lb-count-${s.players.length}">${s.players.length}</b>/${MAX_PLAYERS} desks</span>
       </div>
       <div class="lb-list">${rows}</div>
       ${

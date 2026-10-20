@@ -128,7 +128,7 @@ io.on("connection", (socket: Socket) => {
     socket.to(room.code).emit("hostBack");
   });
 
-  socket.on("join", ({ code, name, avatar, token }: { code: string; name: string; avatar?: string; token?: string }, cb?: (res: { ok: boolean; error?: string }) => void) => {
+  socket.on("join", ({ code, name, avatar, token, watch }: { code: string; name: string; avatar?: string; token?: string; watch?: boolean }, cb?: (res: { ok: boolean; error?: string }) => void) => {
     const room = rooms.get(String(code ?? "").toUpperCase());
     if (!room) {
       cb?.({ ok: false, error: "Room not found. Check the code." });
@@ -140,7 +140,7 @@ io.on("connection", (socket: Socket) => {
     cb?.({ ok: true });
     // Host validates the join (duplicate names, capacity, rejoin) and replies
     // via toPlayer with "joined" or "joinRejected".
-    toHost(room, "joinRequest", { socketId: socket.id, name: String(name ?? ""), avatar: String(avatar ?? ""), token: String(token ?? "") });
+    toHost(room, "joinRequest", { socketId: socket.id, name: String(name ?? ""), avatar: String(avatar ?? ""), token: String(token ?? ""), watch: watch === true });
     if (!room.hostSocketId) socket.emit("hostAway");
   });
 

@@ -74,6 +74,7 @@ let lastPhase = "";
 let lastQuestionKey = "";
 
 const hashJoin = location.hash.match(/#\/join\/([A-Za-z0-9]+)/);
+const hashTv = location.hash.match(/#\/tv\/([A-Za-z0-9]+)/); // v0.16 big screen
 if (hashJoin) app.home.code = hashJoin[1].toUpperCase();
 app.home.name = localStorage.getItem("hdykt-name") ?? "";
 app.home.avatar = localStorage.getItem("hdykt-avatar") ?? AVATARS[Math.floor(Math.random() * AVATARS.length)];
@@ -296,6 +297,38 @@ async function createLobby(bots = 0): Promise<void> {
     for (let i = 0; i < bots; i++) session.engine.addBot();
     app.isHost = true;
     app.selfId = session.selfId;
+    app.screen = "game";
+    app.closedReason = null;
+  } catch (e) {
+    showError((e as Error).message);
+  }
+  app.home.busy = false;
+  render();
+}
+
+/** v0.16: a TV or laptop shows the class's shared screen. The phone layout,
+ *  scaled to the screen, with nothing to tap; it plays the sound for the room. */
+async function watchTv(code: string): Promise<void> {
+  app.tv = true;
+  document.documentElement.classList.add("tv");
+  const fit = () =>
+    document.documentElement.style.setProperty("--tv-zoom", String(Math.max(1, Math.min(innerWidth / 600, innerHeight / 880)).toFixed(3)));
+  fit();
+  addEventListener("resize", fit);
+  // Browsers only start sound after a click: say so until someone does.
+  const hint = document.createElement("div");
+  hint.id = "tv-sound";
+  hint.textContent = "🔊 Click anywhere for sound";
+  document.body.append(hint);
+  document.addEventListener("pointerdown", () => hint.remove(), { once: true });
+  app.home.code = code;
+  app.home.busy = true;
+  render();
+  try {
+    session = await joinAsPlayer(code, "Big screen", "📺", { onState, onSecret, onClosed, onNet }, { watch: true });
+    keepAwake(true);
+    app.isHost = false;
+    app.selfId = "";
     app.screen = "game";
     app.closedReason = null;
   } catch (e) {
@@ -688,7 +721,8 @@ if (fixtureMatch) {
   // browser threw the tab away while it sat in the background: take the seat
   // straight back instead of making them type it all again.
   const hostSave = loadHostSave();
-  if (hostSave) void resumeHost(hostSave);
+  if (hashTv) void watchTv(hashTv[1].toUpperCase());
+  else if (hostSave) void resumeHost(hostSave);
   else if (hashJoin && app.home.name && hasSeat(app.home.code, app.home.name)) void joinLobby();
 }
 

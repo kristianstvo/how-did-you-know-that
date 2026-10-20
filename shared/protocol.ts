@@ -144,6 +144,8 @@ export interface PublicState {
   loadingQuestions: boolean; // host is fetching questions at match start
   /** v0.7 the hallway: arrived mid-period, watching, seated at the next one. */
   hallway?: { id: string; name: string; avatar: string }[];
+  /** v0.16: big screens (TV, laptop) watching the show; never players. */
+  screens?: number;
   debugForcedCheater?: boolean; // test hook active: the cheater is not random (shown to everyone)
   match: null | {
     questionIdx: number; // 0-based
@@ -249,6 +251,8 @@ export interface JoinRejectedMsg {
 export const ROOM_CODE_LEN = 5;
 export const MIN_PLAYERS = 3;
 export const MAX_PLAYERS = 10;
+/** v0.16: big screens per classroom. */
+export const MAX_SCREENS = 3;
 export const QUESTIONS_PER_MATCH = 10;
 export const TIER_PLAN: Tier[] = [
   "easy", "easy", "easy",

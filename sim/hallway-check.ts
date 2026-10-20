@@ -6,9 +6,10 @@
 //     out keeps its place (same id), a place that lapses isn't seated
 //   · Add bot counts the hallway; a quick change of suspect sticks
 //   · back in homeroom they have a seat for the next period
+//   · a big screen (v0.16) watches without a seat; at most MAX_SCREENS
 import { HostEngine, type Transport } from "../client/src/engine";
 import { localOnlySource, resetLocalDeck } from "../client/src/providers";
-import { MAX_PLAYERS } from "../shared/protocol";
+import { MAX_PLAYERS, MAX_SCREENS } from "../shared/protocol";
 import { VirtualClock } from "./harness";
 
 const clock = new VirtualClock();
@@ -98,4 +99,16 @@ engine.handlePeerDisconnected("s1"); // Bea leaves for good
 engine.removePlayer(bea.id);
 st = engine.publicState();
 check(!st.players.some((p) => p.id === bea.id) && !(bea.id in st.sessionBoard), "the seat of someone who left can be cleared");
+
+// v0.16: a big screen (TV, laptop) watches the show without being in the class.
+engine.handleJoinRequest("tv1", "Big screen", "📺", "", true);
+st = engine.publicState();
+const tv = lastTo("tv1");
+check(tv?.event === "joined" && tv.payload.playerId === "" && st.screens === 1, "a big screen joins, with no player id");
+check(!st.players.some((p) => p.name === "Big screen") && !(st.hallway ?? []).some((h) => h.name === "Big screen"), "…and takes no desk and no hallway place");
+check(tv?.payload.secret?.isCheater === false, "…and is never told it's the cheater");
+for (const id of ["tv2", "tv3", "tv4"]) engine.handleJoinRequest(id, "Big screen", "📺", "", true);
+check(lastTo("tv4")?.event === "joinRejected" && engine.publicState().screens === MAX_SCREENS, `at most ${MAX_SCREENS} big screens per classroom`);
+engine.handlePeerDisconnected("tv1");
+check(engine.publicState().screens === MAX_SCREENS - 1, "a big screen that leaves stops counting");
 process.exit(failures ? 1 : 0);

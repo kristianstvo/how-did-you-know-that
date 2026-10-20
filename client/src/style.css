@@ -202,3 +202,15 @@ html.fixture #app { padding-bottom: 90px; }
 .snd.in-sheet { margin-left: 8px; font-size: 1rem; }
 .screen-lobby .lb-head { margin-inline: 50px; } /* clear of 🔊 (left) and 🎓 (right) */
 .sheet h2 { display: flex; align-items: center; justify-content: space-between; }
+
+/* Big screen (v0.16, #/tv/CODE): the phone layout scaled to the TV, with
+   nothing to tap: no docks, no buttons, no ⭐ tab. */
+html.tv { zoom: var(--tv-zoom, 1); }
+html.tv #app { max-width: 600px; }
+.tv .rv-dock, .tv .vo-dock, .tv .vr-dock, .tv .me-dock, .tv .se-dock, .tv .lb-dock,
+.tv .lb-invite, .tv .sess-tab, .tv .rv-point { display: none !important; }
+#tv-sound {
+  position: fixed; z-index: 90; right: 16px; bottom: 16px; padding: 8px 14px; border-radius: 999px;
+  background: var(--card2); color: var(--ink); font-weight: 700; font-size: 0.9rem; pointer-events: none;
+  border: 2px dashed var(--chalk-line);
+}

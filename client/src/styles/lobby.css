@@ -248,3 +248,13 @@
 .how-fine b { color: var(--ink); }
 .screen-lobby details.how[open] .how-card,
 .screen-lobby details.how[open] .how-fine li { animation: hd-enter-up var(--t-base) var(--e-enter) both; animation-delay: calc(var(--i) * var(--stagger-deco)); }
+
+/* Big screen (v0.16): the way in, large. */
+.lb-tvjoin { display: flex; align-items: center; gap: 16px; margin: 0 -4px 14px; padding: 12px 14px; }
+.lb-tvjoin .lb-qr-code { flex: none; width: 150px; padding: 6px; border-radius: 10px; background: #fff; }
+.lb-tvjoin .lb-qr-code svg { display: block; width: 100%; height: auto; }
+.lb-tvjoin p { margin: 0; font-size: 1rem; line-height: 1.45; color: var(--dim); }
+.lb-tvjoin b { color: var(--ink); }
+.lb-qr-tv { margin: 8px 0 0; font-size: 0.8rem; color: var(--dim); overflow-wrap: anywhere; }
+.lb-qr-tv b { color: var(--ink); }
+.lb-screens { font-weight: 700; margin-right: 2px; }

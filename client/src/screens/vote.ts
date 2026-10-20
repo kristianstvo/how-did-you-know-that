@@ -69,7 +69,9 @@ export const vote: Screen = {
     const inCount = eligible.filter((p) => p.votedCurrent).length;
     const cleared = new Set(m.cleared);
 
-    const status = !self
+    const status = app.tv
+      ? "📺 The class is voting."
+      : !self
       ? "👀 Watching from the hallway."
       : self.banished
         ? "In detention: no vote this time."

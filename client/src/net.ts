@@ -173,8 +173,8 @@ function hostWiring(socket: Socket, events: SessionEvents) {
   let engine: HostEngine | null = null;
   const early: ((e: HostEngine) => void)[] = [];
   const run = (fn: (e: HostEngine) => void) => (engine ? fn(engine) : early.push(fn));
-  socket.on("joinRequest", ({ socketId, name, avatar, token }: { socketId: string; name: string; avatar: string; token?: string }) =>
-    run((e) => e.handleJoinRequest(socketId, name, avatar, token ?? "")),
+  socket.on("joinRequest", ({ socketId, name, avatar, token, watch }: { socketId: string; name: string; avatar: string; token?: string; watch?: boolean }) =>
+    run((e) => e.handleJoinRequest(socketId, name, avatar, token ?? "", watch === true)),
   );
   socket.on("intent", ({ fromSocket, payload }: { fromSocket: string; payload: Intent }) => run((e) => e.handleIntent(fromSocket, payload)));
   socket.on("peerDisconnected", ({ socketId }: { socketId: string }) => run((e) => e.handlePeerDisconnected(socketId)));
@@ -259,7 +259,9 @@ export function hasSeat(code: string, name: string): boolean {
   }
 }
 
-export async function joinAsPlayer(code: string, name: string, avatar: string, events: SessionEvents): Promise<PlayerSession> {
+/** Join a classroom as a player, or (v0.16, `watch`) as a big screen that
+ *  only shows the public state: no seat, no token, never in the class. */
+export async function joinAsPlayer(code: string, name: string, avatar: string, events: SessionEvents, opts: { watch?: boolean } = {}): Promise<PlayerSession> {
   const socket = connectSocket();
   try {
     await waitConnected(socket);
@@ -287,7 +289,7 @@ export async function joinAsPlayer(code: string, name: string, avatar: string, e
       reject(new Error(msg));
     };
     const doJoin = () => {
-      socket.emit("join", { code, name, avatar, token: readToken() }, (res: { ok: boolean; error?: string }) => {
+      socket.emit("join", { code, name, avatar, token: opts.watch ? "" : readToken(), watch: !!opts.watch }, (res: { ok: boolean; error?: string }) => {
         if (!res.ok && !joined) fail(res.error ?? "Couldn't join.");
       });
     };
@@ -296,7 +298,7 @@ export async function joinAsPlayer(code: string, name: string, avatar: string, e
     socket.on("connect", doJoin);
     socket.on("joined", (msg: JoinedMsg) => {
       try {
-        sessionStorage.setItem(tokenKey, msg.token);
+        if (!opts.watch) sessionStorage.setItem(tokenKey, msg.token);
       } catch {
         /* storage unavailable: name-only rejoin between matches still works */
       }
