@@ -148,6 +148,17 @@
   .av-face { transition: none; }
 }
 
+/* How to play (v0.20): the one-minute video, right under the pitch. */
+.btn.hm-howto {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: auto; min-height: 44px;
+  margin: 0 auto 14px; padding: 6px 22px; border: 2px solid rgba(255, 209, 102, 0.55); border-radius: 99px;
+  color: var(--accent2); font-size: 1rem; animation: hd-fade-in var(--t-scene) var(--e-standard) 200ms both;
+}
+.hm-howto small { color: var(--dim); font: 700 0.75rem system-ui, sans-serif; }
+@media (max-height: 760px) {
+  .btn.hm-howto { margin-bottom: 8px; padding-block: 4px; }
+}
+
 /* Practice with bots (v0.7): a quiet third way in, under Join / Start. */
 .hm-practice { margin: 0 0 6px; min-height: 44px; font-size: 0.95rem; animation: hd-fade-in var(--t-scene) var(--e-standard) 350ms both; }
 .btn.hm-practice { border: 2px dashed var(--chalk-line); color: var(--ink); }

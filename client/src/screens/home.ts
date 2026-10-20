@@ -80,6 +80,7 @@ export const home: Screen = {
       <span class="hm-t2">Know That?!</span>
     </h1>
     <p class="tagline hm-tagline" id="hm-tagline">Pop quiz! One classmate secretly sees the answers. Catch them before they graduate.</p>
+    <button class="btn ghost hm-howto" id="hm-howto" data-action="howto"><span aria-hidden="true">▶</span> How to play <small>1 min</small></button>
     ${app.closedReason ? `<div class="warn hm-closed" id="hm-closed" role="status">🚪 ${esc(app.closedReason)}</div>` : ""}
     ${h.resuming ? `<div class="warn hm-closed hm-resuming" id="hm-resuming" role="status">📡 Taking classroom ${esc(h.resuming)} back…</div>` : ""}
 

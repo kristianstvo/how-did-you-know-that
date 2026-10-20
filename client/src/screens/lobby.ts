@@ -186,6 +186,7 @@ export const lobby: Screen = {
 
     <details class="how" id="lb-how" ${howOpen ? "open" : ""}>
       <summary><span><span aria-hidden="true">📖 </span>How to play</span><span class="lb-chev" aria-hidden="true">▾</span></summary>
+      <button class="btn ghost lb-howto" id="lb-howto" data-action="howto"><span aria-hidden="true">▶</span> Watch it in a minute</button>
       <div class="how-cards">${howCards(s.settings)}</div>
       <ul class="how-fine">${FINE_PRINT.map((r, i) => `<li style="--i:${i + 4}">${r.replace("{drop}", String(s.settings.thresholdDrop))}</li>`).join("")}</ul>
     </details>

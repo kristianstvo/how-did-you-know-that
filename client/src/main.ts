@@ -18,7 +18,7 @@ import { AVATARS, type Intent, type PublicState, type SecretState } from "../../
 import { clockStatus, serverNow } from "./clock";
 import { startFixture } from "./fixture";
 import { buzz } from "./haptics";
-import { hostCue } from "./host";
+import { hostCue, setAfterWelcome } from "./host";
 import { setSound, sfx, soundOn } from "./sound";
 import {
   clearHostSave,
@@ -35,6 +35,7 @@ import {
 } from "./net";
 import { createRenderer, reducedMotion, type Router, type TransitionKind } from "./render";
 import { startHostVoice, toggleHostVoice } from "./voice";
+import { closeTutorial, mountTutorialRender, playTutorial, tutorialPlaying } from "./tutorial/player";
 import { home } from "./screens/home";
 import { lobby } from "./screens/lobby";
 import { matchEnd } from "./screens/matchEnd";
@@ -189,6 +190,7 @@ let lastMatchNumber = -1;
 
 function onState(state: PublicState): void {
   const prevPhase = lastPhase;
+  if (app.tv && state.phase !== "lobby" && tutorialPlaying()) closeTutorial(); // the bell: class starts
   // A new match: forget last match's secret until this match's arrives, so a
   // stale "you were the cheater" can never render (it's re-sent at the bell).
   if (state.matchNumber !== lastMatchNumber) {
@@ -327,10 +329,14 @@ async function watchTv(code: string): Promise<void> {
   document.addEventListener("pointerdown", () => hint.remove(), { once: true });
   document.addEventListener("keydown", () => hint.remove(), { once: true }); // a TV remote
   // v0.19: a game-show host voices the night from here (never on a phone).
+  // v0.20: once she has welcomed the room, the big screen plays how to play.
   startHostVoice();
+  setAfterWelcome(tvTutorial);
   document.addEventListener("keydown", (e) => {
-    if (e.key.toLowerCase() !== "v" || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
-    toast(toggleHostVoice() ? "🎙️ Host voice on" : "🎙️ Host voice off (press V for her again)");
+    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.key.toLowerCase();
+    if (k === "v") toast(toggleHostVoice() ? "🎙️ Host voice on" : "🎙️ Host voice off (press V for her again)");
+    if (k === "h") tvTutorial();
   });
   app.home.code = code;
   app.home.busy = true;
@@ -348,6 +354,20 @@ async function watchTv(code: string): Promise<void> {
   }
   app.home.busy = false;
   render();
+}
+
+/** v0.20: the big screen teaches the room while it joins: after the host's
+ *  welcome, and again on H. Homeroom only; the bell closes it. */
+function tvTutorial(): void {
+  const s = app.state;
+  if (!app.tv || !s || s.phase !== "lobby" || tutorialPlaying()) return;
+  playTutorial({
+    tv: {
+      code: s.roomCode,
+      url: `${location.origin}${location.pathname}#/join/${s.roomCode}`,
+      who: () => (app.state?.players ?? []).map((p) => ({ face: p.avatar, name: p.name })),
+    },
+  });
 }
 
 /** v0.18: a TV has no thumb to scroll with. Long screens (homeroom with the
@@ -542,6 +562,9 @@ root.addEventListener("click", (ev) => {
       break;
     case "practice":
       void createLobby(5);
+      break;
+    case "howto": // v0.20: the one-minute video
+      playTutorial({ onClose: () => btn.isConnected && btn.focus() });
       break;
     case "share":
       void shareLink(btn.dataset.url!);
@@ -768,7 +791,9 @@ document.addEventListener("keydown", (ev) => {
 // ---------------- Boot ----------------
 
 const fixtureMatch = location.hash.match(/#\/fixture\/([\w-]+)/);
-if (fixtureMatch) {
+if (location.hash.startsWith("#/tutorial/render")) {
+  mountTutorialRender(); // v0.20: tools/tutorial-video.mjs films this page frame by frame
+} else if (fixtureMatch) {
   const fxParams = new URLSearchParams(location.hash.split("?")[1] ?? location.search.slice(1));
   app.fixture = true;
   app.screen = "game";

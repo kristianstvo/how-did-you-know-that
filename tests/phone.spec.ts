@@ -397,6 +397,65 @@ test("big screen: a game-show host voices the night, from the TV only (v0.19)", 
   await host.ctx.close();
 });
 
+type TutorialState = { voiced: boolean; total: number };
+const tutorialOf = (page: Page) => page.evaluate(() => (window as unknown as { __hdykt?: { tutorial?: TutorialState } }).__hdykt?.tutorial ?? null);
+
+test("how to play: Home's one-minute video plays with her voice and captions, and closes (v0.20)", async ({ browser }) => {
+  const { ctx, page } = await phone(browser);
+  await page.click("#hm-howto");
+  const tut = page.locator("#tut");
+  await expect(tut).toBeVisible();
+  await expect.poll(() => tutorialOf(page), { timeout: 10000 }).toMatchObject({ voiced: true });
+  expect((await tutorialOf(page))!.total).toBeGreaterThan(55_000);
+  // The stage fits the phone: nothing sticks out sideways.
+  const box = (await page.locator(".tut-stage").boundingBox())!;
+  expect(box.width).toBeLessThanOrEqual(SE.width + 1);
+  expect(box.height).toBeLessThanOrEqual(SE.height + 1);
+  // Captions follow her words; the word being said is marked.
+  await expect(page.locator(".tut-cap-box span.now")).toHaveCount(1, { timeout: 5000 });
+  await expect(page.locator(".tut-cap-box")).toContainText("Welcome");
+  // Closing gives the page back, focus on the button that opened it.
+  await page.click(".tut-close");
+  await expect(tut).toHaveCount(0);
+  await expect(page.locator("#hm-howto")).toBeFocused();
+  await ctx.close();
+});
+
+test("how to play: the big screen plays it after the welcome, the way in beside it; the bell ends it (v0.20)", async ({ browser }) => {
+  const host = await phone(browser);
+  await host.page.fill("#playerName", "Hana");
+  await host.page.click('[data-action="create"]');
+  const code = (await host.page.locator(".roomcode").innerText({ timeout: 15000 })).replace(/\s/g, "");
+  const tvCtx = await browser.newContext({ viewport: { width: 1280, height: 720 }, isMobile: false, hasTouch: false });
+  const tv = await tvCtx.newPage();
+  await tv.goto(`/#/tv/${code}`);
+  await expect(tv.locator("#lb-tvjoin")).toBeVisible({ timeout: 15000 });
+  await tv.waitForFunction(() => (window as unknown as { __hdykt?: { voiceReady?: boolean } }).__hdykt?.voiceReady === true, null, { timeout: 30000 });
+  await tv.keyboard.press("Enter");
+  await expect.poll(async () => (await voiceOf(tv)).map((v) => v.id), { timeout: 5000 }).toContain("welcome");
+  // ~9s later, once she has welcomed the room: how to play, with the QR and the code beside it.
+  await expect(tv.locator("#tut")).toBeVisible({ timeout: 15000 });
+  await expect(tv.locator("#tut .tut-side .code")).toHaveText(code);
+  await expect(tv.locator("#tut .tut-side .qr svg")).toBeVisible();
+  await expect(tv.locator("#tut .tut-side .who")).toContainText("Hana");
+  await expect(tv.locator(".tut-close")).toHaveCount(0); // nothing to tap on a TV
+  await expect.poll(() => tutorialOf(tv), { timeout: 10000 }).toMatchObject({ voiced: true });
+  // The teacher rings the bell: the big screen goes straight to the class.
+  for (let i = 0; i < 2; i++) {
+    await host.page.click("#lb-addbot");
+    await host.page.waitForTimeout(120);
+  }
+  await host.page.click("#lb-start");
+  await expect(tv.locator("#tut")).toHaveCount(0, { timeout: 10000 });
+  await expect(tv.locator(".screen-role, .screen-question")).toBeVisible({ timeout: 15000 });
+  // H plays it again, but only in homeroom.
+  await tv.keyboard.press("h");
+  await tv.waitForTimeout(400);
+  await expect(tv.locator("#tut")).toHaveCount(0);
+  await tvCtx.close();
+  await host.ctx.close();
+});
+
 test("phone: someone arriving mid-period watches from the hallway, without answering", async ({ browser }) => {
   const { host, code, close } = await classroom(browser, [], 3);
   await host.page.waitForSelector("button.opt:not([disabled])", { timeout: 30000 });

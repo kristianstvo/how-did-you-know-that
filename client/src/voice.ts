@@ -46,7 +46,7 @@ const KEY = "hdykt-voice";
 const clips = new Map<LineId, Clip>();
 let lines: Line[] = []; // playing or scheduled
 let started = false;
-let pending: { id: LineId; ok: () => boolean } | null = null;
+let pending: { id: LineId; ok: () => boolean; then?: (endsAt: number) => void } | null = null;
 let muted = false;
 try {
   muted = localStorage.getItem(KEY) === "off";
@@ -134,7 +134,7 @@ function flush(): void {
   if (!pending || !clips.has(pending.id) || !liveAudio()) return;
   const p = pending;
   pending = null;
-  if (p.ok()) say(p.id, { mode: "aside" });
+  if (p.ok() && say(p.id, { mode: "aside" })) p.then?.(busyUntil());
 }
 
 const soundsUntil = (l: Line) => Math.min(l.at + l.clip.dur, l.stopAt);
@@ -249,9 +249,10 @@ export function sayTimed(ids: LineId[], startOf: (c: Clip) => number): LineId | 
 }
 
 /** Say `id` as soon as she can be heard (clips loaded, audio unlocked by a
- *  click or a key), if `ok()` still holds by then. */
-export function sayWhenHeard(id: LineId, ok: () => boolean): void {
-  pending = { id, ok };
+ *  click or a key), if `ok()` still holds by then; `then` learns when her
+ *  last word ends (shared-clock ms). */
+export function sayWhenHeard(id: LineId, ok: () => boolean, then?: (endsAt: number) => void): void {
+  pending = { id, ok, then };
   flush();
 }
 

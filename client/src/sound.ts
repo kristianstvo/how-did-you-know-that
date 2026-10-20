@@ -46,11 +46,28 @@ function audio(): AudioContext | null {
   return ctx;
 }
 
+/** Where a sound goes: the live speakers, or (v0.20) an offline render that
+ *  starts the sound `t0` seconds into it (the tutorial's video export). */
+interface Out {
+  c: BaseAudioContext;
+  out: AudioNode;
+  noise: AudioBuffer;
+  t0: number;
+}
+let offline: Out | null = null;
+function target(): Out | null {
+  if (offline) return offline;
+  const c = audio();
+  if (!c || !master || !noiseBuf) return null;
+  return { c, out: master, noise: noiseBuf, t0: c.currentTime };
+}
+
 /** One enveloped oscillator note, `at` seconds from now. */
 function tone(freq: number, at: number, dur: number, opts: { wave?: Wave; gain?: number; to?: number; attack?: number } = {}): void {
-  const c = audio();
-  if (!c || !master) return;
-  const t = c.currentTime + at;
+  const tg = target();
+  if (!tg) return;
+  const { c, out: master } = tg;
+  const t = tg.t0 + at;
   const o = c.createOscillator();
   const g = c.createGain();
   o.type = opts.wave ?? "sine";
@@ -67,11 +84,12 @@ function tone(freq: number, at: number, dur: number, opts: { wave?: Wave; gain?:
 
 /** A filtered noise burst, `at` seconds from now. */
 function hiss(at: number, dur: number, opts: { gain?: number; type?: BiquadFilterType; freq?: number; q?: number } = {}): void {
-  const c = audio();
-  if (!c || !master || !noiseBuf) return;
-  const t = c.currentTime + at;
+  const tg = target();
+  if (!tg) return;
+  const { c, out: master } = tg;
+  const t = tg.t0 + at;
   const src = c.createBufferSource();
-  src.buffer = noiseBuf;
+  src.buffer = tg.noise;
   const f = c.createBiquadFilter();
   f.type = opts.type ?? "bandpass";
   f.frequency.value = opts.freq ?? 1800;
@@ -158,6 +176,7 @@ export const sfx = {
 
 // Test hook: the last sounds fired (names only), next to the beat telemetry.
 type Sfx = Record<string, (...args: number[]) => void>;
+const RAW: Sfx = { ...(sfx as unknown as Sfx) }; // unwrapped, for offline renders
 for (const name of Object.keys(sfx)) {
   const play = (sfx as unknown as Sfx)[name];
   (sfx as unknown as Sfx)[name] = (...args: number[]) => {
@@ -169,6 +188,34 @@ for (const name of Object.keys(sfx)) {
 }
 
 export const soundOn = (): boolean => enabled;
+
+/** v0.20: wake audio inside a tap (the tutorial's Play button): the running
+ *  context, or null when sound is off or the browser refuses. */
+export async function wakeAudio(): Promise<AudioContext | null> {
+  const c = audio();
+  if (!c) return null;
+  if (c.state !== "running") await c.resume().catch(() => {});
+  return (c.state as string) === "running" ? c : null;
+}
+
+/** v0.20: render one effect into an offline context, starting `at` seconds
+ *  in, through `out` (the tutorial's video export). Same synthesis as live. */
+const noiseFor = new WeakMap<BaseAudioContext, AudioBuffer>();
+export function sfxOffline(c: BaseAudioContext, out: AudioNode, at: number, name: keyof typeof sfx, args: number[] = []): void {
+  let noise = noiseFor.get(c);
+  if (!noise) {
+    noise = c.createBuffer(1, c.sampleRate, c.sampleRate);
+    const d = noise.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    noiseFor.set(c, noise);
+  }
+  offline = { c, out, noise, t0: at };
+  try {
+    RAW[name](...args);
+  } finally {
+    offline = null;
+  }
+}
 
 /** v0.19: the audio context, but only once a click or a key has let it run
  *  (sound off, or still locked: null). The TV host speaks through it. */

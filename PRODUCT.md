@@ -43,6 +43,7 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.17.0 | Called it: the cheater's record vs the class's, and who saw it coming | shipped |
 | v0.18.0 | Game night ready: a whole-evening smoke test, the big screen rolls, balance re-checked | shipped |
 | v0.19.0 | Your host tonight: a recorded game-show host voices the big screen | shipped |
+| v0.20.0 | How to play, in a minute: a narrated video on Home and the big screen, and as an MP4 | shipped |
 | later | A big-screen layout that uses the width (side-by-side reveal) | ideas |
 
 Later versions take the best of what playtests and audits turn up.
@@ -113,3 +114,9 @@ Later versions take the best of what playtests and audits turn up.
 | v0.19.0 | ✅ The bell holds 6.4 s (not 3.2 s) when a big screen is in the room | Her intro otherwise ran 5 s into question one and "Question one!" never came; phone-only rooms keep the faster start |
 | v0.19.0 | ✅ Each evidence quip once per period | Hearing "Genius... or cheat sheet?" four times in one period grated in testing; line alerts (near the line, cleared) repeat because they carry news |
 | v0.19.0 | ❌ Captions for the host | She never says anything the screen doesn't already show, so captions would only add clutter |
+| v0.20.0 | ✅ A narrated one-minute video, not more rule text | People at a party watch together; the rule cards stay for readers |
+| v0.20.0 | ✅ Built from the game's own look, not AI-generated video | It has to show exactly what players will see, and generated video can't draw the real screens |
+| v0.20.0 | ✅ Vertical 9:16, narrated by Amy | Your call: phones first (Reels, TikTok, Shorts), and the same voice as game night |
+| v0.20.0 | ✅ The big screen plays it after the welcome | The room waits for latecomers anyway; teaching everyone at once beats everyone reading |
+| v0.20.0 | ✅ Captions burned in, word by word | Most vertical video is watched muted, and game night is loud |
+| v0.20.0 | ❌ Background music | The game has none; her voice and the game's own effects keep the video sounding like the game |

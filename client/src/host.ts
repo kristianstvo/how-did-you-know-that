@@ -28,6 +28,13 @@ let flip = false;
 /** Alternate two takes of a call that comes back all night. */
 const take = (a: LineId, b: LineId): LineId => ((flip = !flip) ? a : b);
 
+let afterWelcome: (() => void) | null = null;
+/** v0.20: what the big screen does once she has welcomed the room (main.ts
+ *  plays the how-to-play tutorial), if it's still homeroom by then. */
+export function setAfterWelcome(fn: () => void): void {
+  afterWelcome = fn;
+}
+
 export function hostCue(s: PublicState | null, screenKey: string, added: string[], entered: boolean, settled: boolean): void {
   phase = screenKey === "session" ? "sessionEnd" : screenKey.split("-")[0];
   if (!s) return;
@@ -48,7 +55,14 @@ export function hostCue(s: PublicState | null, screenKey: string, added: string[
     case "lobby":
       if (!welcomed) {
         welcomed = true;
-        sayWhenHeard("welcome", () => phase === "lobby");
+        sayWhenHeard(
+          "welcome",
+          () => phase === "lobby",
+          (endsAt) =>
+            setTimeout(() => {
+              if (phase === "lobby") afterWelcome?.();
+            }, Math.max(0, endsAt - serverNow()) + 900),
+        );
       }
       break;
     case "role":

@@ -8,10 +8,15 @@ answer times, then burns their one accusation to send someone to detention.
 
 Built from the specs in `00-overview.md` … `07-ui-screens.md`.
 
+▶ **[How to play, in a minute](media/how-to-play.mp4)** (a narrated 9:16 video; it also plays in the game).
+
 ## Extras beyond the specs
 
 Newest first (details in `CHANGELOG.md`, decisions in `PRODUCT.md`):
 
+- **How to play, in a minute** (v0.20) — a narrated video on Home and on the
+  big screen while the class joins, and as an MP4 to share
+  (`media/how-to-play.mp4`).
 - **Your host tonight** (v0.19) — a recorded game-show host (an ElevenLabs
   voice) calls the questions, the answers and the verdicts from the big
   screen. Phones stay silent; V on the TV mutes her.
@@ -76,7 +81,8 @@ share the invite link (`/#/join/CODE`). 3–10 players, 4+ recommended.
 3. **A TV or the laptop can be the big screen.** The teacher's QR card shows
    its link (`/#/tv/CODE`). Click once there for sound. It shows the whole
    show for the room and never plays, and a game-show host voices the night
-   from it (press V to mute her).
+   from it (press V to mute her). While the class joins, it plays the
+   one-minute how-to-play video (H plays it again).
 4. **The teacher's phone is the game.** A reload, a crash or a locked
    screen is fine: the class waits a few seconds and carries on. Closing
    the tab for more than 90 seconds ends the class.

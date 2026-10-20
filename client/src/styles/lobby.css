@@ -258,3 +258,7 @@
 .lb-qr-tv { margin: 8px 0 0; font-size: 0.8rem; color: var(--dim); overflow-wrap: anywhere; }
 .lb-qr-tv b { color: var(--ink); }
 .lb-screens { font-weight: 700; margin-right: 2px; }
+
+/* v0.20: the one-minute video, at the top of How to play (a big screen plays it by itself). */
+.btn.lb-howto { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; margin: 2px 0 10px; border: 2px solid rgba(255, 209, 102, 0.5); border-radius: 99px; color: var(--accent2); font-size: 0.95rem; }
+.tv .lb-howto { display: none; }

@@ -19,6 +19,44 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.20.0 — How to play, in a minute · 2026-10-20 09:54
+
+**Why:** the rules were four cards in the lobby and a teacher's note in the
+first period. That works for someone who reads. A party needs something the
+whole room watches together, and a link to send before game night.
+
+**Added**
+- **A narrated how-to-play video, in the game and as an MP4.** Amy, the big
+  screen's host, explains the gist between a title and a sign-off:
+  1. the pop quiz on every phone;
+  2. the secret cheater and their dot;
+  3. the graduation line;
+  4. the reveal and its evidence;
+  5. pointing, accusing and the vote;
+  6. what a vote does: caught, innocent, two strikes;
+  7. question ten, and a tip for the cheater.
+- **It's drawn in the game's own look:** the chalkboard, paper notes, stamps
+  and the real phone screens. The game's own sound effects play on the
+  beats.
+- **Captions follow her word by word,** from ElevenLabs Scribe's word timings.
+  Every picture lands on the word it shows: the magnifier finds the dot as
+  she says "dot".
+- **Home: ▶ How to play (1 min)** opens it full screen. In the lobby, How to
+  play starts with "▶ Watch it in a minute".
+- **The big screen plays it by itself** in homeroom, once Amy has welcomed
+  the room, with the QR, the room code and who's in beside it. H plays it
+  again; the bell ends it.
+- **`media/how-to-play.mp4`:** 1080×1920 (9:16), 73 s, H.264 + AAC, for
+  Reels, TikTok, Shorts or the group chat. `npm run tutorial:video`
+  re-renders it from the game. It needs ffmpeg:
+  `npm i --no-save ffmpeg-static`.
+- The scenes are posed frame by frame from the clock, so the video in the
+  game and the MP4 are the same pictures. In the game, the clock is the
+  audio clock, so her words and the pictures never drift apart.
+- Tests: Home's video plays with her voice and captions, then closes; the
+  big screen plays it after the welcome with the way in beside it, and the
+  bell ends it.
+
 ## v0.19.0 — Your host tonight · 2026-10-20 08:45
 
 **Why:** a TV game night needs a host. The big screen had the show and the
