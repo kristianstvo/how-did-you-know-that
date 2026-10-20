@@ -78,7 +78,7 @@
   position: relative; flex: 1; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-rows: auto auto;
   align-content: center; column-gap: 8px; row-gap: 3px; min-height: 66px; min-width: 0;
   padding: 7px 9px; text-align: left; border-radius: 14px;
-  background: var(--card); border: 2.5px dashed var(--chalk-line);
+  background: var(--card); border: 2.5px solid transparent; box-shadow: var(--raise);
   transition: transform var(--t-tap) var(--e-standard);
 }
 .roomy .vo-cell { min-height: 76px; }
@@ -92,8 +92,8 @@
 .vo-meta { grid-column: 2 / span 2; display: flex; flex-wrap: wrap; align-items: center; gap: 3px 5px; min-width: 0; overflow: hidden; white-space: nowrap; }
 .vo-pick { flex: none; font-size: 0.82rem; font-weight: 800; font-variant-numeric: tabular-nums; padding: 0 5px; border-radius: 6px; line-height: 1.45; }
 .vo-pick.ok { color: var(--good); border: 1.5px solid var(--good); }
-.vo-pick.bad { color: var(--bad); border: 1.5px dashed var(--bad); }
-.vo-pick.none { color: var(--dim); border: 1.5px dotted var(--chalk-line); }
+.vo-pick.bad { color: var(--bad); border: 1.5px solid var(--bad); }
+.vo-pick.none { color: var(--dim); border: 1.5px solid var(--edge-2); }
 .vo-meta .exhibits { gap: 2px; }
 .vo-meta .exhibit { font-size: 0.82rem; }
 
@@ -127,7 +127,7 @@
 .vo-slots { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; min-height: 30px; }
 .vo-slot {
   width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
-  border: 2px dashed var(--chalk-line);
+  border: 2px solid transparent; background: rgba(0, 0, 0, 0.2); box-shadow: var(--well);
 }
 .vo-slot.in { border-style: solid; border-color: var(--good); }
 .vo-in { display: block; width: 100%; height: 100%; font-size: 1rem; line-height: 1; animation: hd-pop var(--t-stamp) var(--e-standard) both; }
@@ -187,5 +187,5 @@
 /* Last strike (v0.4): a wrong detention now ends the match. */
 .vo-sub.last-strike {
   color: var(--accent); font-weight: 800; white-space: normal;
-  border: 1.5px dashed var(--accent); border-radius: 10px; padding: 2px 8px; margin-inline: 6px;
+  border: 1.5px solid var(--accent); border-radius: 10px; padding: 2px 8px; margin-inline: 6px;
 }

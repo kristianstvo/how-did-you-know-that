@@ -204,7 +204,7 @@ grows by one stagger per extra player.
 | pencils | 0 | 0 | 0 | "✏️ PENCILS DOWN" stamps over the Board. The option rows are neutral |
 | slap | 250 | 400 | 600 | Avatars slap into the tray of the option they picked, **fastest first**. Stagger 110/140/190ms. Players who didn't answer drop into a "🤐 no answer" chip. The first three get small ①②③ speed ranks |
 | drumroll | +250 after last slap | same | same | The Board dims and a chalk underline sweeps across. Hold 300/800/1400ms. High stakes adds a slow shimmer |
-| answer | ≈1.35s | ≈2.15s | ≈3.2s | The correct row gets a ✓ stamp and a solid border, and its avatars pop. Wrong rows get ✗ and a dashed outline at 55% opacity. **The room reacts out loud here** |
+| answer | ≈1.35s | ≈2.15s | ≈3.2s | The correct row gets a ✓ stamp and a solid border, and its avatars pop. Wrong rows get ✗ and a thin, faint outline (dashed until v0.22). **The room reacts out loud here** |
 | verdict | +350 | +450 | +600 | ✓ or ✗ badges on tray avatars. Time chips land on Grade Book rows (⚡ marks the fastest correct). "+points" pops |
 | evidence | (none) | +550 | +700 | The **EXHIBIT** card stamps into the slot: icon, title, observation, question. Its icon pins onto the subject's row as an exhibit badge |
 | grade | +350 | callout hold 1300 | callout hold 1600 | Bars grow with `scaleX` from the old to the new share, and rows reorder with `translateY`. CLEARED stamps land. **LAST BELL** banner if active |
@@ -289,7 +289,7 @@ timings:
 | Parity: cheater and innocent run the same timeline and layout, except the marker | Timelines are pure functions of public data. Parity test: `tests/parity.spec.ts` |
 | Sync within 150ms across phones | Shared server clock. Sync test with three clients and injected clock skew: `tests/sync.spec.ts` |
 | At least 55fps during the reveal with 4–6× CPU throttle | `tests/perf.spec.ts` on a fixture replay. Caveats: CPU throttling doesn't slow the GPU, iOS Low Power caps at 30fps, so beats are designed to read at 30fps, and a real mid-range Android should be checked |
-| Correctness without colour | ✓/✗ glyphs, solid vs dashed borders, the CLEARED word |
+| Correctness without colour | ✓/✗ glyphs, thick tinted vs thin faint outlines (dashed until v0.22), the CLEARED word |
 | Haptics never carry information alone | Android only; each buzz mirrors something on screen |
 | No role leak through packet size | Every secret is padded to the same length. `sim/protocol-check.ts` |
 

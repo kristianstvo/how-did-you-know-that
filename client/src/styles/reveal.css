@@ -57,14 +57,14 @@
 .screen-reveal.dense .ob-text { font-size: 0.86rem; }
 .screen-reveal.dense .rv-qtext { font-size: 0.92rem; margin-bottom: 8px; }
 .screen-reveal.dense .board { margin-bottom: 12px; }
-/* Outlines are overlays swapped by opacity: correct = solid + tint, wrong = dashed. */
+/* Outlines are overlays swapped by opacity: correct = thick + tint, wrong = thin and faint. */
 .screen-reveal .ob-row::before,
 .screen-reveal .ob-row::after {
   content: ""; position: absolute; inset: -2px; border-radius: inherit; pointer-events: none; opacity: 0;
   transition: opacity var(--t-base) var(--e-standard);
 }
 .screen-reveal .ob-row::before { border: 2.5px solid var(--good); background: rgba(142, 229, 154, 0.12); }
-.screen-reveal .ob-row::after { border: 2px dashed var(--bad); }
+.screen-reveal .ob-row::after { border: 1.5px solid rgba(255, 138, 101, 0.55); }
 .screen-reveal.drumming .ob-row { opacity: 0.6; } /* the board dims */
 .screen-reveal.b-answer .ob-row.is-wrong { opacity: 0.55; }
 .screen-reveal.b-answer .ob-row.is-correct::before { opacity: 1; }
@@ -79,7 +79,7 @@
 }
 .screen-reveal .ob-mark { opacity: 0; font-size: 0.95rem; }
 .screen-reveal .is-correct .ob-mark { background: var(--good); color: #10241a; transform: scale(2.2) rotate(-14deg); }
-.screen-reveal .is-wrong .ob-mark { color: var(--bad); border: 2px dashed var(--bad); font-size: 0.8rem; transform: scale(1.6); }
+.screen-reveal .is-wrong .ob-mark { color: var(--bad); border: 2px solid var(--bad); font-size: 0.8rem; transform: scale(1.6); }
 .screen-reveal.b-answer .ob-letter { opacity: 0; }
 .screen-reveal.b-answer .ob-mark { opacity: 1; transition: transform var(--t-stamp) var(--e-impact), opacity var(--t-quick) linear; }
 .screen-reveal.b-answer .is-correct .ob-mark { transform: rotate(-6deg); }
@@ -121,7 +121,7 @@
 .screen-reveal .tav-rank { top: -7px; background: var(--accent2); color: #241300; box-shadow: 0 0 0 1.5px var(--card); }
 .screen-reveal .tav-mark { bottom: -7px; opacity: 0; transform: scale(0.3); }
 .screen-reveal .tav-mark.ok { background: var(--good); color: #10241a; box-shadow: 0 0 0 1.5px var(--card); }
-.screen-reveal .tav-mark.no { background: #3b2a22; color: var(--bad); border: 1px dashed var(--bad); }
+.screen-reveal .tav-mark.no { background: #3b2a22; color: var(--bad); border: 1px solid var(--bad); }
 .screen-reveal.b-verdict .tav-mark {
   opacity: 1; transform: none;
   transition: transform var(--t-base) var(--e-impact) var(--dj), opacity var(--t-quick) linear var(--dj);
@@ -133,7 +133,7 @@
 .screen-reveal.b-answer .ob-none { opacity: 0.55; }
 .screen-reveal .none-chip {
   display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 6px 0 10px; border-radius: 999px;
-  border: 1.5px dashed var(--chalk-line); color: var(--dim); font-size: 0.72rem; font-weight: 800; font-family: var(--hand);
+  border: 1.5px solid transparent; background: rgba(0, 0, 0, 0.2); box-shadow: var(--well); color: var(--dim); font-size: 0.72rem; font-weight: 800; font-family: var(--hand);
 }
 .screen-reveal .none-chip { opacity: 0; }
 .screen-reveal.b-slap .none-chip { opacity: 1; transition: opacity var(--t-quick) linear var(--d); }
@@ -180,7 +180,7 @@
 /* ---------------- Evidence slot (sized by its content from frame 0) ----------------
    The EXHIBIT card is in the DOM, invisible, from the first frame, so the slot
    is exactly the card's height and the card only ever changes opacity/transform. */
-.screen-reveal .ev-slot { position: relative; min-height: 64px; border-radius: 12px; border: 2px dashed rgba(244, 241, 232, 0.12); }
+.screen-reveal .ev-slot { position: relative; min-height: 64px; border-radius: 12px; border: 2px solid transparent; background: rgba(0, 0, 0, 0.14); box-shadow: var(--well); }
 .screen-reveal .ev-slot.has-note { height: 40px; min-height: 0; }
 .screen-reveal .ev-ph {
   position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--hand); font-size: 0.78rem;
@@ -225,7 +225,7 @@
 .screen-reveal.b-grade .ev-note { opacity: 1; transform: none; transition: transform var(--t-base) var(--e-enter), opacity var(--t-base) var(--e-standard); }
 
 /* ---------------- LAST BELL ---------------- */
-.screen-reveal .lb-slot { position: relative; margin-top: 8px; border-radius: 12px; border: 2px dashed rgba(244, 241, 232, 0.1); }
+.screen-reveal .lb-slot { position: relative; margin-top: 8px; border-radius: 12px; border: 2px solid transparent; background: rgba(0, 0, 0, 0.12); box-shadow: var(--well); }
 .screen-reveal .lastbell {
   display: flex; align-items: center; gap: 9px; min-height: 42px; margin: -2px; padding: 5px 10px;
   border-radius: 12px; background: rgba(255, 107, 107, 0.13); border: 2px solid var(--accent); color: #ffe1dc;
@@ -242,7 +242,7 @@
 /* ---------------- GRADE BOOK ---------------- */
 .screen-reveal .gb {
   position: relative; margin: 10px 0 10px; padding: 2px 4px 5px; border-radius: 14px;
-  background: rgba(29, 54, 40, 0.7); border: 2px dashed var(--chalk-line);
+  background: rgba(29, 54, 40, 0.7); border: 1px solid var(--edge); box-shadow: var(--lift);
 }
 .screen-reveal .gb-head { height: 24px; display: flex; align-items: center; }
 .screen-reveal.dense .gb { margin-top: 8px; }
@@ -337,7 +337,7 @@
   position: absolute; top: -22px; bottom: 0; right: 43px; width: var(--bar-w); pointer-events: none; z-index: 2;
   transform: translateX(calc(var(--line) * 100%));
 }
-.screen-reveal .gb-line::before { content: ""; position: absolute; left: -1px; top: 18px; bottom: 2px; border-left: 2px dashed var(--accent2); opacity: 0.9; }
+.screen-reveal .gb-line::before { content: ""; position: absolute; left: -1px; top: 18px; bottom: 2px; border-left: 2px solid var(--accent2); opacity: 0.8; }
 .screen-reveal .gb-line-lbl {
   position: absolute; top: 2px; left: 0; transform: translateX(-50%); white-space: nowrap;
   font: 800 0.74rem/16px var(--hand); color: var(--accent2);
@@ -353,7 +353,7 @@
 .screen-reveal .rv-dock .btn + .btn { margin-top: 0; }
 .screen-reveal .btn.accuse {
   position: relative; isolation: isolate; display: grid; place-items: center; height: 56px; min-height: 56px; padding: 0 12px; overflow: hidden;
-  background: var(--card2); border: 2px dashed var(--chalk-line); color: var(--dim);
+  background: var(--card2); border: 2px solid transparent; box-shadow: var(--raise); color: var(--dim);
   font-size: 1.08rem; letter-spacing: 0.5px; white-space: nowrap;
   transition: transform var(--t-tap) var(--e-standard), opacity var(--t-quick) var(--e-standard);
 }
@@ -444,7 +444,7 @@
 .screen-reveal .gb-strikes-l { font-size: 0.62rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); margin-right: 1px; }
 .screen-reveal .gb-strikes i {
   display: grid; place-items: center; width: 15px; height: 15px; border-radius: 3px;
-  border: 1.5px dashed var(--chalk-line); font: 900 0.66rem/1 system-ui, sans-serif; font-style: normal; color: var(--bad);
+  border: 1.5px solid var(--edge-2); font: 900 0.66rem/1 system-ui, sans-serif; font-style: normal; color: var(--bad);
 }
 .screen-reveal .gb-strikes i.used { border-style: solid; border-color: var(--bad); background: rgba(255, 138, 101, 0.16); }
 

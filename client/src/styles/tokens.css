@@ -9,12 +9,19 @@
   --card: #223b2d;
   --card2: #2c4a39;
   --chalk-line: rgba(244, 241, 232, 0.28);
+  /* Surfaces (v0.22): solid edges and depth, never dashed lines. */
+  --edge: rgba(244, 241, 232, 0.1); /* a panel's edge */
+  --edge-2: rgba(244, 241, 232, 0.2); /* a marker's edge */
+  --lift: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 6px 16px rgba(0, 0, 0, 0.2); /* a panel resting on the board */
+  --raise: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 2px 0 rgba(0, 0, 0, 0.28); /* a button you can press */
+  --well: inset 0 2px 5px rgba(0, 0, 0, 0.35); /* an empty seat or slot */
+  --well-bg: #1b3025; /* opaque, for wells over scrolling content */
   --ink: #f4f1e8;
   --dim: #a8bfab;
   --accent: #ff6b6b; /* red marker */
   --accent2: #ffd166; /* pencil yellow */
-  --good: #8ee59a; /* chalk green — always paired with ✓ + solid border */
-  --bad: #ff8a65; /* chalk orange — always paired with ✗ + dashed border */
+  --good: #8ee59a; /* chalk green — always paired with ✓ */
+  --bad: #ff8a65; /* chalk orange — always paired with ✗ */
   --cleared: #7cc4ff; /* chalk blue — always paired with the word CLEARED */
   --purple: #7cc4ff;
   --radius: 14px;

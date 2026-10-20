@@ -508,7 +508,7 @@ const outcomes: SceneDef = {
     const wins = E("tut-title t2 tut-wins", "🎉 Class wins!", 0, 830, 1080);
     const party = confetti(46, 540, 900);
     // B: send an innocent.
-    const detK = E("tut-stamp orange dashed", "Detention: Kiko", 160, 330);
+    const detK = E("tut-stamp orange", "Detention: Kiko", 160, 330);
     const innocent = E("tut-chalk orange tut-innocent", "Innocent! ✗", 0, 470, 1080);
     const linePanel = E(
       "tut-panel tut-line",

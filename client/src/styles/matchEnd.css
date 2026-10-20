@@ -88,7 +88,7 @@
 .me-id { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px; align-items: center; margin-top: 8px; }
 .me-face {
   position: relative; width: 72px; height: 72px; border-radius: 14px;
-  border: 2px dashed var(--chalk-line);
+  border: 2px solid var(--edge);
   background: repeating-linear-gradient(180deg, transparent 0 11px, rgba(244, 241, 232, 0.06) 11px 12px), var(--card2);
   display: grid; place-items: center; perspective: 320px;
 }
@@ -151,7 +151,7 @@
 .me-no { color: var(--bad); }
 .me-dimtxt { color: var(--dim); font-size: 0.8rem; margin-left: 4px; }
 /* Two reserved lines: the sentence wraps instead of being clipped. */
-.me-drop { height: 48px; margin-top: 8px; padding-top: 4px; border-top: 1px dashed var(--chalk-line); color: var(--accent2); }
+.me-drop { height: 48px; margin-top: 8px; padding-top: 4px; border-top: 1px solid var(--edge); color: var(--accent2); }
 .me-drop .me-blow-in { display: block; height: auto; font-size: 0.84rem; font-weight: 700; line-height: 1.35; white-space: normal; overflow: hidden; }
 .me-drop-nm { font-weight: 900; }
 
@@ -202,8 +202,8 @@
 .me-trophy { width: 22px; text-align: center; }
 .me-trophy > span { display: inline-block; animation: hd-pop var(--t-base) var(--e-impact) both; animation-delay: calc(var(--i) * var(--stagger-info) + 200ms); }
 
-/* Case file (caseFile beat): ✓ solid = pointed at the cheater,
-   ✗ dashed = pointed at innocents (readable without colour). */
+/* Case file (caseFile beat): the ✓ group pointed at the cheater, the ✗
+   group at innocents (each headed by its glyph: readable without colour). */
 .me-cf-list { position: relative; height: calc(var(--g) * var(--me-cf-head) + var(--n) * var(--me-cf-row)); }
 .me-cf-group, .me-cf-line, .me-cf-empty { animation: hd-enter-up var(--t-base) var(--e-enter) both; animation-delay: calc(var(--i) * var(--stagger-info)); }
 .me-cf-group {
@@ -217,7 +217,7 @@
   height: var(--me-cf-row); display: grid; grid-template-columns: 20px 26px minmax(0, 1fr) auto; column-gap: 6px; align-items: center;
   padding-left: 8px; font-size: 0.86rem; border-left: 3px solid var(--good);
 }
-.me-cf-line.miss { border-left: 3px dashed var(--bad); }
+.me-cf-line.miss { border-left: 3px solid var(--bad); }
 .me-cf-ic { text-align: center; }
 .me-cf-q { color: var(--dim); font-weight: 800; font-size: 0.76rem; font-variant-numeric: tabular-nums; }
 .me-cf-title { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

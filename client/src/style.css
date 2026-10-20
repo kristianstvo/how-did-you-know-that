@@ -38,7 +38,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px solid var(--accent2); outline-offset: 2px; }
 input {
   font: inherit; color: var(--ink); width: 100%;
-  background: var(--card); border: 2px dashed var(--chalk-line); border-radius: 12px;
+  background: rgba(0, 0, 0, 0.2); border: 2px solid var(--edge); border-radius: 12px; box-shadow: var(--well);
   padding: 12px 14px; outline: none; min-height: 44px;
   font-size: max(16px, 1em); /* iOS zooms the whole page into any field under 16px */
 }
@@ -57,7 +57,7 @@ input:focus { border-color: var(--accent2); }
 
 .card {
   background: var(--card);
-  border: 2px dashed var(--chalk-line);
+  border: 1px solid var(--edge); box-shadow: var(--lift);
   border-radius: var(--radius); padding: 16px; margin-bottom: 14px;
 }
 .card h2 { font-family: var(--hand); font-size: 1.02rem; margin-bottom: 10px; }
@@ -76,12 +76,12 @@ input:focus { border-color: var(--accent2); }
   .btn { transition: opacity var(--t-quick) var(--e-standard); }
   .btn:active:not(:disabled) { transform: none; opacity: 0.85; }
 }
-.btn.secondary { background: var(--card2); border: 2px dashed var(--chalk-line); }
+.btn.secondary { background: var(--card2); border: 2px solid transparent; box-shadow: var(--raise); }
 .btn.ghost { background: none; color: var(--dim); font-weight: 600; }
 .btn + .btn { margin-top: 10px; }
 
 .err { background: rgba(255, 107, 107, 0.14); border: 1px solid var(--accent); color: #ffc2c2; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; font-size: 0.9rem; animation: hd-shake var(--t-stamp) var(--e-standard); }
-.warn { background: rgba(255, 209, 102, 0.12); border: 1px dashed var(--accent2); color: var(--accent2); border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; font-size: 0.9rem; font-family: var(--hand); }
+.warn { background: rgba(255, 209, 102, 0.12); border: 1px solid rgba(255, 209, 102, 0.4); color: var(--accent2); border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; font-size: 0.9rem; font-family: var(--hand); }
 .chip { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: var(--card2); color: var(--dim); vertical-align: middle; }
 
 .toast {
@@ -129,7 +129,7 @@ input:focus { border-color: var(--accent2); }
 .player-li .pts { font-weight: 900; font-variant-numeric: tabular-nums; }
 .badge { font-size: 0.68rem; font-weight: 800; padding: 2px 7px; border-radius: 6px; flex: none; font-family: var(--hand); }
 .badge.host { background: var(--purple); color: #10241a; }
-.badge.bot { background: var(--card2); color: var(--dim); border: 1px dashed var(--chalk-line); }
+.badge.bot { background: var(--card2); color: var(--dim); border: 1px solid var(--edge-2); }
 .badge.banished { background: #574632; color: #ffd9a8; }
 .badge.cleared { background: none; color: var(--cleared); border: 1.5px solid var(--cleared); }
 .badge.recon { background: none; color: var(--dim); font-style: italic; font-weight: 600; }
@@ -150,7 +150,7 @@ input:focus { border-color: var(--accent2); }
 .sess-tab {
   position: fixed; top: max(10px, env(safe-area-inset-top)); right: 10px; z-index: 50;
   width: 44px; height: 44px; border-radius: 50%; background: var(--card2);
-  border: 2px dashed var(--chalk-line);
+  border: 2px solid var(--edge);
   display: grid; place-items: center; font-size: 1.2rem; box-shadow: 0 2px 12px rgba(0,0,0,0.4);
 }
 .overlay { position: fixed; inset: 0; z-index: 60; background: rgba(10, 20, 14, 0.93); display: flex; flex-direction: column; padding: 60px 18px 20px; animation: hd-fade-in var(--t-base) var(--e-standard); }
@@ -177,7 +177,7 @@ html.fixture #app { padding-bottom: 90px; }
 .overlay.pt-sheet { justify-content: flex-end; align-items: center; gap: 10px; padding: max(24px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom)); }
 .pt-card {
   width: min(100%, 480px); max-height: 72dvh; overflow-y: auto; overscroll-behavior: contain;
-  padding: 14px 12px 8px; border-radius: 18px; background: var(--card); border: 2px dashed var(--chalk-line);
+  padding: 14px 12px 8px; border-radius: 18px; background: var(--card); border: 1px solid var(--edge);
   animation: hd-enter-up var(--t-base) var(--e-enter) both;
 }
 .pt-card h2 { font-family: var(--hand); font-size: 1.15rem; margin: 0 2px 2px; }
@@ -205,7 +205,7 @@ html.fixture #app { padding-bottom: 90px; }
 }
 
 /* Sound switch (v0.6) */
-.snd { width: 44px; height: 44px; display: inline-grid; place-items: center; border-radius: 50%; font-size: 1.15rem; background: var(--card2); border: 2px dashed var(--chalk-line); }
+.snd { width: 44px; height: 44px; display: inline-grid; place-items: center; border-radius: 50%; font-size: 1.15rem; background: var(--card2); border: 2px solid transparent; box-shadow: var(--raise); }
 .snd[aria-pressed="false"] { opacity: 0.75; }
 .snd.lb-snd { position: absolute; top: max(10px, env(safe-area-inset-top)); left: 10px; z-index: 50; }
 .snd.in-sheet { margin-left: 8px; font-size: 1rem; }
@@ -221,5 +221,5 @@ html.tv #app { max-width: 600px; }
 #tv-sound {
   position: fixed; z-index: 90; right: 16px; bottom: 16px; padding: 8px 14px; border-radius: 999px;
   background: var(--card2); color: var(--ink); font-weight: 700; font-size: 0.9rem; pointer-events: none;
-  border: 2px dashed var(--chalk-line);
+  border: 1px solid var(--edge-2);
 }

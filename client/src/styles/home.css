@@ -94,26 +94,29 @@
 /* ---- Step 2: you in a nutshell (tap Change to go back), then where to ---- */
 .hm-me {
   display: flex; align-items: center; gap: 12px; margin-top: 4px; padding: 10px 10px 10px 12px;
-  border-style: solid; border-color: rgba(216, 66, 58, 0.6); /* the sticker's red */
+  border: 2px solid rgba(216, 66, 58, 0.6); /* the sticker's red */
 }
 .hm-me-face { flex: none; width: 60px; height: 60px; border-radius: 50%; box-shadow: 0 0 0 3px #d8423a; animation: hd-pop var(--t-stamp) var(--e-impact) 160ms both; }
 .hm-me-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
 .hm-me-hi { font-size: 0.64rem; font-weight: 900; letter-spacing: 1.2px; color: #ff9a90; text-transform: uppercase; }
 .hm-me-name { font-family: var(--hand); font-size: 1.35rem; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hm-me-nick { color: var(--accent2); font-family: var(--hand); font-size: 0.85rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.btn.hm-change { flex: none; width: auto; min-height: 44px; padding: 8px 12px; font-size: 0.9rem; border: 2px dashed var(--chalk-line); border-radius: 12px; }
+.btn.hm-change { flex: none; width: auto; min-height: 44px; padding: 8px 12px; font-size: 0.9rem; border: 2px solid transparent; border-radius: 12px; background: var(--card2); box-shadow: var(--raise); color: var(--ink); }
 .hm-where { margin: 6px 0 10px; text-align: center; font-family: var(--hand); font-size: 1.3rem; font-weight: 900; color: var(--ink); animation: hd-fade-in var(--t-scene) var(--e-standard) 100ms both; }
 .hm-step2 .hm-foot { margin-top: 0; } /* right under the choices, not at the far end of the screen */
 
-/* ---- Join / Start, side by side ---- */
-.screen-home .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 0 12px; align-items: stretch; }
-.screen-home .duo .card { position: relative; display: flex; flex-direction: column; gap: 10px; margin-bottom: 0; padding: 14px 12px; }
-.screen-home .duo .card h2 { margin-bottom: 0; font-size: 0.98rem; }
-.screen-home .duo .card .hint { font-size: 0.82rem; line-height: 1.4; }
-.screen-home .duo .card .btn { margin-top: auto; }
+/* ---- Join on top, Start a class under it (v0.22) ---- */
+.hm-ways { display: flex; flex-direction: column; gap: 10px; margin: 0 0 12px; }
+.hm-ways .card { position: relative; display: flex; flex-direction: column; gap: 10px; margin-bottom: 0; padding: 14px; }
+.hm-ways .card h2 { margin-bottom: 0; font-size: 1.02rem; }
+.hm-ways .card .hint { font-size: 0.85rem; line-height: 1.4; }
+/* The code and its Join button share a row: the button sits by what it sends. */
+.hm-join-row { display: flex; gap: 10px; }
+.hm-join-row .code-input { flex: 1; min-width: 0; }
+.hm-join-row .btn { flex: none; width: auto; min-width: 108px; padding-inline: 18px; }
 .code-input { text-transform: uppercase; letter-spacing: 4px; font-weight: 800; text-align: center; font-family: var(--hand); padding-inline: 6px; }
 .code-input::placeholder { letter-spacing: 4px; }
-.hm-join.invited { border-style: solid; border-color: var(--accent2); }
+.hm-join.invited { border: 2px solid var(--accent2); }
 .hm-invited {
   position: absolute; top: -10px; right: 8px; padding: 2px 8px; border: 2px solid var(--accent2); border-radius: 6px;
   background: var(--bg); color: var(--accent2); font-family: var(--hand); font-weight: 900; font-size: 0.68rem; letter-spacing: 1px;
@@ -155,7 +158,7 @@
   .screen-home > * { grid-column: 1; }
   .hm-step1 > .hm-namecard { grid-column: 2; grid-row: 1 / span 6; align-self: start; }
   .hm-step1 .av-grid { grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; }
-  .hm-step2 > .duo { grid-column: 2; grid-row: 1 / span 4; align-self: center; margin-bottom: 0; }
+  .hm-step2 > .hm-ways { grid-column: 2; grid-row: 1 / span 4; align-self: center; margin-bottom: 0; }
   .hm-step2 > .hm-where { display: none; }
   .hm-step2 > .hm-err, .hm-step2 > .hm-foot { grid-column: 2; }
 }
@@ -185,7 +188,7 @@
 
 /* Practice with bots (v0.7): a quiet third way in, under Join / Start. */
 .hm-practice { margin: 0 0 6px; min-height: 44px; font-size: 0.95rem; animation: hd-fade-in var(--t-scene) var(--e-standard) 350ms both; }
-.btn.hm-practice { border: 2px dashed var(--chalk-line); color: var(--ink); }
+.btn.hm-practice { border: 2px solid transparent; background: var(--card2); box-shadow: var(--raise); color: var(--ink); }
 
 /* Your report card (v0.12) */
 .hm-record { margin: 0 -4px 8px; padding: 0 12px; animation: hd-fade-in var(--t-scene) var(--e-standard) 400ms both; }

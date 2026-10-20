@@ -125,13 +125,13 @@
 /* "Add a bot" reads as the next empty desk */
 .lb-addbot {
   display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; min-height: 46px; margin-top: 6px;
-  border: 2px dashed var(--chalk-line); border-radius: 12px; color: var(--dim); font-family: var(--hand); font-weight: 800; font-size: 0.95rem;
+  border: 2px solid transparent; border-radius: 12px; background: rgba(244, 241, 232, 0.06); box-shadow: var(--raise); color: var(--dim); font-family: var(--hand); font-weight: 800; font-size: 0.95rem;
   transition: transform var(--t-tap) var(--e-standard);
 }
 .lb-addbot:active { transform: scale(0.98); }
 
 /* ---- How to play (the one rules panel) ---- */
-.screen-lobby details.how { background: var(--card); border: 2px dashed var(--chalk-line); border-radius: var(--radius); padding: 0 14px; margin: 0 -4px 14px; animation: hd-enter-up var(--t-scene) var(--e-enter) 220ms both; }
+.screen-lobby details.how { background: var(--card); border: 1px solid var(--edge); box-shadow: var(--lift); border-radius: var(--radius); padding: 0 14px; margin: 0 -4px 14px; animation: hd-enter-up var(--t-scene) var(--e-enter) 220ms both; }
 .screen-lobby details.how summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; font-family: var(--hand); font-weight: 800; cursor: pointer; }
 .screen-lobby details.how summary::-webkit-details-marker { display: none; }
 .lb-chev { display: inline-block; color: var(--dim); font-size: 1.1rem; width: 24px; text-align: center; rotate: -90deg; transition: rotate var(--t-base) var(--e-standard); }
@@ -164,9 +164,9 @@
   box-shadow: 0 0 0 3px var(--accent2), 0 0 26px 6px rgba(255, 209, 102, 0.55);
 }
 .lb-start .lb-bell { display: inline-block; transform-origin: 50% 15%; }
-/* Not ready: an opaque, chalk-outlined slot (a translucent red over the
+/* Not ready: an opaque, recessed slot (a translucent red over the
    scrolling page read as mud). */
-.lb-start:disabled { opacity: 1; background: var(--card2); color: var(--dim); border: 2px dashed var(--chalk-line); }
+.lb-start:disabled { opacity: 1; background: var(--well-bg); color: var(--dim); border: 2px solid transparent; box-shadow: var(--well); }
 .lb-start:disabled .lb-bell { opacity: 0.5; }
 /* Becoming ready: one glow pulse and one ring of the bell. */
 .lb-start.ready::after { animation: lb-glow 1100ms var(--e-standard) 1 both; }
@@ -176,7 +176,7 @@
 @keyframes lb-ring { 15% { transform: rotate(18deg); } 35% { transform: rotate(-15deg); } 55% { transform: rotate(10deg); } 75% { transform: rotate(-5deg); } }
 .lb-need { min-height: 1.4em; margin-top: 6px; text-align: center; font-family: var(--hand); font-size: 0.78rem; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lb-wait {
-  margin: 0 0 4px; padding: 12px 14px; border-radius: 999px; background: var(--card); border: 2px dashed var(--chalk-line);
+  margin: 0 0 4px; padding: 12px 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--edge);
   font-size: 0.88rem; line-height: 1.35;
 }
 .lb-wait .lb-bell { display: inline-block; transform-origin: 50% 15%; animation: lb-sway 2.4s ease-in-out 2; } /* two swings (<5s), then still */
@@ -207,7 +207,7 @@
 .lb-pace { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 2px 0 10px; }
 .lb-pace-btn {
   display: flex; flex-direction: column; align-items: center; gap: 1px; min-height: 64px; padding: 6px 4px;
-  border-radius: 12px; background: var(--card2); border: 2px dashed var(--chalk-line); line-height: 1.15;
+  border-radius: 12px; background: var(--card2); border: 2px solid transparent; box-shadow: var(--raise); line-height: 1.15;
   transition: transform var(--t-tap) var(--e-standard);
 }
 .lb-pace-btn:active { transform: scale(0.97); }
@@ -230,7 +230,7 @@
 .lb-roles-l { color: var(--dim); font-weight: 700; font-size: 0.85rem; margin-right: auto; }
 .lb-role-btn {
   min-height: 44px; padding: 0 10px; border-radius: 999px; background: var(--card2);
-  border: 2px dashed var(--chalk-line); font-weight: 700; font-size: 0.88rem; white-space: nowrap;
+  border: 2px solid transparent; box-shadow: var(--raise); font-weight: 700; font-size: 0.88rem; white-space: nowrap;
 }
 .lb-role-btn.on { border-style: solid; border-color: var(--accent2); background: rgba(255, 209, 102, 0.12); }
 

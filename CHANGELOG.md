@@ -19,6 +19,34 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.22.0 — Clean slate · 2026-10-20 21:42
+
+**Why:** you said the dashed borders everywhere were distracting. The chalk
+dashes outlined every card, button, field and empty seat, so nothing stood
+out. And on Home's second step, Join belongs above Create: most people join,
+one person creates.
+
+**Changed**
+- **No dashed borders anywhere** (68 of them). One look replaces them:
+  - panels (cards, the grade book, the report card, sheets) rest on the
+    board with a thin solid edge and a soft shadow;
+  - buttons and toggles (secondary buttons, pace and role, sound, Add a bot,
+    Practice, Change) are solid fills with a slightly raised edge;
+  - empty places (desks waiting for an answer, ballot slots, the evidence
+    and last-bell slots, face-down votes, Start class before it's ready)
+    are recessed wells;
+  - fields (the classroom code) are recessed too, and turn yellow while you
+    type;
+  - the graduation line is solid.
+- **Wrong and innocent stay readable without colour.** The ✗ and the words
+  carry it, as they always did. A wrong answer's outline is thin and faint,
+  the right one's thick and tinted, and CHEATER CAUGHT keeps its double
+  border.
+- **Home's step 2: Join a class on top** (the code and its Join button side
+  by side), **Start a class under it**, then Practice with bots.
+- The how-to-play video uses the same look (`media/how-to-play.mp4` is
+  re-rendered).
+
 ## v0.21.0 — Meet the class · 2026-10-20 21:17
 
 **Why:** Home asked for everything at once: your name, an avatar, a code,

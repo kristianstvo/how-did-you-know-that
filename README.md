@@ -14,6 +14,8 @@ Built from the specs in `00-overview.md` … `07-ui-screens.md`.
 
 Newest first (details in `CHANGELOG.md`, decisions in `PRODUCT.md`):
 
+- **Clean slate** (v0.22) — no dashed borders: panels, buttons and empty
+  seats each have their own look; Join above Start a class.
 - **Meet the class** (v0.21) — sixteen cartoon students to play as, and a
   Home in two steps: who you are (name and student), then where to (join,
   start, or practice).

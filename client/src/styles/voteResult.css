@@ -41,10 +41,10 @@
 .vr-l1 .vr-nm { font-weight: 900; }
 .vr-l2 { display: flex; align-items: center; justify-content: center; gap: 6px; max-width: 100%; font-size: 0.95rem; font-weight: 800; }
 .vr-l2t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-/* Correct/wrong never by colour alone: ✓/✗ + solid-double vs dashed vs dotted */
+/* Correct/wrong never by colour alone: ✓/✗ and the words, and a double border for caught */
 .vr-verdict.caught .vr-stamp { color: var(--good); border: 6px double var(--good); background: rgba(142, 229, 154, 0.08); }
-.vr-verdict.innocent .vr-stamp { color: var(--bad); border: 3px dashed var(--bad); background: rgba(255, 138, 101, 0.08); }
-.vr-verdict.tie .vr-stamp { color: var(--ink); border: 3px dotted var(--chalk-line); background: rgba(244, 241, 232, 0.05); }
+.vr-verdict.innocent .vr-stamp { color: var(--bad); border: 3px solid var(--bad); background: rgba(255, 138, 101, 0.08); }
+.vr-verdict.tie .vr-stamp { color: var(--ink); border: 3px solid var(--edge-2); background: rgba(244, 241, 232, 0.05); }
 
 /* ---- Tally chips: appear on their first vote, count up with chalk ticks ---- */
 .vr-tally {
@@ -78,10 +78,10 @@
   transform: rotate(-4deg); animation: hd-stamp var(--t-stamp) var(--e-standard) var(--d, 0ms) backwards;
 }
 .vr-tag.ok { color: var(--good); border: 1.5px solid var(--good); }
-.vr-tag.bad { color: var(--bad); border: 1.5px dashed var(--bad); }
-.vr-tag.tie { color: var(--ink); border: 1.5px dotted var(--ink); }
+.vr-tag.bad { color: var(--bad); border: 1.5px solid var(--bad); }
+.vr-tag.tie { color: var(--ink); border: 1.5px solid var(--edge-2); }
 .out-caught .vr-chip.win { border-color: var(--good); }
-.out-innocent .vr-chip.win { border: 2px dashed var(--bad); }
+.out-innocent .vr-chip.win { border: 2px solid var(--bad); }
 .vr-chip.lose { opacity: 0.45; }
 
 /* ---- Ballots: voter → sealed card that flips to the target ---- */
@@ -98,8 +98,8 @@
 .dense .vr-card { height: 24px; }
 .vr-back, .vr-face { position: absolute; inset: 0; border-radius: 8px; padding: 0 6px; }
 .vr-back {
-  display: grid; place-items: center; border: 1.5px dashed var(--chalk-line); color: var(--dim); font-size: 0.72rem; font-weight: 700;
-  letter-spacing: 0.4px; text-transform: uppercase; background: rgba(244, 241, 232, 0.05);
+  display: grid; place-items: center; border: 1.5px solid transparent; box-shadow: var(--well); color: var(--dim); font-size: 0.72rem; font-weight: 700;
+  letter-spacing: 0.4px; text-transform: uppercase; background: rgba(0, 0, 0, 0.2);
   transition: opacity var(--t-quick) var(--e-exit), transform var(--t-quick) var(--e-exit);
 }
 .flipped .vr-back { opacity: 0; transform: rotateY(-90deg); }
@@ -108,7 +108,7 @@
   animation: hd-spin-in var(--t-base) var(--e-enter) var(--d, 0ms) backwards;
 }
 .vr-line.ok .vr-face { border: 2px solid var(--good); }
-.vr-line.bad .vr-face { border: 2px dashed var(--bad); }
+.vr-line.bad .vr-face { border: 2px solid var(--bad); }
 .vr-mark { text-align: center; font-weight: 900; font-size: 1rem; }
 .vr-mk { display: inline-block; animation: hd-pop var(--t-stamp) var(--e-standard) var(--d, 0ms) backwards; }
 .vr-line.ok .vr-mk { color: var(--good); }
@@ -125,11 +125,11 @@
 .vr-pending { opacity: 0.6; }
 .vr-note {
   text-align: center; font-family: var(--hand); font-weight: 700; font-size: 0.95rem; line-height: 1.4; color: var(--ink);
-  padding: 14px 10px; border: 2px dashed var(--chalk-line); border-radius: var(--radius);
+  padding: 14px 10px; border: 1px solid var(--edge); border-radius: var(--radius); background: var(--card); box-shadow: var(--lift);
   animation: hd-enter-up var(--t-base) var(--e-enter) var(--d, 0ms) backwards;
 }
 .vr-gb {
-  padding: 8px 12px 6px; background: var(--card); border: 2px dashed var(--chalk-line); border-radius: var(--radius);
+  padding: 8px 12px 6px; background: var(--card); border: 1px solid var(--edge); box-shadow: var(--lift); border-radius: var(--radius);
   animation: hd-enter-up var(--t-base) var(--e-enter) var(--d, 0ms) backwards;
 }
 .vr-gb-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 0.7rem; font-weight: 800; color: var(--dim); text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
@@ -150,7 +150,7 @@
 }
 .vr-pin.out { opacity: 0.4; }
 .vr-gb-ghost {
-  position: absolute; left: var(--x); top: 2px; bottom: 0; width: 0; border-left: 2px dashed var(--chalk-line); opacity: 0;
+  position: absolute; left: var(--x); top: 2px; bottom: 0; width: 0; border-left: 2px solid var(--edge-2); opacity: 0;
   transition: opacity var(--t-base) var(--e-standard);
 }
 .b-drop .vr-gb-ghost { opacity: 1; }

@@ -24,7 +24,7 @@ hd-qsheet.qz { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .qz-ticks { color: var(--accent2); letter-spacing: 2px; font-size: 0.8rem; white-space: nowrap; }
 .qz-act {
   margin-left: auto; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
-  padding: 3px 9px; border: 1.5px dashed var(--chalk-line); border-radius: 999px; color: var(--dim);
+  padding: 3px 9px; border: 1.5px solid transparent; border-radius: 999px; background: var(--card2); color: var(--dim);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
 }
 @media (max-width: 359px) { .qz-act-n { display: none; } } /* "Pop quiz" alone on small phones */
@@ -161,7 +161,7 @@ hd-qsheet.qz { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .qz-desks { display: flex; flex-wrap: nowrap; gap: 4px; margin-top: 6px; }
 .qz-desk {
   flex: 0 1 30px; min-width: 0; aspect-ratio: 1 / 1; border-radius: 50%; display: grid; place-items: center;
-  border: 1.5px dashed var(--chalk-line); background: rgba(244, 241, 232, 0.03);
+  border: 1.5px solid transparent; background: rgba(0, 0, 0, 0.2); box-shadow: var(--well);
 }
 .qz-desk.me { border: 2px solid var(--accent2); }
 .qz-desk.off { opacity: 0.45; }

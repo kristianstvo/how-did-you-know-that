@@ -45,6 +45,7 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.19.0 | Your host tonight: a recorded game-show host voices the big screen | shipped |
 | v0.20.0 | How to play, in a minute: a narrated video on Home and the big screen, and as an MP4 | shipped |
 | v0.21.0 | Meet the class: sixteen cartoon students, Home in two steps (you, then where to) | shipped |
+| v0.22.0 | Clean slate: no dashed borders; Join above Start a class | shipped |
 | later | A big-screen layout that uses the width (side-by-side reveal) | ideas |
 
 Later versions take the best of what playtests and audits turn up.
@@ -128,3 +129,6 @@ Later versions take the best of what playtests and audits turn up.
 | v0.21.0 | ✅ The emoji stays the avatar's ID | No protocol change: saved games, fixtures and older phones keep working, and the emoji is the text fallback |
 | v0.21.0 | ✅ The host accepts only the sixteen students | Every phone renders every avatar; accepting anything let one phone inject markup into everyone's game |
 | v0.21.0 | ❌ Uploading your own photo | Moderation, storage and privacy, for a party game that must start in seconds |
+| v0.22.0 | ✅ No dashed borders: edges, depth and wells instead | Your call. Dashes on every card, button and field made everything shout, so nothing did; depth tells a panel from a button from an empty seat without outlining anything |
+| v0.22.0 | ✅ Join above Start a class | Your call. Most people join and one person creates, so Join comes first |
+| v0.22.0 | ✅ ✗ and the words are the non-colour cue for wrong, not a border style | The dashes were only ever the second cue; the glyph and the words were always the first |

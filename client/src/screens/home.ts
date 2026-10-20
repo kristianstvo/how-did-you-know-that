@@ -1,7 +1,8 @@
 // 1. Home / Join (spec 07; motion: 08-reveal-direction.md §4).
 // v0.21: two steps. Step 1 is you: your name on the "HELLO my name is"
 // sticker and your student from the class photo. Step 2 is where to: join a
-// class by its code, start one, or practice with bots. An invite link
+// class by its code (on top), start one under it, or practice with bots
+// (v0.22: stacked, not side by side). An invite link
 // (#/join/CODE) needs no step 2: step 1's button joins that class.
 // Beats (all on insertion; the shell morphs, so nothing replays per keystroke):
 //   title wobble-in at 0 · tagline 150 · cards rise with the 50ms deco
@@ -96,14 +97,16 @@ export const home: Screen = {
     ${notices(app.closedReason, h.resuming)}
     <h2 class="hm-where" id="hm-where">Where to?</h2>
 
-    <div class="duo" id="hm-duo">
+    <div class="hm-ways" id="hm-ways">
       <div class="card hm-card hm-join ${invited ? "invited" : ""}" id="hm-join">
         <h2>🚪 Join a class</h2>
         ${invited ? `<span class="hm-invited" aria-hidden="true">INVITED</span>` : ""}
-        <label class="hm-sr" for="joinCode">Classroom code</label>
-        <input id="joinCode" placeholder="CODE" maxlength="5" autocapitalize="characters" autocomplete="off" spellcheck="false"
-               enterkeyhint="go" value="${esc(h.code)}" class="code-input" />
-        <button class="btn ${h.busy ? "hm-busy" : ""}" data-action="join" ${h.busy ? "disabled" : ""}><span>${h.busy ? "Joining…" : "Join"}</span></button>
+        <div class="hm-join-row">
+          <label class="hm-sr" for="joinCode">Classroom code</label>
+          <input id="joinCode" placeholder="CODE" maxlength="5" autocapitalize="characters" autocomplete="off" spellcheck="false"
+                 enterkeyhint="go" value="${esc(h.code)}" class="code-input" />
+          <button class="btn ${h.busy ? "hm-busy" : ""}" data-action="join" ${h.busy ? "disabled" : ""}><span>${h.busy ? "Joining…" : "Join"}</span></button>
+        </div>
       </div>
       <div class="card hm-card hm-create" id="hm-create">
         <h2>🔔 Start a class</h2>
