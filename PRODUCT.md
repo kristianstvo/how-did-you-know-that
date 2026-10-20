@@ -35,7 +35,8 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.9.0 | Question bank 2.0: 189 curated questions, a fetcher that stops getting rate-limited | shipped |
 | v0.10.0 | Hosting made easy: pace presets, New day same class, clear a seat | shipped |
 | v0.11.0 | Fair start: the cheater learns the dot, Practice as a chosen role, dialog focus | shipped |
-| later | A "how to play" picture card; your own report card across days | ideas |
+| v0.12.0 | Your report card: each phone remembers its record across days | shipped |
+| later | A "how to play" picture card; a TV / big-screen view for in-person nights | ideas |
 
 Later versions take the best of what playtests and audits turn up.
 
@@ -75,3 +76,6 @@ Later versions take the best of what playtests and audits turn up.
 | v0.11.0 | ✅ Choose your role, but only with bots | Practicing the cheater role needs it; with any other human it would be cheating |
 | v0.11.0 | ✅ Every sound waits for its beat on the shared clock, never for a packet | A gavel landing 200ms apart on ten phones sounds like a glitch; the motion was already synced, the sound now is too |
 | v0.11.0 | ❌ Bot smarts (Easy / Normal / Sharp) | Simulated: "Sharp" (more accusations) made the cheater win more under two strikes; Easy ≈ Normal. Built, measured, not shipped |
+| v0.12.0 | ✅ The report card lives on the phone only | No accounts, nothing sent anywhere; a party game must start in seconds, and your record is nobody else's business |
+| v0.12.0 | ✅ Counted from the public result, once per period | The secret never leaves the host, and a reload or a rejoin can't count a period twice |
+| v0.12.0 | ❌ Accounts or a cloud profile | A sign-up wall in front of a party game costs more players than a record across phones would win |

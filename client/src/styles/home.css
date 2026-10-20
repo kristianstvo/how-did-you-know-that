@@ -150,3 +150,16 @@
 
 /* Practice with bots (v0.7): a quiet third way in, under Join / Start. */
 .hm-practice { margin: 0 0 6px; min-height: 44px; font-size: 0.95rem; animation: hd-fade-in var(--t-scene) var(--e-standard) 350ms both; }
+
+/* Your report card (v0.12) */
+.hm-record { margin: 0 -4px 8px; padding: 0 12px; animation: hd-fade-in var(--t-scene) var(--e-standard) 400ms both; }
+.hm-record summary { display: flex; align-items: center; gap: 8px; min-height: 48px; cursor: pointer; font-family: var(--hand); font-weight: 800; list-style: none; }
+.hm-record summary::-webkit-details-marker { display: none; }
+.hm-record[open] .lb-chev { rotate: 0deg; }
+.hm-rec-sum { margin-left: auto; color: var(--dim); font-family: system-ui, sans-serif; font-size: 0.85rem; font-weight: 700; }
+.hm-rec-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding-bottom: 8px; }
+.hm-rec-cell { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 6px 2px; border-radius: 10px; background: var(--card2); }
+.hm-rec-cell b { font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.hm-rec-cell small { color: var(--dim); font-size: 0.68rem; line-height: 1.2; }
+.hm-rec-awards { font-size: 0.85rem; margin: 0 0 6px; }
+.hm-rec-note { color: var(--dim); font-size: 0.72rem; margin: 0 0 10px; }

@@ -9,6 +9,7 @@
 // Errors shake (hd-shake) — and shake again on every Join/Create tap that
 // repeats the same error.
 import { AVATARS } from "../../../shared/protocol";
+import { loadRecord } from "../record";
 import { esc } from "./common";
 import type { Screen } from "./types";
 
@@ -41,6 +42,29 @@ if (typeof document !== "undefined") {
     },
     true,
   );
+}
+
+/** Your report card (v0.12): this phone's record across every day played. */
+function reportCard(): string {
+  const r = loadRecord();
+  if (!r.periods) return "";
+  const best = Object.entries(r.awards)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([t, n]) => `${esc(t)}${n > 1 ? ` ×${n}` : ""}`)
+    .join(" · ");
+  const cell = (n: number, label: string) => `<div class="hm-rec-cell"><b>${n}</b><small>${label}</small></div>`;
+  return `<details class="card hm-record" id="hm-record">
+    <summary><span>📒 Your report card</span><span class="hm-rec-sum">${r.periods} period${r.periods === 1 ? "" : "s"} · ${r.wins} win${r.wins === 1 ? "" : "s"}</span><span class="lb-chev" aria-hidden="true">▾</span></summary>
+    <div class="hm-rec-grid">
+      ${cell(r.cheater, r.cheater === 1 ? "time the cheater" : "times the cheater")}
+      ${cell(r.cheaterWins, "got away")}
+      ${cell(r.caught, r.caught === 1 ? "cheater caught" : "cheaters caught")}
+      ${cell(r.detentions, "wrongly detained")}
+    </div>
+    ${best ? `<p class="hm-rec-awards">🏅 ${best}</p>` : ""}
+    <p class="hm-rec-note">Kept on this phone only.</p>
+  </details>`;
 }
 
 export const home: Screen = {
@@ -93,6 +117,7 @@ export const home: Screen = {
     </div>
     <button class="btn ghost hm-practice" id="hm-practice" data-action="practice" ${h.busy ? "disabled" : ""}><span aria-hidden="true">🤖 </span>Practice with bots</button>
     ${app.error ? `<div class="err hm-err" id="hm-err-${keyOf(app.error)}" role="alert">✏️ ${esc(app.error)}</div>` : ""}
+    ${reportCard()}
     <p class="footer-note hm-foot" id="hm-foot">3–10 classmates · phones out · one voice call · bots welcome</p>
     </section>`;
   },

@@ -70,6 +70,11 @@ while (Date.now() - t0 < 6 * 60_000) {
   await page.waitForTimeout(250);
 }
 const yearbook = await page.evaluate(() => [...document.querySelectorAll("#se-yearbook .me-aw-row")].map((r) => r.textContent?.replace(/\s+/g, " ").trim()));
-console.log(JSON.stringify({ screens: [...seen], yearbook, errors, throttledQuestionFetches: throttled, seconds: Math.round((Date.now() - t0) / 1000) }, null, 1));
+// Your report card (v0.12): a fresh tab on the same phone remembers the day.
+const home = await ctx.newPage();
+await home.goto(base);
+await home.waitForTimeout(800);
+const reportCard = await home.evaluate(() => document.querySelector("#hm-record .hm-rec-sum")?.textContent ?? "(no report card)");
+console.log(JSON.stringify({ screens: [...seen], yearbook, reportCard, errors, throttledQuestionFetches: throttled, seconds: Math.round((Date.now() - t0) / 1000) }, null, 1));
 await browser.close();
 process.exit(errors.length || !seen.has("screen-sessionEnd") ? 1 : 0);

@@ -19,6 +19,28 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.12.0 — Your report card · 2026-10-20 04:13
+
+**Why:** a party game is played across many nights, but nothing remembered you
+between them. Your best moments ("Detective ×3", "got away with it twice")
+vanished when the tab closed.
+
+**Added**
+- **📒 Your report card** on Home, once you've played. It shows periods, wins,
+  times you were the cheater and how often you got away with it, cheaters
+  caught, times wrongly detained, and your most-earned superlatives. It's kept
+  on this phone only and never sent anywhere.
+- Each period counts once, from the public result. A reload, a late join or a
+  New day never double-counts, and the hallway doesn't count.
+
+**Evidence**
+- A new phone test plays a period with three phones: Bea is the cheater, and
+  the class catches her after Q1. Bea reloads on the report card. A fresh
+  tab on each phone then shows "1 period": Bea has "1 time the cheater", Cy
+  has "1 cheater caught".
+- Screenshots at iPhone SE size, closed and open; nothing scrolls sideways.
+- The full suite and the full-session smoke run pass.
+
 ## v0.11.0 — Fair start · 2026-10-20 03:58
 
 **Why:** the cheater's first game decides whether the game works at all, and

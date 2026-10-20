@@ -32,6 +32,7 @@ import type { App, Screen } from "./screens/types";
 import { vote } from "./screens/vote";
 import { voteResult } from "./screens/voteResult";
 import { awake, keepAwake } from "./wakelock";
+import { countPeriod } from "./record";
 
 const root = document.getElementById("app")!;
 const params = new URLSearchParams(location.search);
@@ -183,6 +184,8 @@ function onState(state: PublicState): void {
   lastPhase = state.phase;
   if (state.phase === "role") lastQuestionKey = "";
   banner();
+  // Your report card (v0.12): count each finished period once, on this phone.
+  if (state.phase === "matchEnd" && state.match?.end && session) countPeriod(state, app.selfId, `${state.roomCode}#${state.phaseStartedAt}`);
   if (state.phase === "question" && state.match?.question) {
     const qk = `${state.matchNumber}:${state.match.questionIdx}`;
     if (qk !== lastQuestionKey) {

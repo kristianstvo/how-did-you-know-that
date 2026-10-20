@@ -11,6 +11,7 @@
 //   · no input is small enough for iOS to zoom; nothing scrolls sideways
 //   · the screen is kept awake in a classroom; the host's page asks before
 //     leaving mid-game
+//   · your report card counts a finished period once, across a reload (v0.12)
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 
@@ -184,11 +185,68 @@ test("phone: pointing at a suspect is free, public and changeable", async ({ bro
   // It costs nothing: her accusation is untouched.
   await expect(bea.locator("#rv-accuse.st-go")).toBeVisible();
   // And it is changeable: stop pointing clears it for everyone.
-  await bea.waitForTimeout(400); // the engine ignores changes closer than 350ms
+  await bea.waitForTimeout(400); // past the 350ms broadcast coalescing
   await bea.click("#rv-point");
   await bea.click("#pt-stop");
   await expect(host.page.locator(".gb-row", { hasText: "Hana" }).locator(".ptr")).toHaveCount(0, { timeout: 5000 });
   await close();
+});
+
+test("phone: your report card counts a finished period once, across a reload", async ({ browser }) => {
+  // Bea is the cheater (local test hook); the class catches her after Q1.
+  const host = await phone(browser, "/?debugCheater=Bea");
+  await host.page.fill("#playerName", "Hana");
+  await host.page.click('[data-action="create"]');
+  const code = (await host.page.locator(".roomcode").innerText({ timeout: 15000 })).replace(/\s/g, "");
+  const join = async (name: string) => {
+    const p = await phone(browser, `/#/join/${code}`);
+    await p.page.fill("#playerName", name);
+    await p.page.click('[data-action="join"]');
+    await p.page.waitForSelector(".screen-lobby");
+    return p;
+  };
+  const bea = await join("Bea");
+  const cy = await join("Cy");
+  // Nobody has a report card yet.
+  expect(await bea.page.locator("#hm-record").count()).toBe(0);
+  await host.page.click("#lb-start");
+  for (const p of [host.page, bea.page, cy.page]) await answer(p);
+  await host.page.waitForSelector("#rv-host", { timeout: 40000 });
+  await host.page.click("#rv-host"); // skip to the accuse beat
+  await cy.page.waitForSelector("#rv-accuse.st-go:not([disabled])", { timeout: 15000 });
+  await cy.page.click("#rv-accuse");
+  await cy.page.waitForTimeout(600); // a deliberate confirm, not a fumble
+  await cy.page.click("#rv-accuse");
+  const vote = async (p: Page, whom: string) => {
+    await p.waitForSelector(".screen-vote", { timeout: 15000 });
+    await p.locator(`.vo-cell:has(.vo-nm[title="${whom}"])`).click();
+    await p.click("#vo-go");
+  };
+  await vote(host.page, "Bea");
+  await vote(cy.page, "Bea");
+  await vote(bea.page, "Cy");
+  await host.page.click("#vr-continue", { timeout: 30000 });
+  await bea.page.waitForSelector(".screen-matchEnd", { timeout: 30000 });
+  // Bea reloads on the report card: she's back, and it still counts once.
+  await bea.page.reload();
+  await bea.page.waitForSelector(".screen-matchEnd", { timeout: 20000 });
+  const record = async (ctx: Awaited<ReturnType<typeof phone>>["ctx"]) => {
+    const tab = await ctx.newPage(); // a new tab on the same phone, days later
+    await tab.goto("/");
+    const card = tab.locator("#hm-record");
+    await expect(card).toBeVisible({ timeout: 10000 });
+    await card.locator("summary").click();
+    const out = { sum: await card.locator(".hm-rec-sum").innerText(), cells: await card.locator(".hm-rec-cell").allInnerTexts() };
+    await tab.close();
+    return out;
+  };
+  const b = await record(bea.ctx);
+  expect(b.sum).toContain("1 period");
+  expect(b.cells.join("|").replace(/\s+/g, " ")).toContain("1 time the cheater");
+  const c = await record(cy.ctx);
+  expect(c.sum).toContain("1 period");
+  expect(c.cells.join("|").replace(/\s+/g, " ")).toContain("1 cheater caught");
+  for (const p of [host, bea, cy]) await p.ctx.close();
 });
 
 test("phone: someone arriving mid-period watches from the hallway, without answering", async ({ browser }) => {
