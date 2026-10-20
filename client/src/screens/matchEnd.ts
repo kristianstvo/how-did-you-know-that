@@ -279,6 +279,38 @@ function caseFileRecap(ctx: RenderCtx, b: Set<MatchEndBeat>): string {
   </section>`;
 }
 
+/** How they played (v0.17): the cheater's record against the class's, and
+ *  who was pointing at them when the period ended. Built at the caseFile beat
+ *  (after the unmask); three fixed rows, reserved from frame 0. */
+function tellsCard(ctx: RenderCtx, b: Set<MatchEndBeat>): string {
+  const { s } = ctx;
+  const e = s.match!.end!;
+  const t = e.tells;
+  if (!t) return "";
+  const cheater = s.players.find((p) => p.id === e.cheaterId);
+  const callers = s.players.filter((p) => p.pointingAt === e.cheaterId);
+  const secs = (ms: number) => `${(ms / 1000).toFixed(1)}s`;
+  const row = (i: number, icon: string, html: string) =>
+    `<div class="me-tell" id="me-tell-${i}" style="--i:${i}"><span class="me-tell-ic" aria-hidden="true">${icon}</span><span class="me-tell-t">${html}</span></div>`;
+  const rows = b.has("caseFile")
+    ? row(0, "🤫", `${t.cheater.right}/${t.asked} right · ${secs(t.cheater.medianMs)} · <b>${cheater ? esc(cheater.name) : "the cheater"}</b>`) +
+      row(1, "🏫", `${t.class.right}/${t.asked} right · ${secs(t.class.medianMs)} · the class`) +
+      row(
+        2,
+        "👉",
+        !callers.length
+          ? "Nobody was pointing at them at the end."
+          : callers.length <= 2
+            ? `Called it: ${callers.map((p) => `${p.avatar}&nbsp;<b>${esc(p.name)}</b>`).join(", ")}`
+            : `Called it: ${callers.map((p) => `<span title="${esc(p.name)}">${p.avatar}</span>`).join(" ")} · <b>${callers.length} of ${s.players.length - 1}</b>`,
+      )
+    : "";
+  return `<section class="card me-sec me-tells" id="me-tells" aria-labelledby="me-tells-h">
+    <h2 class="me-h" id="me-tells-h"><span>🔍 How they played</span><span class="me-aside">right · median time</span></h2>
+    <div class="me-tells-list">${rows}</div>
+  </section>`;
+}
+
 /** Yearbook superlatives (v0.8): up to four, computed by the host. Built at
  *  the caseFile beat (after the unmask: the cheater's award names them); the
  *  box is reserved from frame 0 (rows × fixed height). */
@@ -376,6 +408,7 @@ export const matchEnd: Screen = {
       ${banner(v, !!s.match!.end!.struckOut)}
       ${hero(ctx, v, b, drum)}
       ${reportCard(ctx, b)}
+      ${tellsCard(ctx, b)}
       ${caseFileRecap(ctx, b)}
       ${superlatives(ctx, b)}
       ${semester(ctx, b)}

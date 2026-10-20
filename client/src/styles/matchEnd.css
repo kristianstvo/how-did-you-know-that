@@ -160,7 +160,7 @@
   transition: opacity var(--t-scene) var(--e-standard);
   animation: hd-fade-in var(--t-scene) var(--e-standard) 260ms backwards;
 }
-.b-scores .me-rc, .b-caseFile .me-cf, .b-caseFile .me-aw, .b-session .me-sem { opacity: 1; }
+.b-scores .me-rc, .b-caseFile .me-tells, .b-caseFile .me-cf, .b-caseFile .me-aw, .b-session .me-sem { opacity: 1; }
 .me-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 .me-h > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .me-aside { flex: none; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 0.72rem; font-weight: 700; color: var(--dim); white-space: nowrap; }
@@ -279,3 +279,13 @@
 @media (prefers-reduced-motion: reduce) {
   .me-aw-row { animation-name: hd-fade-in; }
 }
+
+/* How they played (v0.17): three fixed rows, built after the unmask. */
+.me-tells-list { height: 90px; }
+.me-tell {
+  height: 30px; display: flex; align-items: center; gap: 8px; font-size: 0.88rem; color: var(--dim); white-space: nowrap;
+  animation: hd-enter-up var(--t-base) var(--e-enter) both; animation-delay: calc(var(--i) * var(--stagger-info));
+}
+.me-tell-ic { flex: none; width: 22px; text-align: center; }
+.me-tell-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.me-tell b { color: var(--ink); }

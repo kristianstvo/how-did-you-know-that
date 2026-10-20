@@ -50,6 +50,13 @@ for (let period = 1; period <= 2; period++) {
   check(new Set(ids).size === ids.length, `period ${period}: one per player`);
   check(ids[0] === e.cheaterId, `period ${period}: the cheater's comes first`);
   check(awards.every((a) => st.players.some((p) => p.id === a.playerId) && a.title && a.why), `period ${period}: every award names a classmate and a reason`);
+  // v0.17: how the cheater played against the class, published with the result.
+  const t = e.tells;
+  console.log(`  how they played: cheater ${t?.cheater.right}/${t?.asked} right, ${t?.cheater.medianMs}ms median · class ${t?.class.right}/${t?.asked}, ${t?.class.medianMs}ms`);
+  check(
+    !!t && t.asked === st.match!.questionIdx + 1 && t.cheater.right <= t.asked && t.class.right <= t.asked && t.cheater.medianMs >= 0 && t.class.medianMs >= 0,
+    `period ${period}: "how they played" counts the questions asked, and nobody gets more right than that`,
+  );
   await clock.runUntil(() => engine.publicState().phase === "lobby", 500_000);
   const back = engine.publicState();
   check(back.players.every((p) => !p.banished && !p.tokenUsed && p.votingRights && !p.pointingAt), `period ${period}: back in homeroom, nobody is still in detention or out of accusations`);

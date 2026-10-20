@@ -40,6 +40,7 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.14.0 | The unkillable host: a reload takes the class back | shipped |
 | v0.15.0 | Fresh eyes: an independent review's fixes; ⭐ gold stars | shipped |
 | v0.16.0 | The big screen: a TV or laptop shows the show for the room | shipped |
+| v0.17.0 | Called it: the cheater's record vs the class's, and who saw it coming | shipped |
 | later | A big-screen layout that uses the width (side-by-side reveal) | ideas |
 
 Later versions take the best of what playtests and audits turn up.
@@ -97,3 +98,5 @@ Later versions take the best of what playtests and audits turn up.
 | v0.16.0 | ✅ The big screen reuses the phone layout, scaled | Every screen and beat already works and is tested; a TV-specific layout is a later step, not a prerequisite |
 | v0.16.0 | ✅ A big screen is never a player | It can't hold a secret or a vote, so it can't change the game: parity and balance are untouched |
 | v0.16.0 | ❌ Making the big screen required | Phone first: the game must stay complete on phones alone, for remote classes on a call |
+| v0.17.0 | ✅ Show the cheater's record next to the class's after every period | Deduction must beat guessing: seeing how a cheater actually played (often right, sometimes slow) teaches what to look for |
+| v0.17.0 | ❌ Quick emoji reactions on the reveal | The reveal is the busiest screen on the smallest phones, and voices already do the job; a reaction bar would crowd ACCUSE |

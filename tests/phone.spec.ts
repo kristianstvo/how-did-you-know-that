@@ -252,6 +252,8 @@ test("phone: your report card counts a finished period once, across a reload", a
   await vote(bea.page, "Cy");
   await host.page.click("#vr-continue", { timeout: 30000 });
   await bea.page.waitForSelector(".screen-matchEnd", { timeout: 30000 });
+  // v0.17: after the unmask, how the cheater played against the class.
+  await expect(cy.page.locator("#me-tells")).toContainText("/1 right", { timeout: 15000 });
   // Bea reloads on the report card: she's back, and it still counts once.
   await bea.page.reload();
   await bea.page.waitForSelector(".screen-matchEnd", { timeout: 20000 });

@@ -19,6 +19,36 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.17.0 — Called it · 2026-10-20 06:58
+
+**Why:** the moment after the unmask is when a class decides whether to play
+again. The report card showed scores, and the case file showed which
+exhibits had been right. Neither answered the two questions everyone asks:
+"how did they do it?" and "who saw it coming?". Answering both also teaches
+deduction for next period. Principle 1: deduction must beat guessing.
+
+**Added**
+- **🔍 How they played**, a new card after the period's report card:
+  - 🤫 **The cheater's record:** right answers out of the questions asked,
+    and their median answer time.
+  - 🏫 **The class's record:** how many the average classmate got right,
+    and their median time.
+  - 👉 **Called it:** everyone who was pointing at the cheater when the period
+    ended, or "Nobody was pointing at them at the end."
+- The figures come from the host (only it has every answer). They're
+  published with the result, once the cheater is unmasked, so the card is
+  the same on every phone and on the big screen.
+
+**Evidence**
+- `sim/yearbook-check.ts` checks both bot periods: the card counts the
+  questions asked, and nobody gets more right than that. On the check's
+  fixed seed:
+  - Period 1: the cheater went 9/10 (4.2s median), the class 6.3/10 (5.9s).
+  - Period 2: a careful cheater went 10/10 but slower than the class (6.3s
+    vs 5.9s). That is the tell this card teaches people to read.
+- The report-card phone test now also checks the card after the unmask.
+- The full suite passes.
+
 ## v0.16.0 — The big screen · 2026-10-20 06:13
 
 **Why:** at an in-person game night, the best moments happen when everyone

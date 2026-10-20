@@ -192,6 +192,10 @@ export interface PublicState {
       struckOut?: boolean;
       /** Yearbook superlatives (v0.8), at most 4, one per player. */
       awards?: Award[];
+      /** v0.17: how the cheater played against the class this period (public
+       *  once unmasked): right answers out of `asked`, and median answer time.
+       *  The class figure is the average innocent's. */
+      tells?: { asked: number; cheater: { right: number; medianMs: number }; class: { right: number; medianMs: number } };
       cheaterId: string;
       winnerIds: string[];
       sessionDelta: Record<string, number>; // playerId -> points earned this match

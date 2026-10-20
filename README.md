@@ -12,6 +12,8 @@ Built from the specs in `00-overview.md` … `07-ui-screens.md`.
 
 Newest first (details in `CHANGELOG.md`, decisions in `PRODUCT.md`):
 
+- **Called it** (v0.17) — after the unmask: how the cheater played against the
+  class, and who was pointing at them.
 - **The big screen** (v0.16) — open `#/tv/CODE` on a TV or laptop: the
   room's shared stage, never a player.
 - **Fresh eyes** (v0.15) — 14 fixes from an independent screen-by-screen

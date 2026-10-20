@@ -1009,10 +1009,48 @@ export class HostEngine {
     }
     const awards = this.computeAwards(reason, struckOut, winnerIds);
     this.tallySession(awards, winnerIds);
-    this.end = { reason, ...(struckOut ? { struckOut: true } : {}), cheaterId: this.cheaterId, winnerIds, sessionDelta: { ...this.matchDelta }, awards };
+    const tells = this.computeTells();
+    this.end = { reason, ...(struckOut ? { struckOut: true } : {}), cheaterId: this.cheaterId, winnerIds, sessionDelta: { ...this.matchDelta }, awards, tells };
     this.setPhase("matchEnd");
     this.broadcast();
     this.sendSecrets();
+  }
+
+  /** v0.17: the cheater's record against the class's this period: right
+   *  answers and median answer time. Published with the result (the cheater is
+   *  unmasked by then), so everyone learns what to look for next time. */
+  private computeTells(): { asked: number; cheater: { right: number; medianMs: number }; class: { right: number; medianMs: number } } {
+    const asked = Math.min(this.qIdx + 1, this.questions.length);
+    const median = (xs: number[]) => {
+      if (!xs.length) return 0;
+      const s = [...xs].sort((a, b) => a - b);
+      const m = s.length >> 1;
+      return Math.round(s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2);
+    };
+    const record = (ids: string[]) => {
+      let right = 0;
+      const times: number[] = [];
+      for (let q = 0; q < asked; q++) {
+        for (const id of ids) {
+          const a = this.answers[q]?.[id];
+          if (!a || a.pick < 0) continue;
+          times.push(a.timeMs);
+          if (a.pick === this.questions[q].correctIdx) right++;
+        }
+      }
+      return { right, medianMs: median(times) };
+    };
+    // The class = innocents who answered at least once this period.
+    const innocents = this.players
+      .filter((p) => p.id !== this.cheaterId)
+      .map((p) => p.id)
+      .filter((id) => this.answers.slice(0, asked).some((a) => a[id]));
+    const cls = record(innocents);
+    return {
+      asked,
+      cheater: record([this.cheaterId]),
+      class: { right: innocents.length ? Math.round((cls.right / innocents.length) * 10) / 10 : 0, medianMs: cls.medianMs },
+    };
   }
 
   /** Yearbook superlatives (v0.8): one for the cheater, then the detective,
