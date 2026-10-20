@@ -5,7 +5,7 @@
 import type { PublicState } from "../../shared/protocol";
 
 const KEY = "hdykt-record";
-const SEEN = "hdykt-record-seen"; // sessionStorage: periods already counted (reloads)
+const SEEN = "hdykt-record-seen"; // periods already counted: reloads, and (v0.18) rejoins from another tab
 
 export interface PlayRecord {
   periods: number;
@@ -34,7 +34,7 @@ export function countPeriod(s: PublicState, selfId: string, periodKey: string): 
   if (!end || !me) return; // in the hallway this period: nothing to count
   let seen: string[] = [];
   try {
-    seen = JSON.parse(sessionStorage.getItem(SEEN) ?? "[]");
+    seen = JSON.parse(localStorage.getItem(SEEN) ?? "[]");
   } catch {
     /* storage blocked: count anyway */
   }
@@ -54,7 +54,7 @@ export function countPeriod(s: PublicState, selfId: string, periodKey: string): 
   for (const a of end.awards ?? []) if (a.playerId === selfId) r.awards[a.title] = (r.awards[a.title] ?? 0) + 1;
   try {
     localStorage.setItem(KEY, JSON.stringify(r));
-    sessionStorage.setItem(SEEN, JSON.stringify([...seen, periodKey].slice(-50)));
+    localStorage.setItem(SEEN, JSON.stringify([...seen, periodKey].slice(-50)));
   } catch {
     /* storage blocked: this phone just won't remember */
   }

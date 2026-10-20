@@ -198,6 +198,7 @@ export class HostEngine {
   private watchers = new Set<string>();
   private pointBroadcastAt = 0; // pointer changes share broadcasts (v0.11)
   private pointBroadcastPending = false;
+  private stopped = false; // v0.18: this page no longer hosts (see stop())
   private usedFallback = false;
   private questionDeadline = 0;
   private answers: Record<string, AnswerRecord>[] = []; // per question: playerId -> record
@@ -1315,6 +1316,14 @@ export class HostEngine {
     // voteResult, matchEnd, lobby, sessionEnd: they wait for the host's tap.
   }
 
+  /** v0.18: this page no longer hosts (its room closed, or another tab took
+   *  it over): every pending timer bails and nothing is sent or saved again. */
+  stop(): void {
+    this.stopped = true;
+    this.epoch++;
+    this.botEpoch++;
+  }
+
   /** The host's phone is back after dropping out: everyone gets the current
    *  state and their own secret again (messages sent while away were lost). */
   resync(): void {
@@ -1323,6 +1332,7 @@ export class HostEngine {
   }
 
   private broadcast(): void {
+    if (this.stopped) return;
     const state = this.publicState();
     this.transport.toAll("state", { state });
     this.transport.local("state", { state });
@@ -1331,6 +1341,7 @@ export class HostEngine {
   /** Private per-socket role/answer delivery — sent to every player with an
    *  identical shape so traffic analysis is unhelpful (spec 05). */
   private sendSecrets(): void {
+    if (this.stopped) return;
     for (const p of this.players) {
       if (p.isBot) continue; // bots read the engine directly
       const secret = this.paddedSecret(p.id);

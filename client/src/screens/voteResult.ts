@@ -202,6 +202,9 @@ export const voteResult: Screen = {
           : `🔁 ${accuser ? esc(accuser.name) : "The accuser"}'s hand is spent. The line stays at ${m.threshold}.`;
       after = `<p class="vr-note" id="vr-note" ${enter(vAt + 300, el)}>${note}</p>`;
     }
+    // v0.18: until the verdict, the reserved box says what it's for (it used to
+    // collapse, and the ballots jumped down when the verdict filled it).
+    if (!after) after = `<p class="vr-note vr-pending" id="vr-pending">⚖️ The verdict decides what happens next…</p>`;
 
     const cls = ["screen", "screen-voteResult", `out-${outcome}`, ...beats.map((x) => `b-${x}`), flipped === n && n > 0 ? "all-in" : "", n > 7 ? "dense" : ""]
       .filter(Boolean)

@@ -289,7 +289,7 @@ function tellsCard(ctx: RenderCtx, b: Set<MatchEndBeat>): string {
   if (!t) return "";
   const cheater = s.players.find((p) => p.id === e.cheaterId);
   const callers = s.players.filter((p) => p.pointingAt === e.cheaterId);
-  const secs = (ms: number) => `${(ms / 1000).toFixed(1)}s`;
+  const secs = (ms: number) => (ms > 0 ? `${(ms / 1000).toFixed(1)}s` : "—"); // 0 = nobody answered
   const row = (i: number, icon: string, html: string) =>
     `<div class="me-tell" id="me-tell-${i}" style="--i:${i}"><span class="me-tell-ic" aria-hidden="true">${icon}</span><span class="me-tell-t">${html}</span></div>`;
   const rows = b.has("caseFile")

@@ -182,6 +182,7 @@ export function setSound(on: boolean): void {
 if (typeof document !== "undefined") {
   // iOS unlocks audio only inside a gesture: create/resume on the first tap.
   document.addEventListener("pointerdown", () => void audio(), { passive: true });
+  document.addEventListener("keydown", () => void audio()); // a TV remote's OK button (v0.18)
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && enabled && ctx?.state === "suspended") void ctx.resume().catch(() => {});
   });

@@ -119,9 +119,10 @@
 
 /* ---- Consequence slot: the grade-book strip (line drop) or a note ---- */
 /* v0.15: the consequence sits right under the verdict (ten ballots used to
-   push it under the dock on an iPhone SE); empty until the verdict lands. */
+   push it under the dock on an iPhone SE). v0.18: reserved from the first
+   frame, so nothing jumps when the verdict lands. */
 .vr-after { min-height: 96px; margin: 12px 0; }
-.vr-after:empty { min-height: 0; margin: 0; }
+.vr-pending { opacity: 0.6; }
 .vr-note {
   text-align: center; font-family: var(--hand); font-weight: 700; font-size: 0.95rem; line-height: 1.4; color: var(--ink);
   padding: 14px 10px; border: 2px dashed var(--chalk-line); border-radius: var(--radius);

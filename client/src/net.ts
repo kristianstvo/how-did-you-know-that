@@ -8,6 +8,7 @@ import { createEventLogger, EVENT_LOG_VERSION, type MatchEvent } from "../../sha
 import type { Intent, JoinedMsg, JoinRejectedMsg, PublicState, SecretState } from "../../shared/protocol";
 import { maintainClock, serverNow, syncClock } from "./clock";
 import { HostEngine, type EngineSnapshot, type Transport } from "./engine";
+import { deckState, restoreDeck, type DeckState } from "./providers";
 
 /** online · reconnecting (this phone lost the relay) · hostAway (the host's
  *  phone dropped out; the relay holds the room while it comes back). */
@@ -39,10 +40,10 @@ export interface PlayerSession {
   sendIntent(intent: Intent): void;
 }
 
-function connectSocket(): Socket {
+function connectSocket(timeout?: number): Socket {
   // Dev: Vite proxies /socket.io to :3000. Prod: same origin serves both.
   // WebSocket only: HTTP long-polling first would inflate the clock-sync RTT.
-  return io({ transports: ["websocket"] });
+  return io({ transports: ["websocket"], ...(timeout ? { timeout } : {}) });
 }
 
 /** Phones come back from a locked screen or another app with a socket that
@@ -79,8 +80,8 @@ function waitConnected(socket: Socket): Promise<void> {
 }
 
 /** Connect to the relay and sync this phone's clock to it. */
-async function connectSynced(): Promise<Socket> {
-  const socket = connectSocket();
+async function connectSynced(maintain = true, timeout?: number): Promise<Socket> {
+  const socket = connectSocket(timeout);
   try {
     await waitConnected(socket);
   } catch (e) {
@@ -88,7 +89,7 @@ async function connectSynced(): Promise<Socket> {
     throw e;
   }
   await syncClock(socket);
-  maintainClock(socket);
+  if (maintain) maintainClock(socket);
   return socket;
 }
 
@@ -106,7 +107,13 @@ export interface HostSave {
   hostKey: string;
   savedAt: number;
   snap: EngineSnapshot;
+  /** v0.18: questions already used this session (no repeats after a reload). */
+  deck?: DeckState;
 }
+
+/** v0.18: the relay says the room is gone (only this forgets the save; a
+ *  flaky connection is worth another try while the relay holds the room). */
+export class RoomGoneError extends Error {}
 
 export function loadHostSave(): HostSave | null {
   try {
@@ -152,15 +159,20 @@ export async function createHostSession(
  *  saved key and carry on from the saved engine: the class only sees "the
  *  teacher's phone dropped out" for a moment. */
 export async function resumeHostSession(save: HostSave, events: SessionEvents): Promise<HostSession> {
-  const socket = await connectSynced();
+  // A short connect timeout: a reload on flaky Wi-Fi retries every few
+  // seconds instead of waiting out socket.io's default 20s per try.
+  const socket = await connectSynced(false, 6000);
   const host = hostWiring(socket, events);
-  const ok = await new Promise<boolean>((resolve) =>
-    socket.emit("resumeRoom", { code: save.code, hostKey: save.hostKey }, (res: { ok: boolean }) => resolve(!!res?.ok)),
+  const ok = await new Promise<boolean | null>((resolve) =>
+    socket.timeout(5000).emit("resumeRoom", { code: save.code, hostKey: save.hostKey }, (err: Error | null, res?: { ok: boolean }) => resolve(err ? null : !!res?.ok)),
   );
-  if (!ok) {
+  if (ok !== true) {
     socket.disconnect();
-    throw new Error("Your classroom closed while this page was away.");
+    if (ok === false) throw new RoomGoneError("Your classroom closed while this page was away.");
+    throw new Error("No answer from the game server.");
   }
+  maintainClock(socket);
+  restoreDeck(save.deck);
   const session = host.start(save.code, save.hostKey, (transport) => HostEngine.restore(save.snap, transport, undefined, { now: serverNow }));
   session.engine.resync(); // every phone (this one too) gets the current state and its secret
   return session;
@@ -183,11 +195,15 @@ function hostWiring(socket: Socket, events: SessionEvents) {
     start(code: string, hostKey: string, makeEngine: (transport: Transport) => HostEngine): HostSession {
       const log: MatchEvent[] = [];
       const logState = createEventLogger((e) => log.push(e));
+      // Once this session stops hosting (the room closed, or another tab took
+      // it over) it never saves again: a stale game must not overwrite the save
+      // of a newer room (v0.18).
+      let closed = false;
       // v0.14: saved on every change, so a reload carries on from exactly here.
       const save = () => {
-        if (!engine || !hostSaving) return;
+        if (!engine || !hostSaving || closed) return;
         try {
-          const data: HostSave = { code, hostKey, savedAt: Date.now(), snap: engine.snapshot() };
+          const data: HostSave = { code, hostKey, savedAt: Date.now(), snap: engine.snapshot(), deck: deckState() };
           sessionStorage.setItem(HOST_SAVE, JSON.stringify(data));
         } catch {
           /* storage full or blocked: a reload just can't take the room back */
@@ -215,7 +231,13 @@ function hostWiring(socket: Socket, events: SessionEvents) {
       // The whole game lives in this page, so a dropped connection is NOT the end:
       // the relay holds the room (HOST_GRACE_MS) while this phone reconnects and
       // takes it back, then everyone gets the current state again.
-      let closed = false;
+      const stopHosting = (why: string) => {
+        if (closed) return;
+        closed = true;
+        e.stop();
+        socket.disconnect();
+        events.onClosed(why);
+      };
       socket.on("disconnect", (reason) => {
         if (!closed && reason !== "io client disconnect") events.onNet?.("reconnecting");
       });
@@ -225,13 +247,12 @@ function hostWiring(socket: Socket, events: SessionEvents) {
           if (res?.ok) {
             e.resync();
             events.onNet?.("online");
-          } else {
-            closed = true;
-            socket.disconnect();
-            events.onClosed("Your phone was away too long, so the classroom closed.");
-          }
+          } else stopHosting("Your phone was away too long, so the classroom closed.");
         });
       });
+      // v0.18: another tab or device took the room over with this page's key
+      // (a duplicated tab carries the save): this page stops hosting.
+      socket.on("hostReplaced", () => stopHosting("This classroom moved to another tab or device."));
       reviveOnReturn(socket);
       // Push the initial snapshot to the host UI.
       events.onState(e.publicState());

@@ -21,7 +21,7 @@ git checkout product-lead    # back to the newest
 
 ## v0.18.0 — Game night ready · 2026-10-20 07:13
 
-**Why:** eight versions in one night, each tested on its own. Before anyone
+**Why:** sixteen versions in one night, each tested on its own. Before anyone
 hosts a real evening, the whole product has to work at once: three phones, a
 TV, an accusation, a teacher whose page reloads, two periods, the end of the
 day and the start of a new one.
@@ -41,6 +41,29 @@ day and the start of a new one.
 - README: **Hosting a game night**, the evening in five steps: Wi-Fi, the
   QR, the big screen, reloads, practice.
 
+**Fixed** (an independent code review of v0.12–v0.18 found these)
+- **A reload on flaky Wi-Fi no longer ends the class.** The first failed
+  connection used to throw the saved game away. Now the page tries again
+  every few seconds while the relay holds the room. It only forgets the save
+  when the relay says the room is gone.
+- **A duplicated teacher's tab no longer splits the class silently.** The
+  case: duplicating the tab to make a big-screen window. The copy takes the
+  room. The original says "This classroom moved to another tab or device."
+  and stops.
+- **A closed room's game can't overwrite the next room's save.** A page that
+  stops hosting now goes quiet.
+- **The vote result no longer jumps when the verdict lands.** The box for the
+  consequence is reserved from the first frame and reads "⚖️ The verdict
+  decides what happens next…".
+- **Your record counts a period once, even when you rejoin from a new tab.**
+- **No repeated questions after the teacher's page reloads.** The list of
+  questions already used is saved with the game.
+- **How they played shows "—"** instead of "0.0s" when nobody answered.
+- **The fine print lists every gold star,** including the cheater's +1 for
+  lasting to Q10.
+- **The big screen's sound turns on with any key,** not just a click, so a
+  smart TV's remote works.
+
 **Evidence**
 - **`npm run game-night`:** 12 of 12 checks pass with no page errors on any
   of the four screens (three phones and a 1280×720 big screen). The first
@@ -54,6 +77,17 @@ day and the start of a new one.
 - **Big screen roll:** at 720p the lobby's scroll position, sampled every 2.5
   seconds, read 0, 0, 26, 101, 176 and 252. It waits 7 seconds, then rolls
   at 30 px/s.
+- **The fixes:**
+  - `sim/relay-check.ts` adds 3 checks: a second tab with the key takes the
+    room, the first is told, and only the new host reaches the class. The old
+    tab closing afterwards isn't mistaken for the host leaving.
+  - `sim/resume-check.ts` adds one: a stopped host sends nothing, and its
+    timers don't move the game.
+  - The report-card phone test also closes Bea's tab and brings her back
+    through the invite link in a new one. It still counts once.
+  - Checked by hand: a duplicated teacher's tab takes the room and the
+    original says so. A reload whose first three connections fail takes the
+    room back on the fourth, 28 seconds in.
 - The full suite passes.
 
 ## v0.17.0 — Called it · 2026-10-20 06:58
@@ -124,6 +158,9 @@ shared stage.
 - Screenshots at 1920×1080 (lobby, role, question, reveal). The column
   scales 1.23×, a six-player reveal fits on screen, nothing scrolls
   sideways, and there are no page errors.
+- Checked by hand: when the teacher's page reloads, the 📺 comes back and the
+  big screen keeps following the class. Removing a bot afterwards took its
+  list from 6 rows to 5.
 - The full suite passes.
 
 ## v0.15.0 — Fresh eyes · 2026-10-20 05:58
@@ -230,6 +267,10 @@ was gone.
   the same period, not the home screen. Bea's phone recovers by itself, both
   answer, the reveal reaches both, and the grade book shows the same four
   seats with Bea connected.
+- Checked by hand: after a reload the teacher is back in the same room with
+  its five bots. After leaving on purpose they land on Home and the save is
+  gone; a last pagehide can't write it back.
+- The full-session smoke run passes with no errors.
 - The full suite passes.
 
 ## v0.13.0 — Rules at a glance · 2026-10-20 04:58

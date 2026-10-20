@@ -5,6 +5,8 @@
 //   2. Only the host's key takes the room back; then the held messages arrive
 //      in order and the class is told (hostBack).
 //   3. A host that never comes back: the room closes after the grace period.
+//   4. (v0.18) A second tab with the saved key takes the room: the first is
+//      told it no longer hosts, and only the new host reaches the class.
 import { spawn, spawnSync } from "node:child_process";
 import { io, type Socket } from "socket.io-client";
 
@@ -94,6 +96,27 @@ try {
   const lateTry = await emitAck<{ ok: boolean }>(late, "resumeRoom", room2);
   check(!lateTry.ok, "a host coming back after the room closed is told so");
   for (const s of [p2, late]) s.disconnect();
+
+  // ---- Scenario C (v0.18): a duplicated tab takes the room over ----
+  const tabA = await connect();
+  const aGot = record(tabA);
+  const room3 = await emitAck<{ code: string; hostKey: string }>(tabA, "createRoom");
+  const p3 = await connect();
+  const p3Got = record(p3);
+  await emitAck(p3, "join", { code: room3.code, name: "Dee", avatar: "🧪", token: "" });
+  const tabB = await connect();
+  const took = await emitAck<{ ok: boolean }>(tabB, "resumeRoom", room3);
+  await sleep(150);
+  check(took.ok && aGot.some((m) => m.event === "hostReplaced"), "a second tab with the key takes the room, and the first is told it no longer hosts");
+  tabA.emit("toAll", { event: "state", payload: { from: "A" } });
+  tabB.emit("toAll", { event: "state", payload: { from: "B" } });
+  await sleep(150);
+  const froms = p3Got.filter((m) => m.event === "state").map((m) => (m.payload as { from: string }).from);
+  check(froms.join(",") === "B", `only the new host reaches the class (got ${froms.join(",") || "none"})`);
+  tabA.disconnect();
+  await sleep(200);
+  check(!p3Got.some((m) => m.event === "hostAway"), "the old tab closing isn't mistaken for the host leaving");
+  for (const s of [tabB, p3]) s.disconnect();
 } finally {
   // Kill the whole tree (shell → npx → node) and wait for it, or a stray relay
   // keeps running after this check exits.

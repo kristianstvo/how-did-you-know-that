@@ -103,3 +103,4 @@ Later versions take the best of what playtests and audits turn up.
 | v0.17.0 | ❌ Quick emoji reactions on the reveal | The reveal is the busiest screen on the smallest phones, and voices already do the job; a reaction bar would crowd ACCUSE |
 | v0.18.0 | ✅ A whole-evening test before calling it ready | Each feature passed its own tests; only playing them together (TV + reload + votes + New day) proves the evening works |
 | v0.18.0 | ✅ Re-measure balance after a night of features | Nothing should have moved it, and the simulator says nothing did: 34–56% at 6 players, as tuned in v0.4 |
+| v0.18.0 | ✅ An independent code review before the last version | The night’s save/resume and big-screen code found 5 real issues no test had hit (a flaky-Wi-Fi reload ending the class, a duplicated tab splitting it); all fixed before tagging |

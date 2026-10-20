@@ -83,4 +83,23 @@ for (const at of AT) {
   }
   if (!done) check(false, `${at}: no seed reached this phase`);
 }
+// v0.18: a page that no longer hosts (its room closed, or another tab took
+// it over) goes quiet: no timer acts, nothing is sent or saved.
+{
+  clock.reset();
+  resetLocalDeck();
+  Math.random = mulberry32(4242);
+  let sent = 0;
+  const counting: Transport = { toAll: () => sent++, toPlayer: () => sent++, local: () => sent++ };
+  const e = new HostEngine("STOPD", "Hana", "🎒", counting, localOnlySource);
+  for (let i = 0; i < 5; i++) e.addBot();
+  void e.startMatch();
+  await clock.runUntil(() => e.publicState().phase === "question", 500_000);
+  e.stop();
+  const before = sent;
+  let done = false;
+  setTimeout(() => (done = true), 60_000);
+  await clock.runUntil(() => done, 500_000);
+  check(sent === before && e.publicState().phase === "question", "a stopped host sends nothing and its timers don't move the game");
+}
 process.exit(failures ? 1 : 0);

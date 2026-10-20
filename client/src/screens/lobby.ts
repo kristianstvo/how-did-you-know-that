@@ -84,7 +84,7 @@ const FINE_PRINT = [
   "A wrong detention also drops the line by <b>{drop}</b>, and that classmate loses their vote (but keeps answering). Ties send nobody.",
   "Anyone over the line with <b>no siren</b> is proven innocent: <b>CLEARED</b>.",
   "Nobody wins by Q10? <b>Top of the class</b> takes the period.",
-  "<b>Gold stars ⭐</b> add up over the day: +2 for voting the cheater into detention (+1 for whoever accused), −1 for voting an innocent in, +3 for a cheater who graduates, +2 for top of the class.",
+  "<b>Gold stars ⭐</b> add up over the day: +2 for voting the cheater into detention (+1 for whoever accused), −1 for voting an innocent in, +3 for a cheater who graduates (+1 for one who just lasts to Q10), +2 for top of the class.",
 ];
 
 export const lobby: Screen = {

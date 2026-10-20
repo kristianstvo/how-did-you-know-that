@@ -119,6 +119,16 @@ io.on("connection", (socket: Socket) => {
     }
     if (room.closeTimer) clearTimeout(room.closeTimer);
     room.closeTimer = null;
+    // v0.18: another tab or device took the room over (a duplicated tab carries
+    // the saved key). The previous host socket stops hosting instead of running
+    // a game nobody receives, and its eventual disconnect isn't "host away".
+    const previous = room.hostSocketId;
+    if (previous && previous !== socket.id) {
+      io.to(previous).emit("hostReplaced");
+      room.memberSocketIds.delete(previous);
+      socketRoom.delete(previous);
+      io.sockets.sockets.get(previous)?.leave(room.code);
+    }
     room.hostSocketId = socket.id;
     room.memberSocketIds.add(socket.id);
     socketRoom.set(socket.id, room.code);

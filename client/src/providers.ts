@@ -230,3 +230,21 @@ export const localOnlySource: QuestionSource = {
 export function resetLocalDeck(): void {
   usedLocal.clear();
 }
+
+/** v0.18: which questions this session has used (local pack indexes and the
+ *  OpenTDB session token), saved with the host's game so a reload keeps
+ *  avoiding repeats. */
+export interface DeckState {
+  local: number[];
+  token: string | null;
+}
+
+export function deckState(): DeckState {
+  return { local: LOCAL_PACK.flatMap((q, i) => (usedLocal.has(q) ? [i] : [])), token: sessionToken };
+}
+
+export function restoreDeck(d: DeckState | undefined): void {
+  if (!d) return;
+  for (const i of d.local) if (LOCAL_PACK[i]) usedLocal.add(LOCAL_PACK[i]);
+  if (d.token) sessionToken = d.token;
+}

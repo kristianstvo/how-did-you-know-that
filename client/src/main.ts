@@ -26,6 +26,7 @@ import {
   joinAsPlayer,
   loadHostSave,
   resumeHostSession,
+  RoomGoneError,
   type HostSave,
   type HostSession,
   type NetStatus,
@@ -318,9 +319,10 @@ async function watchTv(code: string): Promise<void> {
   // Browsers only start sound after a click: say so until someone does.
   const hint = document.createElement("div");
   hint.id = "tv-sound";
-  hint.textContent = "🔊 Click anywhere for sound";
+  hint.textContent = "🔊 Click or press any key for sound";
   document.body.append(hint);
   document.addEventListener("pointerdown", () => hint.remove(), { once: true });
+  document.addEventListener("keydown", () => hint.remove(), { once: true }); // a TV remote
   app.home.code = code;
   app.home.busy = true;
   render();
@@ -385,16 +387,27 @@ async function resumeHost(save: HostSave): Promise<void> {
   app.home.busy = true;
   app.home.resuming = save.code;
   render();
-  try {
-    session = await resumeHostSession(save, { onState, onSecret, onClosed, onNet });
-    keepAwake(true);
-    app.isHost = true;
-    app.selfId = session.selfId;
-    app.screen = "game";
-    app.closedReason = null;
-  } catch (e) {
-    clearHostSave();
-    app.closedReason = (e as Error).message;
+  // The relay holds the room for 90s after this page went away, so a flaky
+  // connection is worth retrying (v0.18). Only the relay saying the room is
+  // gone, or two minutes of trying, forgets the save.
+  const giveUpAt = Date.now() + 120_000;
+  for (;;) {
+    try {
+      session = await resumeHostSession(save, { onState, onSecret, onClosed, onNet });
+      keepAwake(true);
+      app.isHost = true;
+      app.selfId = session.selfId;
+      app.screen = "game";
+      app.closedReason = null;
+      break;
+    } catch (e) {
+      if (e instanceof RoomGoneError || Date.now() > giveUpAt) {
+        clearHostSave();
+        app.closedReason = e instanceof RoomGoneError ? e.message : "Couldn't reach the game server, so the classroom closed.";
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 3000));
+    }
   }
   app.home.busy = false;
   app.home.resuming = undefined;

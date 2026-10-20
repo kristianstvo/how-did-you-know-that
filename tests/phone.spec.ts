@@ -257,6 +257,13 @@ test("phone: your report card counts a finished period once, across a reload", a
   // Bea reloads on the report card: she's back, and it still counts once.
   await bea.page.reload();
   await bea.page.waitForSelector(".screen-matchEnd", { timeout: 20000 });
+  // …and closes the tab and comes back through the invite link in a new one
+  // (v0.18: still once).
+  await bea.page.close();
+  const again = await bea.ctx.newPage();
+  await again.goto(`/#/join/${code}`);
+  await again.click('[data-action="join"]');
+  await again.waitForSelector(".screen-matchEnd", { timeout: 20000 });
   const record = async (ctx: Awaited<ReturnType<typeof phone>>["ctx"]) => {
     const tab = await ctx.newPage(); // a new tab on the same phone, days later
     await tab.goto("/");
