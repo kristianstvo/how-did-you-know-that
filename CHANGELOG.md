@@ -19,6 +19,33 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.13.0 — Rules at a glance · 2026-10-20 04:58
+
+**Why:** How to play was seven paragraphs, and nobody reads seven paragraphs
+on a phone in a noisy room. First-timers learned the rules from Teacher's
+notes during the first period, so the lobby, where they wait with nothing to
+do, taught them nothing.
+
+**Changed**
+- **How to play is four cards**: ✏️ 10 questions · 🤫 One cheater (the dot,
+  the line) · 👀 Watch the board (point 👉) · 🙋 Accuse (and the strikes).
+  The fine print (the line drop, CLEARED, top of the class) follows in three
+  short lines. Every number comes from this class's settings, so a custom
+  line or strike count is what the cards say.
+- **It opens by itself for a first-timer**, meaning a phone with no report card
+  yet. Everyone else gets it closed, as before.
+
+**Removed**
+- The seven-paragraph rules block.
+
+**Evidence**
+- Screenshots at iPhone SE size; nothing scrolls sideways.
+- Phone audit across 7 phone sizes and 98 screen checks. The only change is a
+  longer lobby for a first-timer: 2.4 → 3.2 screens on an iPhone SE, because
+  How to play starts open. Start stays on screen, and there are no new small
+  tap targets.
+- The full suite passes (37 tests).
+
 ## v0.12.0 — Your report card · 2026-10-20 04:13
 
 **Why:** a party game is played across many nights, but nothing remembered you

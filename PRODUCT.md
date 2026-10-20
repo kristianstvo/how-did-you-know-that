@@ -36,7 +36,8 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.10.0 | Hosting made easy: pace presets, New day same class, clear a seat | shipped |
 | v0.11.0 | Fair start: the cheater learns the dot, Practice as a chosen role, dialog focus | shipped |
 | v0.12.0 | Your report card: each phone remembers its record across days | shipped |
-| later | A "how to play" picture card; a TV / big-screen view for in-person nights | ideas |
+| v0.13.0 | Rules at a glance: four cards, open for first-timers | shipped |
+| later | A TV / big-screen view for in-person nights | ideas |
 
 Later versions take the best of what playtests and audits turn up.
 
@@ -79,3 +80,6 @@ Later versions take the best of what playtests and audits turn up.
 | v0.12.0 | ✅ The report card lives on the phone only | No accounts, nothing sent anywhere; a party game must start in seconds, and your record is nobody else's business |
 | v0.12.0 | ✅ Counted from the public result, once per period | The secret never leaves the host, and a reload or a rejoin can't count a period twice |
 | v0.12.0 | ❌ Accounts or a cloud profile | A sign-up wall in front of a party game costs more players than a record across phones would win |
+| v0.13.0 | ✅ Four cards, then the fine print | Ten seconds of reading covers the game; the edge cases stay one glance away |
+| v0.13.0 | ✅ Open by itself only for a first-timer | The lobby is where a newcomer waits with nothing to do; regulars don't need it in their way |
+| v0.13.0 | ❌ A tutorial before the first game | It delays the start for everyone; Teacher's notes (v0.7) already teach inside the first period |

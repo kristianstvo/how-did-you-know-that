@@ -9,7 +9,8 @@
 //   · the copy toast (app.ui.toast) slides up out of the dock
 // Desk numbers = seat order (players[] order), the order the vote grid uses.
 import { renderSVG } from "uqr";
-import { MAX_PLAYERS, MIN_PLAYERS } from "../../../shared/protocol";
+import { MAX_PLAYERS, MIN_PLAYERS, type Settings } from "../../../shared/protocol";
+import { loadRecord } from "../record";
 import { av, esc, playerBadges, sessionTab, soundToggle } from "./common";
 import type { Screen } from "./types";
 
@@ -23,7 +24,8 @@ const keyOf = (str: string) => {
 // attribute the render doesn't emit — so without this, every broadcast (a
 // classmate joining, a setting changing) would snap "How to play" shut while
 // someone is reading it. Remember the reader's choice and render it back.
-let howOpen = false;
+// v0.13: open for a first-timer (no report card on this phone yet).
+let howOpen = typeof localStorage !== "undefined" && loadRecord().periods === 0;
 if (typeof document !== "undefined") {
   document.addEventListener(
     "toggle",
@@ -61,14 +63,27 @@ const PRACTICE_ROLES = [
   { id: "cheater", icon: "🤫", label: "Cheater" },
 ] as const;
 
-const RULES = [
-  "The class answers the same <b>10 questions</b>, each from a different school subject (100 → 200 → 400 points). One classmate is secretly <b>the cheater</b> and sees the correct answers: a faint dot in the corner of the right one.",
-  "The cheater <b>graduates instantly</b> by reaching the public score line on the grade book. Everyone else wins by catching them first.",
-  "After every question, everyone's picks and <b>answer times</b> go up on the board. Suspicious? Each player holds <b>one accusation</b> per period — raise your hand during a reveal to force a vote. Plurality goes to <b>detention</b>.",
-  "Detention for the cheater → class wins. Detention for an innocent → they keep answering but lose their vote, and the cheater's graduation line <b>drops by {drop}</b>.{strikes} Ties send nobody.",
-  "Suspect someone? <b>Point 👉</b> at them during a reveal: free, changeable, and the whole class sees it. It isn't a vote.",
-  "Anyone who reaches the line and <b>no siren goes off</b> is proven innocent — <b>cleared</b>.",
-  "If nobody wins by question 10, <b>top of the class</b> takes the period — whoever they are. Semester points add up across periods.",
+/** v0.13 rules at a glance: four cards a first-timer reads in ten seconds,
+ *  then the fine print. Numbers come from this class's own settings. */
+function howCards(st: Settings): string {
+  const k = st.strikes;
+  const strikeRule = k > 0 ? `${k === 1 ? "One wrong detention" : `${k === 2 ? "Two" : k} wrong detentions`} and they graduate.` : "A wrong detention lowers their line.";
+  const t = st.tierPoints;
+  const cards = [
+    { icon: "✏️", title: "10 questions", text: `Everyone answers the same quiz. Easy → hard: ${t.easy} · ${t.medium} · ${t.hard} points.` },
+    { icon: "🤫", title: "One cheater", text: `Sees a faint dot on the right answer. Graduates at 🎓 ${st.threshold} points.` },
+    { icon: "👀", title: "Watch the board", text: "Who's right <i>and</i> fast on the hard ones? Point 👉 at a suspect: free and public." },
+    { icon: "🙋", title: "Accuse", text: `One accusation each forces a vote. Catch the cheater: the class wins. ${strikeRule}` },
+  ];
+  return cards
+    .map((c, i) => `<div class="how-card" style="--i:${i}"><span class="how-ic" aria-hidden="true">${c.icon}</span><b>${c.title}</b><span>${c.text}</span></div>`)
+    .join("");
+}
+
+const FINE_PRINT = [
+  "A wrong detention also drops the line by <b>{drop}</b>, and that classmate loses their vote (but keeps answering). Ties send nobody.",
+  "Anyone over the line with <b>no siren</b> is proven innocent: <b>CLEARED</b>.",
+  "Nobody wins by Q10? <b>Top of the class</b> takes the period. Semester points add up across periods.",
 ];
 
 export const lobby: Screen = {
@@ -80,7 +95,6 @@ export const lobby: Screen = {
     const hour = ((7 + s.matchNumber) % 12) + 1; // 8:59 — one minute to the bell
     const letters = [...s.roomCode];
     const k = s.settings.strikes;
-    const strikesRule = k > 0 ? ` <b>${k === 1 ? "One wrong detention" : `${k} wrong detentions`}</b> and the cheater graduates on the spot.` : "";
 
     const rows = s.players
       .map((p, i) => {
@@ -162,7 +176,8 @@ export const lobby: Screen = {
 
     <details class="how" id="lb-how" ${howOpen ? "open" : ""}>
       <summary><span><span aria-hidden="true">📖 </span>How to play</span><span class="lb-chev" aria-hidden="true">▾</span></summary>
-      ${RULES.map((r, i) => `<p style="--i:${i}">${r.replace("{drop}", String(s.settings.thresholdDrop)).replace("{strikes}", strikesRule)}</p>`).join("")}
+      <div class="how-cards">${howCards(s.settings)}</div>
+      <ul class="how-fine">${FINE_PRINT.map((r, i) => `<li style="--i:${i + 4}">${r.replace("{drop}", String(s.settings.thresholdDrop))}</li>`).join("")}</ul>
     </details>
 
     ${

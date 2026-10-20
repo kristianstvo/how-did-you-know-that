@@ -233,3 +233,18 @@
   border: 2px dashed var(--chalk-line); font-weight: 700; font-size: 0.88rem; white-space: nowrap;
 }
 .lb-role-btn.on { border-style: solid; border-color: var(--accent2); background: rgba(255, 209, 102, 0.12); }
+
+/* Rules at a glance (v0.13): four cards, then the fine print. */
+.how-cards { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin: 2px 0 10px; }
+.how-card {
+  display: flex; flex-direction: column; gap: 2px; padding: 10px; border-radius: 12px; background: var(--card2);
+  font-size: 0.82rem; line-height: 1.35; color: var(--dim);
+}
+.how-card b { color: var(--ink); font-family: var(--hand); font-size: 0.98rem; }
+.how-card i { color: var(--ink); }
+.how-ic { font-size: 1.4rem; line-height: 1; margin-bottom: 2px; }
+.how-fine { margin: 0 0 14px; padding-left: 18px; color: var(--dim); font-size: 0.82rem; line-height: 1.45; }
+.how-fine li + li { margin-top: 4px; }
+.how-fine b { color: var(--ink); }
+.screen-lobby details.how[open] .how-card,
+.screen-lobby details.how[open] .how-fine li { animation: hd-enter-up var(--t-base) var(--e-enter) both; animation-delay: calc(var(--i) * var(--stagger-deco)); }
