@@ -89,7 +89,7 @@
 .vo-tags { grid-column: 3; display: inline-flex; gap: 3px; align-items: center; }
 .vo-hand-tag { font-size: 0.85rem; line-height: 1; }
 .vo-you { font-size: 0.64rem; font-weight: 900; letter-spacing: 0.5px; padding: 1px 5px; border-radius: 5px; background: var(--ink); color: var(--bg); font-family: var(--hand); }
-.vo-meta { grid-column: 2 / span 2; display: flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; white-space: nowrap; }
+.vo-meta { grid-column: 2 / span 2; display: flex; flex-wrap: wrap; align-items: center; gap: 3px 5px; min-width: 0; overflow: hidden; white-space: nowrap; }
 .vo-pick { flex: none; font-size: 0.82rem; font-weight: 800; font-variant-numeric: tabular-nums; padding: 0 5px; border-radius: 6px; line-height: 1.45; }
 .vo-pick.ok { color: var(--good); border: 1.5px solid var(--good); }
 .vo-pick.bad { color: var(--bad); border: 1.5px dashed var(--bad); }

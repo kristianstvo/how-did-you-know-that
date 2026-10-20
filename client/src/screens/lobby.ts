@@ -83,7 +83,8 @@ function howCards(st: Settings): string {
 const FINE_PRINT = [
   "A wrong detention also drops the line by <b>{drop}</b>, and that classmate loses their vote (but keeps answering). Ties send nobody.",
   "Anyone over the line with <b>no siren</b> is proven innocent: <b>CLEARED</b>.",
-  "Nobody wins by Q10? <b>Top of the class</b> takes the period. Semester points add up across periods.",
+  "Nobody wins by Q10? <b>Top of the class</b> takes the period.",
+  "<b>Gold stars ⭐</b> add up over the day: +2 for voting the cheater into detention (+1 for whoever accused), −1 for voting an innocent in, +3 for a cheater who graduates, +2 for top of the class.",
 ];
 
 export const lobby: Screen = {
@@ -115,7 +116,7 @@ export const lobby: Screen = {
       .join("");
 
     const hostNote = s.loadingQuestions
-      ? "Printing 10 questions…"
+      ? "Questions on the way…"
       : connected < MIN_PLAYERS
         ? `Need ${MIN_PLAYERS}+ in class to start · add bots to test solo`
         : `${connected} at their desks · ring when everyone's seated`;

@@ -19,6 +19,78 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.15.0 — Fresh eyes · 2026-10-20 05:58
+
+**Why:** after fourteen versions of features, I had an independent reviewer go
+through every screen at phone size with no context, the way a first-time
+player would. They came back with 14 concrete problems. The worst three:
+- On an iPhone SE, the prime suspect's name shrank to one letter on the
+  reveal.
+- The period's results ranked a caught cheater #1.
+- A wrong detention's consequence (the line dropping) played under the
+  Continue button.
+
+**Fixed**
+- **Reveal:** on phones narrower than 400px the score bar gives up room, so
+  names stay readable. The prime suspect shows "Priy…" instead of "P…".
+- **Vote:** a classmate's clues wrap to a second line instead of being sliced
+  off at the card's edge. "Plurality goes to detention" now reads "Most
+  votes → detention".
+- **Exhibits:** "Pencil never stopped" gets its own ⏱️. ⚡ already meant
+  "fastest right answer" on the grade book, so a harmless fast answer looked
+  like evidence.
+- **Report card:** the period's report card lists the winners first. A caught
+  cheater no longer ranks #1, above the class that beat them.
+- **Vote result:** the consequence (the line dropping, the strike, "case
+  closed") shows right under the verdict, not below ten ballots. The stamp
+  reads "Innocent!" instead of a second ✗.
+- **Final blow:** it reads "✓ Antonio Vivaldi · 2.2s" instead of cutting the
+  answer off at "answered “Antonio Vi…”".
+- **Small labels:**
+  - While the show runs, ACCUSE says "Grading…", which fits the teacher's
+    three-button dock. "Watch the boa…" did not.
+  - The strike boxes next to GRADE BOOK are labeled "strikes".
+  - The lobby shows one "printing" message, not two.
+
+**Changed**
+- **Gold stars ⭐.** The day's points were "semester points", "pts" and
+  "Semester standings", while "pts" also meant 100–400 per question. Now they
+  are gold stars:
+  - The ⭐ tab (it was 🎓, which also marks the graduation line) opens
+    "Today's gold stars".
+  - The podium says "2 ⭐".
+  - How to play's fine print says how you earn them.
+- **Names:** Home's lifetime card is now "📒 Your record", so "report
+  card" only means one period's results.
+- **Session end:** "🚪 Leave class" is a quiet secondary button. It used to be
+  a red "Back to school" that looked like the next step. For classmates,
+  "Share the day" leads.
+- **Home:** "Practice with bots" now looks like a button (dashed outline).
+
+**Removed**
+- The "offline questions" chip on the reveal. Since v0.9 the built-in pack has
+  been a feature, not a fallback, and players read the chip as a connection
+  problem.
+- "⬇ Match log" and "⬇ Download session log" for every teacher. They are
+  playtest tools and now need `?playtest` in the URL. "End the day" gets the
+  full width.
+
+**Not taken**
+- **The lobby clock "🕘 8:59"** stays. It's the minute before the bell, not a
+  countdown.
+- **A legend for ①②③** isn't needed: they only appear on the answers, in
+  answer order.
+- **Wrapping long podium names** would move the podium mid-animation.
+
+**Evidence**
+- Screenshots at iPhone SE size, before and after, of each fixed screen.
+- Phone audit (7 phone sizes, 98 checks): no new sideways overflow and no
+  new small tap targets. The vote needs a little more scrolling on the
+  smallest phone (1st-gen SE), because clues now wrap instead of being cut
+  off.
+- The full-session smoke run passes with no errors.
+- The full suite passes.
+
 ## v0.14.0 — The unkillable host · 2026-10-20 05:13
 
 **Why:** the whole game lives in the teacher's page. Until now, a single

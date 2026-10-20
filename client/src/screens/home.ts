@@ -55,7 +55,7 @@ function reportCard(): string {
     .join(" · ");
   const cell = (n: number, label: string) => `<div class="hm-rec-cell"><b>${n}</b><small>${label}</small></div>`;
   return `<details class="card hm-record" id="hm-record">
-    <summary><span>📒 Your report card</span><span class="hm-rec-sum">${r.periods} period${r.periods === 1 ? "" : "s"} · ${r.wins} win${r.wins === 1 ? "" : "s"}</span><span class="lb-chev" aria-hidden="true">▾</span></summary>
+    <summary><span>📒 Your record</span><span class="hm-rec-sum">${r.periods} period${r.periods === 1 ? "" : "s"} · ${r.wins} win${r.wins === 1 ? "" : "s"}</span><span class="lb-chev" aria-hidden="true">▾</span></summary>
     <div class="hm-rec-grid">
       ${cell(r.cheater, r.cheater === 1 ? "time the cheater" : "times the cheater")}
       ${cell(r.cheaterWins, "got away")}

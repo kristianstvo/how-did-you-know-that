@@ -83,7 +83,6 @@ input:focus { border-color: var(--accent2); }
 .err { background: rgba(255, 107, 107, 0.14); border: 1px solid var(--accent); color: #ffc2c2; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; font-size: 0.9rem; animation: hd-shake var(--t-stamp) var(--e-standard); }
 .warn { background: rgba(255, 209, 102, 0.12); border: 1px dashed var(--accent2); color: var(--accent2); border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; font-size: 0.9rem; font-family: var(--hand); }
 .chip { display: inline-block; font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: var(--card2); color: var(--dim); vertical-align: middle; }
-.chip.offline { background: rgba(255, 209, 102, 0.15); color: var(--accent2); }
 
 .toast {
   /* Centred without a transform, so the entrance keyframe can own transform. */

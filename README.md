@@ -12,6 +12,8 @@ Built from the specs in `00-overview.md` … `07-ui-screens.md`.
 
 Newest first (details in `CHANGELOG.md`, decisions in `PRODUCT.md`):
 
+- **Fresh eyes** (v0.15) — 14 fixes from an independent screen-by-screen
+  review; the day's points are ⭐ gold stars.
 - **The unkillable host** (v0.14) — the teacher's page can reload mid-game
   and take the class back.
 - **Rules at a glance** (v0.13) — How to play is four cards, open for

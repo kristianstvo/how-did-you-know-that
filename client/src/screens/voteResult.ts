@@ -145,7 +145,7 @@ export const voteResult: Screen = {
       outcome === "caught"
         ? { l1: "CHEATER CAUGHT ✓", l2: `${banished ? av(banished, "vr-av") : ""}${nm(banished)}<span class="vr-l2t">→ detention</span>` }
         : outcome === "innocent"
-          ? { l1: `DETENTION: ${nm(banished)}`, l2: `<span class="vr-l2t">innocent ✗${strikeTag || (wasCleared ? " · was CLEARED" : "")}</span>` }
+          ? { l1: `DETENTION: ${nm(banished)}`, l2: `<span class="vr-l2t">Innocent!${strikeTag || (wasCleared ? " · was CLEARED" : "")}</span>` }
           : { l1: "TIE — NOBODY GOES", l2: `<span class="vr-l2t">${n === 0 ? "No votes, no detention." : `Tied at ${max} vote${max === 1 ? "" : "s"} each.`}</span>` };
     const verdictHtml = verdict
       ? `<div class="vr-verdict ${outcome}" id="vr-verdict" role="alert" ${enter(vAt, el)}>
@@ -216,10 +216,10 @@ export const voteResult: Screen = {
       </div>
       ${verdictHtml}
     </div>
+    <div class="vr-after">${after}</div>
     ${n ? `<div class="vr-tally" style="--rows:${tallyRows}">${chips}</div>` : ""}
     ${n ? `<ol class="vr-lines" aria-label="Ballots, in seat order">${lines}</ol>` : `<p class="vr-empty">Nobody voted. Cowards.</p>`}
     ${abstained.length ? `<p class="vr-abstain">Didn't vote: ${abstained.map((p) => `${p.avatar} ${esc(p.name)}`).join(", ")}</p>` : ""}
-    <div class="vr-after">${after}</div>
     <div class="vr-dock">${
       done
         ? app.isHost

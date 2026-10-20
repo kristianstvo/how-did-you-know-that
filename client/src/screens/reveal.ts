@@ -227,7 +227,7 @@ export const reveal: Screen = {
     const w = m.wrongDetentions;
     const strikeBoxes =
       k > 0
-        ? `<span class="gb-strikes" role="img" aria-label="Wrong detentions: ${w} of ${k}" title="${w} of ${k} strikes. At ${k}, the cheater graduates">${Array.from({ length: k }, (_, i) => `<i class="${i < w ? "used" : ""}">${i < w ? "✗" : ""}</i>`).join("")}</span>`
+        ? `<span class="gb-strikes" role="img" aria-label="Wrong detentions: ${w} of ${k}" title="${w} of ${k} strikes. At ${k}, the cheater graduates"><span class="gb-strikes-l">strikes</span>${Array.from({ length: k }, (_, i) => `<i class="${i < w ? "used" : ""}">${i < w ? "✗" : ""}</i>`).join("")}</span>`
         : "";
 
     // ---- 👉 Point (v0.5): free and public; opens the sheet ----
@@ -241,7 +241,7 @@ export const reveal: Screen = {
     const canAccuse = armed && !blocked;
     const confirm = canAccuse && app.ui.accuseConfirm;
     const accState = blocked ? "off" : confirm ? "confirm" : armed ? "go" : "wait";
-    const accLabel = { off: blocked, confirm: "Use your only accusation? Tap again to confirm.", go: "🙋 ACCUSE", wait: "Watch the board…" }[accState];
+    const accLabel = { off: blocked, confirm: "Use your only accusation? Tap again to confirm.", go: "🙋 ACCUSE", wait: "Grading…" }[accState];
     const accTitle = self?.banished ? "You're in detention — no accusing" : self?.tokenUsed ? "You already used your accusation" : !armed ? "Opens when the board is graded" : "";
     const lastQ = m.questionIdx + 1 >= m.questionCount;
     const hostBtn = app.isHost
@@ -279,7 +279,7 @@ export const reveal: Screen = {
     ${sessionTab(app, s)}
     <header class="rv-head">
       <div class="rv-h1"><span class="rv-q">Q${m.questionIdx + 1}/${m.questionCount}</span><span class="rv-subj">${q.subjectEmoji} ${esc(q.subject)}</span></div>
-      <div class="rv-h2"><span class="rv-ticks" role="img" title="${q.tier} · ${q.points} pts" aria-label="${q.tier} question, ${q.points} points">${tierTicks(q.tier)}</span><span class="chip rv-act">${act.n} · ${act.name}</span>${s.offlineQuestions ? `<span class="chip offline">offline questions</span>` : ""}</div>
+      <div class="rv-h2"><span class="rv-ticks" role="img" title="${q.tier} · ${q.points} pts" aria-label="${q.tier} question, ${q.points} points">${tierTicks(q.tier)}</span><span class="chip rv-act">${act.n} · ${act.name}</span></div>
     </header>
     <p class="rv-qtext" title="${esc(q.text)}">${esc(q.text)}</p>
 
@@ -309,7 +309,7 @@ export const reveal: Screen = {
       ${pointBtn}
       <button class="btn accuse st-${accState}" id="rv-accuse" data-action="accuse" ${canAccuse ? "" : "disabled"} aria-label="${esc(accLabel)}" ${accTitle ? `title="${esc(accTitle)}"` : ""}>
         <span class="ac-bg go"></span><span class="ac-bg confirm"></span><span class="ac-glow"></span>
-        <span class="ac-l wait" aria-hidden="true">Watch the board…</span>
+        <span class="ac-l wait" aria-hidden="true">Grading…</span>
         <span class="ac-l go" aria-hidden="true">🙋 ACCUSE</span>
         <span class="ac-l confirm" aria-hidden="true">Sure? Tap again</span>
         <span class="ac-l off" aria-hidden="true">${esc(blocked || "—")}</span>

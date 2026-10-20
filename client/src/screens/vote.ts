@@ -133,7 +133,7 @@ export const vote: Screen = {
         <span class="vo-stamp-line">raises a hand</span>
       </div>
     </div>
-    <p class="vo-sub${lastStrike ? " last-strike" : ""}" id="vo-sub" ${enter(AT.sub, elapsed)}>${lastStrike ? "⚠ Last strike: wrong again = the cheater graduates" : "Who's the cheater? Plurality goes to detention."}</p>
+    <p class="vo-sub${lastStrike ? " last-strike" : ""}" id="vo-sub" ${enter(AT.sub, elapsed)}>${lastStrike ? "⚠ Last strike: wrong again = the cheater graduates" : "Who's the cheater? Most votes → detention."}</p>
     <div class="vo-clock" id="vo-clock" ${enter(AT.clock, elapsed)}>
       <div class="vo-track" aria-hidden="true"><div class="vo-drain" id="vo-drain" ${enter(0, elapsed, `--dur:${windowMs(s)}ms`)}></div></div>
       <span class="vo-num" data-count="${v.deadline}" role="timer" aria-label="Seconds left to vote"></span>

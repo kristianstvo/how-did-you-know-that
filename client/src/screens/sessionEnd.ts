@@ -5,7 +5,7 @@
 // function of the player count), exposed as b-<beat> classes on the root so
 // a late arrival renders settled. Every box is reserved from frame 0.
 import type { PublicPlayer, PublicState } from "../../../shared/protocol";
-import { esc } from "./common";
+import { esc, PLAYTEST } from "./common";
 import type { RenderCtx, Screen } from "./types";
 
 type SessionBeat = "start" | "rise3" | "rise2" | "rise1" | "crown" | "list" | "done";
@@ -87,7 +87,7 @@ export const sessionEnd: Screen = {
         <div class="se-fig">
           <span class="se-av" aria-hidden="true">${p.avatar}</span>
           <span class="se-nm" title="${esc(p.name)}">${esc(p.name)}</span>
-          <span class="se-pts">${pts(s, p.id)} pts</span>
+          <span class="se-pts">${pts(s, p.id)} ⭐</span>
         </div>
         <div class="se-block"><span class="se-place">${ORDINAL[Math.min(r, 3)]}</span></div>
       </div>`;
@@ -95,7 +95,7 @@ export const sessionEnd: Screen = {
 
     const stamp = b.has("crown")
       ? `<span class="se-stamp" id="se-stamp">${champs.length > 1 ? "CO-VALEDICTORIANS" : "VALEDICTORIAN"}</span>
-         <span class="se-sr">${champs.map((p) => esc(p.name)).join(" and ")}, with ${pts(s, champs[0]?.id ?? "")} semester points</span>`
+         <span class="se-sr">${champs.map((p) => esc(p.name)).join(" and ")}, with ${pts(s, champs[0]?.id ?? "")} gold stars</span>`
       : "";
 
     const rows = b.has("list")
@@ -135,10 +135,10 @@ export const sessionEnd: Screen = {
 
     const dock = b.has("done")
       ? `${app.isHost ? `<button class="btn" data-action="newDay" id="se-again">🔁 New day, same class</button>` : ""}
-         <button class="btn${app.isHost ? " secondary" : ""}" data-action="home" id="se-home">🏫 Back to school</button>
-         <button class="btn secondary" data-action="shareDay" id="se-share">📤 Share the day</button>
+         <button class="btn${app.isHost ? " secondary" : ""}" data-action="shareDay" id="se-share">📤 Share the day</button>
          ${app.isHost ? "" : `<p class="se-note">Stay here if the teacher starts a new day: you keep your seat.</p>`}
-         ${app.isHost ? `<button class="btn ghost" data-action="downloadLog" id="se-log">⬇ Download session log</button>` : ""}`
+         <button class="btn secondary" data-action="home" id="se-home">🚪 Leave class</button>
+         ${app.isHost && PLAYTEST ? `<button class="btn ghost" data-action="downloadLog" id="se-log">⬇ Download session log</button>` : ""}`
       : "";
 
     return `<section class="screen screen-sessionEnd ${[...b].map((x) => `b-${x}`).join(" ")}" aria-label="Final standings">

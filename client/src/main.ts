@@ -649,7 +649,7 @@ function tick(): void {
   });
 }
 
-// Keyboard: Escape closes the semester standings sheet.
+// Keyboard: Escape closes the gold-stars sheet.
 document.addEventListener("keydown", (ev) => {
   if (ev.key === "Escape" && app.ui.pointOpen) {
     app.ui.pointOpen = false;

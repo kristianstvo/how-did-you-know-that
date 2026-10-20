@@ -38,6 +38,7 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.12.0 | Your report card: each phone remembers its record across days | shipped |
 | v0.13.0 | Rules at a glance: four cards, open for first-timers | shipped |
 | v0.14.0 | The unkillable host: a reload takes the class back | shipped |
+| v0.15.0 | Fresh eyes: an independent review's fixes; ⭐ gold stars | shipped |
 | later | A TV / big-screen view for in-person nights | ideas |
 
 Later versions take the best of what playtests and audits turn up.
@@ -88,3 +89,7 @@ Later versions take the best of what playtests and audits turn up.
 | v0.14.0 | ✅ Keep the "Leave site?" prompt for the teacher | A reload is safe now, but closing the tab still ends the class after 90 seconds |
 | v0.14.0 | ❌ Host migration (another phone takes over the game) | It needs the secret on a second phone; saving the game covers reloads and crashes at a fraction of the risk |
 | v0.14.0 | ❌ A pause button | The reveal, the vote result and the report card already wait for the teacher's tap; the timed bits are 3–30 seconds |
+| v0.15.0 | ✅ An independent, no-context review of every screen | The builder stops seeing what a first-timer trips on; one pass found 14 concrete problems, 3 of them serious |
+| v0.15.0 | ✅ Gold stars ⭐ as the day's unit | "pts" meant two different things; a teacher's gold star is on theme |
+| v0.15.0 | ✅ Playtest tools behind `?playtest` | Event-log downloads are for tuning the game, not for a class at a party |
+| v0.15.0 | ❌ Custom questions written by the teacher | The teacher always plays: they'd know every answer, and their own lone right answers would read as cheating |

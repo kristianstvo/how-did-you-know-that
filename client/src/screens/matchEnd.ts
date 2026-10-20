@@ -12,7 +12,7 @@
 // counts, see matchEnd.css), so beats never reflow.
 import { matchEndTimeline, reached, type MatchEndBeat } from "../../../shared/choreo";
 import type { CaseEntry, PublicPlayer, PublicState } from "../../../shared/protocol";
-import { calloutCopy, esc, fmtTime, playerBadges } from "./common";
+import { calloutCopy, esc, fmtTime, playerBadges, PLAYTEST } from "./common";
 import type { RenderCtx, Screen } from "./types";
 
 type Variant = "caught" | "graduated" | "top";
@@ -135,7 +135,7 @@ function hero(ctx: RenderCtx, v: Variant, b: Set<MatchEndBeat>, drum: { at: numb
     let answer = "";
     if (row && q && row.pick >= 0) {
       const opt = esc(q.options[row.pick] ?? "");
-      answer = `<span class="me-fx">answered “</span><span class="me-opt" title="${opt}">${opt}</span><span class="me-fx">” <b class="${row.correct ? "me-ok" : "me-no"}">${row.correct ? "✓" : "✗"}</b> in ${fmtTime(row.timeMs)}</span>`;
+      answer = `<b class="me-fx ${row.correct ? "me-ok" : "me-no"}">${row.correct ? "✓" : "✗"}&nbsp;</b><span class="me-opt" title="${opt}">${opt}</span><span class="me-fx">&nbsp;· ${fmtTime(row.timeMs)}</span>`;
     } else if (row) {
       answer = `<span class="me-fx">left ${qLabel} blank 🤐</span>`;
     }
@@ -198,8 +198,12 @@ function reportCard(ctx: RenderCtx, b: Set<MatchEndBeat>): string {
   const { s, app } = ctx;
   const m = s.match!;
   const e = m.end!;
-  const sorted = [...s.players].sort((a, c) => c.score - a.score); // stable: ties keep seat order
-  const rk = compRanks(sorted.map((p) => p.score));
+  // Winners first, then by score (v0.15: a caught cheater's points used to
+  // rank them #1, above the class that beat them). Stable: ties keep seat order.
+  const won = (id: string) => (e.winnerIds.includes(id) ? 1 : 0);
+  const sorted = [...s.players].sort((a, c) => won(c.id) - won(a.id) || c.score - a.score);
+  const rk: number[] = [];
+  sorted.forEach((p, i) => rk.push(i > 0 && won(p.id) === won(sorted[i - 1].id) && p.score === sorted[i - 1].score ? rk[i - 1] : i + 1));
   const top = Math.max(m.threshold, ...sorted.map((p) => p.score), 1) * 1.08;
   const linePct = ((m.threshold / top) * 100).toFixed(2);
   const rows = b.has("scores")
@@ -336,7 +340,7 @@ function semester(ctx: RenderCtx, b: Set<MatchEndBeat>): string {
         .join("")
     : "";
   return `<section class="card me-sec me-sem" id="me-sem" aria-labelledby="me-sem-h">
-    <h2 class="me-h" id="me-sem-h"><span>🎓 Semester standings</span><span class="me-aside">${s.matchNumber} period${s.matchNumber === 1 ? "" : "s"}</span></h2>
+    <h2 class="me-h" id="me-sem-h"><span>⭐ Today's gold stars</span><span class="me-aside">${s.matchNumber} period${s.matchNumber === 1 ? "" : "s"}</span></h2>
     <div class="me-sem-list" role="list" style="--n:${s.players.length}">${rows}</div>
   </section>`;
 }
@@ -347,8 +351,8 @@ function dock(ctx: RenderCtx, b: Set<MatchEndBeat>): string {
     ? ""
     : app.isHost
       ? `<button class="btn" data-action="advance" id="me-advance">🏫 Back to homeroom</button>
-         <div class="me-dock-row">
-           <button class="btn secondary" data-action="downloadLog" id="me-log">⬇ Match log</button>
+         <div class="me-dock-row${PLAYTEST ? "" : " one"}">
+           ${PLAYTEST ? `<button class="btn secondary" data-action="downloadLog" id="me-log">⬇ Match log</button>` : ""}
            <button class="btn secondary" data-action="endSession" id="me-endday">🔔 End the day</button>
          </div>`
       : `<p class="me-wait" id="me-wait" role="status">Waiting for the teacher…</p>`;

@@ -29,10 +29,14 @@ export function playerBadges(p: PublicPlayer, s?: PublicState): string {
   return out;
 }
 
+/** Playtest tools (event-log downloads) only with ?playtest in the URL:
+ *  the teacher's dock is for the class, not for debugging (v0.15). */
+export const PLAYTEST = typeof location !== "undefined" && new URLSearchParams(location.search).has("playtest");
+
 export const CALLOUT_ICON: Record<string, string> = {
   lone_correct: "🎯",
   against_crowd: "🐑",
-  lightning: "⚡",
+  lightning: "⏱️",
   streak: "🔥",
   hard_sweep: "💯",
   near_line: "🎓",
@@ -175,13 +179,13 @@ export function sessionTab(app: App, s: PublicState): string {
   if (s.matchNumber === 0 || s.phase === "vote" || s.phase === "voteResult") return "";
   const open = app.ui.boardOpen;
   const overlay = open
-    ? `<div class="overlay" data-action="toggleBoard" role="dialog" aria-modal="true" aria-label="Semester standings">
-        <div class="card sheet"><h2>📊 Semester standings ${soundToggle("in-sheet")}</h2>${sessionRows(s)}
+    ? `<div class="overlay" data-action="toggleBoard" role="dialog" aria-modal="true" aria-label="Today's gold stars">
+        <div class="card sheet"><h2>⭐ Today's gold stars ${soundToggle("in-sheet")}</h2>${sessionRows(s)}
           <button class="btn secondary" data-action="toggleBoard" autofocus>Close</button>
         </div>
       </div>`
     : "";
-  return `<button class="sess-tab" data-action="toggleBoard" aria-label="Semester standings" aria-expanded="${open}">🎓</button>${overlay}`;
+  return `<button class="sess-tab" data-action="toggleBoard" aria-label="Today's gold stars" aria-expanded="${open}">⭐</button>${overlay}`;
 }
 
 /** Players ordered by answer speed (fastest first, no-answers last) — the
