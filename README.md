@@ -99,6 +99,28 @@ For development (client hot reload on :5173, relay on :3000):
 npm run dev
 ```
 
+## Going live
+
+The game and its relay are one Node process that holds classrooms in
+memory, so it needs a host that keeps one process running with WebSockets
+(serverless platforms can't).
+
+- **Render:** `render.yaml` is a Blueprint (one free web service in
+  Frankfurt that redeploys on every push to `main`). On the free tier it
+  sleeps after about 15 idle minutes and takes about a minute to wake;
+  Starter ($7/month) keeps it always on. A deploy or a sleep ends any open
+  classroom.
+- **Anywhere else:** `npm ci && npm run build`, then `npm start`. It needs
+  Node 22.18 or newer, which runs the TypeScript server directly. `PORT`
+  sets the port, `MAX_ROOMS` caps open classrooms (default 2000), and
+  `/healthz` answers `ok`.
+- **Credits:** some questions come live from the
+  [Open Trivia Database](https://opentdb.com) under
+  [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), credited
+  on Home. The host's voice and the tutorial's narration were generated
+  with ElevenLabs; public or commercial use depends on the ElevenLabs plan
+  they were made with.
+
 ## Architecture (spec 05)
 
 - **`server/index.ts`** — dumb Socket.IO relay: rooms, 5-char codes, message

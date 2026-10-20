@@ -2,13 +2,16 @@
   "name": "how-did-you-know-that",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.18"
+  },
   "type": "module",
   "scripts": {
     "dev": "concurrently -n server,client \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "tsx watch server/index.ts",
     "dev:client": "vite client",
     "build": "vite build client",
-    "start": "tsx server/index.ts",
+    "start": "node server/index.ts",
     "typecheck": "tsc --noEmit -p .",
     "sim": "tsx sim/run.ts",
     "sim:tune": "tsx sim/tune.ts",

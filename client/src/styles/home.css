@@ -159,6 +159,10 @@
   .btn.hm-howto { margin-bottom: 8px; padding-block: 4px; }
 }
 
+/* Credits (v0.21, live): where the questions and the voice come from. */
+.hm-credits { margin: 2px 0 18px; text-align: center; font-size: 0.72rem; line-height: 1.5; color: var(--dim); opacity: 0.85; }
+.hm-credits a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
 /* Practice with bots (v0.7): a quiet third way in, under Join / Start. */
 .hm-practice { margin: 0 0 6px; min-height: 44px; font-size: 0.95rem; animation: hd-fade-in var(--t-scene) var(--e-standard) 350ms both; }
 .btn.hm-practice { border: 2px dashed var(--chalk-line); color: var(--ink); }

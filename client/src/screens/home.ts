@@ -121,6 +121,7 @@ export const home: Screen = {
     ${app.error ? `<div class="err hm-err" id="hm-err-${keyOf(app.error)}" role="alert">✏️ ${esc(app.error)}</div>` : ""}
     ${reportCard()}
     <p class="footer-note hm-foot" id="hm-foot">3–10 classmates · phones out · one voice call · bots welcome</p>
+    <p class="hm-credits" id="hm-credits">Some questions from <a href="https://opentdb.com" target="_blank" rel="noopener">Open Trivia Database</a> (<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>) · Host voice by ElevenLabs</p>
     </section>`;
   },
 };

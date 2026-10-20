@@ -1,0 +1,18 @@
+# Render Blueprint (v0.21): the game and its relay as one free web service.
+# Spec: https://render.com/docs/blueprint-spec
+# The relay keeps classrooms in memory, so it must stay ONE instance (no
+# scaling out); a deploy or a free-tier sleep ends any open classroom.
+services:
+  - type: web
+    name: how-did-you-know-that
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: main
+    autoDeployTrigger: commit
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "24"

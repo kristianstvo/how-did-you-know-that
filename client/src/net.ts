@@ -146,7 +146,12 @@ export async function createHostSession(
 ): Promise<HostSession> {
   const socket = await connectSynced();
   const host = hostWiring(socket, events);
-  const { code, hostKey } = await new Promise<{ code: string; hostKey: string }>((resolve) => socket.emit("createRoom", resolve));
+  const res = await new Promise<{ code: string; hostKey: string } | { error: string }>((resolve) => socket.emit("createRoom", resolve));
+  if ("error" in res) {
+    socket.disconnect(); // v0.21: the school is full (the relay caps open classrooms)
+    throw new Error(res.error);
+  }
+  const { code, hostKey } = res;
   return host.start(
     code,
     hostKey,

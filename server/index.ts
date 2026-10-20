@@ -5,6 +5,7 @@ import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
+import { gzipSync } from "node:zlib";
 import { Server, type Socket } from "socket.io";
 import { ROOM_CODE_LEN } from "../shared/protocol.ts";
 
@@ -16,30 +17,76 @@ const MIME: Record<string, string> = {
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json",
+  ".webmanifest": "application/manifest+json",
   ".svg": "image/svg+xml",
   ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".webp": "image/webp",
   ".ico": "image/x-icon",
   ".woff2": "font/woff2",
+  ".mp3": "audio/mpeg",
+  ".txt": "text/plain; charset=utf-8",
 };
+const COMPRESSIBLE = new Set([".html", ".js", ".css", ".json", ".svg", ".webmanifest", ".txt"]);
+
+/** v0.21 (live): each built file is read, and gzipped, once per version of it
+ *  (keyed by its size and time, so a rebuild during development is picked up). */
+const files = new Map<string, { key: string; raw: Buffer; gz: Buffer | null }>();
+async function load(path: string, size: number, mtime: number): Promise<{ raw: Buffer; gz: Buffer | null }> {
+  const key = `${size}:${mtime}`;
+  const hit = files.get(path);
+  if (hit?.key === key) return hit;
+  const raw = await readFile(path);
+  const entry = { key, raw, gz: COMPRESSIBLE.has(extname(path)) && raw.length > 1024 ? gzipSync(raw) : null };
+  files.set(path, entry);
+  return entry;
+}
+
+/** Vite fingerprints everything under /assets/: those never change. Voice
+ *  clips change rarely; the page itself is always checked. */
+const cacheFor = (urlPath: string, file: string) =>
+  urlPath.startsWith("/assets/") ? "public, max-age=31536000, immutable" : extname(file) === ".mp3" ? "public, max-age=86400" : "no-cache";
 
 const httpServer = createServer(async (req, res) => {
-  // Static file serving for the built client; SPA fallback to index.html.
+  // Static file serving for the built client; the app (hash routes) for any
+  // other page, but a missing file is a 404, not the app.
   try {
-    const urlPath = (req.url ?? "/").split("?")[0].split("#")[0];
+    const urlPath = decodeURIComponent((req.url ?? "/").split("?")[0].split("#")[0]);
+    if (urlPath === "/healthz") {
+      res.writeHead(200, { "content-type": "text/plain", "cache-control": "no-store" }).end("ok");
+      return;
+    }
     let filePath = normalize(join(CLIENT_DIST, urlPath === "/" ? "index.html" : urlPath));
     if (!filePath.startsWith(normalize(CLIENT_DIST))) {
       res.writeHead(403).end();
       return;
     }
-    try {
-      const s = await stat(filePath);
-      if (s.isDirectory()) filePath = join(filePath, "index.html");
-    } catch {
-      filePath = join(CLIENT_DIST, "index.html");
+    let s = await stat(filePath).catch(() => null);
+    if (s?.isDirectory()) {
+      filePath = join(filePath, "index.html");
+      s = await stat(filePath).catch(() => null);
     }
-    const data = await readFile(filePath);
-    res.writeHead(200, { "content-type": MIME[extname(filePath)] ?? "application/octet-stream" });
-    res.end(data);
+    if (!s) {
+      if (extname(urlPath)) {
+        res.writeHead(404, { "content-type": "text/plain" }).end("Not found");
+        return;
+      }
+      filePath = join(CLIENT_DIST, "index.html");
+      s = await stat(filePath);
+    }
+    const f = await load(filePath, s.size, s.mtimeMs);
+    const gz = f.gz !== null && /\bgzip\b/.test(String(req.headers["accept-encoding"] ?? ""));
+    const body = gz ? f.gz! : f.raw;
+    res.writeHead(200, {
+      "content-type": MIME[extname(filePath)] ?? "application/octet-stream",
+      "content-length": body.length,
+      "cache-control": cacheFor(urlPath, filePath),
+      "x-content-type-options": "nosniff",
+      "referrer-policy": "strict-origin-when-cross-origin",
+      ...(f.gz ? { vary: "Accept-Encoding" } : {}),
+      ...(gz ? { "content-encoding": "gzip" } : {}),
+    });
+    res.end(req.method === "HEAD" ? undefined : body);
   } catch {
     res.writeHead(404, { "content-type": "text/plain" });
     res.end("Client build not found. Run: npm run build");
@@ -63,6 +110,9 @@ interface Room {
 /** How long a room waits for its host's phone to come back before closing. */
 const HOST_GRACE_MS = Number(process.env.HOST_GRACE_MS ?? 90_000);
 const PENDING_MAX = 500;
+/** v0.21 (live): open classrooms at once. A full school says so instead of
+ *  running out of memory. */
+const MAX_ROOMS = Number(process.env.MAX_ROOMS ?? 2000);
 
 const rooms = new Map<string, Room>();
 const socketRoom = new Map<string, string>(); // socketId -> room code
@@ -99,8 +149,16 @@ io.on("connection", (socket: Socket) => {
     if (typeof cb === "function") cb(Date.now());
   });
 
-  socket.on("createRoom", (cb: (res: { code: string; hostKey: string }) => void) => {
+  socket.on("createRoom", (cb: (res: { code: string; hostKey: string } | { error: string }) => void) => {
     if (typeof cb !== "function") return;
+    // One classroom per teacher's connection: asking again closes the first
+    // (a real teacher never does; a script creating rooms in a loop can't).
+    const already = rooms.get(socketRoom.get(socket.id) ?? "");
+    if (already?.hostSocketId === socket.id) closeRoom(already);
+    if (rooms.size >= MAX_ROOMS) {
+      cb({ error: "Every classroom is taken right now. Try again in a few minutes." });
+      return;
+    }
     const code = newRoomCode();
     const hostKey = randomBytes(16).toString("hex");
     rooms.set(code, { code, hostSocketId: socket.id, hostKey, memberSocketIds: new Set([socket.id]), pending: [], closeTimer: null });
