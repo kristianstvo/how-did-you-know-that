@@ -37,6 +37,7 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.11.0 | Fair start: the cheater learns the dot, Practice as a chosen role, dialog focus | shipped |
 | v0.12.0 | Your report card: each phone remembers its record across days | shipped |
 | v0.13.0 | Rules at a glance: four cards, open for first-timers | shipped |
+| v0.14.0 | The unkillable host: a reload takes the class back | shipped |
 | later | A TV / big-screen view for in-person nights | ideas |
 
 Later versions take the best of what playtests and audits turn up.
@@ -83,3 +84,7 @@ Later versions take the best of what playtests and audits turn up.
 | v0.13.0 | ✅ Four cards, then the fine print | Ten seconds of reading covers the game; the edge cases stay one glance away |
 | v0.13.0 | ✅ Open by itself only for a first-timer | The lobby is where a newcomer waits with nothing to do; regulars don't need it in their way |
 | v0.13.0 | ❌ A tutorial before the first game | It delays the start for everyone; Teacher's notes (v0.7) already teach inside the first period |
+| v0.14.0 | ✅ Save the whole game in the teacher's tab, not on the server | The relay stays dumb (spec 05) and the secret never leaves the host's phone; a reload is the common failure |
+| v0.14.0 | ✅ Keep the "Leave site?" prompt for the teacher | A reload is safe now, but closing the tab still ends the class after 90 seconds |
+| v0.14.0 | ❌ Host migration (another phone takes over the game) | It needs the secret on a second phone; saving the game covers reloads and crashes at a fraction of the risk |
+| v0.14.0 | ❌ A pause button | The reveal, the vote result and the report card already wait for the teacher's tap; the timed bits are 3–30 seconds |

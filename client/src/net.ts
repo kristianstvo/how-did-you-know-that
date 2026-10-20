@@ -7,7 +7,7 @@ import { io, type Socket } from "socket.io-client";
 import { createEventLogger, EVENT_LOG_VERSION, type MatchEvent } from "../../shared/eventlog";
 import type { Intent, JoinedMsg, JoinRejectedMsg, PublicState, SecretState } from "../../shared/protocol";
 import { maintainClock, serverNow, syncClock } from "./clock";
-import { HostEngine, type Transport } from "./engine";
+import { HostEngine, type EngineSnapshot, type Transport } from "./engine";
 
 /** online · reconnecting (this phone lost the relay) · hostAway (the host's
  *  phone dropped out; the relay holds the room while it comes back). */
@@ -78,12 +78,8 @@ function waitConnected(socket: Socket): Promise<void> {
   });
 }
 
-export async function createHostSession(
-  hostName: string,
-  hostAvatar: string,
-  events: SessionEvents,
-  options: { forceCheaterName?: string } = {},
-): Promise<HostSession> {
+/** Connect to the relay and sync this phone's clock to it. */
+async function connectSynced(): Promise<Socket> {
   const socket = connectSocket();
   try {
     await waitConnected(socket);
@@ -93,60 +89,161 @@ export async function createHostSession(
   }
   await syncClock(socket);
   maintainClock(socket);
-  const { code, hostKey } = await new Promise<{ code: string; hostKey: string }>((resolve) => socket.emit("createRoom", resolve));
+  return socket;
+}
 
-  const log: MatchEvent[] = [];
-  const logState = createEventLogger((e) => log.push(e));
-  const transport: Transport = {
-    toAll: (event, payload) => socket.emit("toAll", { event, payload }),
-    toPlayer: (socketId, event, payload) => socket.emit("toPlayer", { socketId, event, payload }),
-    local: (event, payload) => {
-      if (event === "state") {
-        const state = (payload as { state: PublicState }).state;
-        logState(state, serverNow());
-        events.onState(state);
-      }
-      if (event === "secret") events.onSecret((payload as { secret: SecretState }).secret);
-    },
-  };
-  const engine = new HostEngine(code, hostName, hostAvatar, transport, undefined, {
-    now: serverNow,
-    forceCheaterName: options.forceCheaterName,
-  });
-  socket.on("joinRequest", ({ socketId, name, avatar, token }: { socketId: string; name: string; avatar: string; token?: string }) =>
-    engine.handleJoinRequest(socketId, name, avatar, token ?? ""));
-  socket.on("intent", ({ fromSocket, payload }: { fromSocket: string; payload: Intent }) => engine.handleIntent(fromSocket, payload));
-  socket.on("peerDisconnected", ({ socketId }: { socketId: string }) => engine.handlePeerDisconnected(socketId));
-  // The whole game lives in this page, so a dropped connection is NOT the end:
-  // the relay holds the room (HOST_GRACE_MS) while this phone reconnects and
-  // takes it back, then everyone gets the current state again.
-  let closed = false;
-  socket.on("disconnect", (reason) => {
-    if (!closed && reason !== "io client disconnect") events.onNet?.("reconnecting");
-  });
-  socket.on("connect", () => {
-    if (closed) return;
-    socket.emit("resumeRoom", { code, hostKey }, (res: { ok: boolean }) => {
-      if (res?.ok) {
-        engine.resync();
-        events.onNet?.("online");
-      } else {
-        closed = true;
-        socket.disconnect();
-        events.onClosed("Your phone was away too long, so the classroom closed.");
-      }
-    });
-  });
-  reviveOnReturn(socket);
-  // Push the initial snapshot to the host UI.
-  events.onState(engine.publicState());
-  return {
-    kind: "host",
-    engine,
+// ---- v0.14: the host's tab can reload without ending the class ----
+
+const HOST_SAVE = "hdykt-host";
+/** Off once the host leaves on purpose, so a last pagehide can't write it back. */
+let hostSaving = false;
+/** Older than this, the relay has long closed the room: don't even try. */
+const HOST_SAVE_MAX_AGE_MS = 30 * 60_000;
+
+/** What this tab needs to take its classroom back after a reload. */
+export interface HostSave {
+  code: string;
+  hostKey: string;
+  savedAt: number;
+  snap: EngineSnapshot;
+}
+
+export function loadHostSave(): HostSave | null {
+  try {
+    const s = JSON.parse(sessionStorage.getItem(HOST_SAVE) ?? "null") as HostSave | null;
+    if (!s || s.snap?.v !== 1 || !s.code || !s.hostKey) return null;
+    if (Date.now() - s.savedAt > HOST_SAVE_MAX_AGE_MS) {
+      clearHostSave();
+      return null;
+    }
+    return s;
+  } catch {
+    return null;
+  }
+}
+
+export function clearHostSave(): void {
+  hostSaving = false;
+  try {
+    sessionStorage.removeItem(HOST_SAVE);
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+export async function createHostSession(
+  hostName: string,
+  hostAvatar: string,
+  events: SessionEvents,
+  options: { forceCheaterName?: string } = {},
+): Promise<HostSession> {
+  const socket = await connectSynced();
+  const host = hostWiring(socket, events);
+  const { code, hostKey } = await new Promise<{ code: string; hostKey: string }>((resolve) => socket.emit("createRoom", resolve));
+  return host.start(
     code,
-    selfId: engine.hostPlayer.id,
-    eventLog: () =>
-      [JSON.stringify({ type: "logHeader", version: EVENT_LOG_VERSION, room: code, exportedAt: new Date().toISOString() }), ...log.map((e) => JSON.stringify(e))].join("\n") + "\n",
+    hostKey,
+    (transport) => new HostEngine(code, hostName, hostAvatar, transport, undefined, { now: serverNow, forceCheaterName: options.forceCheaterName }),
+  );
+}
+
+/** v0.14: this tab hosted a room and its page reloaded (pull to refresh, a
+ *  crash, or the browser threw the tab away). Take the room back with the
+ *  saved key and carry on from the saved engine: the class only sees "the
+ *  teacher's phone dropped out" for a moment. */
+export async function resumeHostSession(save: HostSave, events: SessionEvents): Promise<HostSession> {
+  const socket = await connectSynced();
+  const host = hostWiring(socket, events);
+  const ok = await new Promise<boolean>((resolve) =>
+    socket.emit("resumeRoom", { code: save.code, hostKey: save.hostKey }, (res: { ok: boolean }) => resolve(!!res?.ok)),
+  );
+  if (!ok) {
+    socket.disconnect();
+    throw new Error("Your classroom closed while this page was away.");
+  }
+  const session = host.start(save.code, save.hostKey, (transport) => HostEngine.restore(save.snap, transport, undefined, { now: serverNow }));
+  session.engine.resync(); // every phone (this one too) gets the current state and its secret
+  return session;
+}
+
+/** Everything a host socket does, for a new room or one taken back. Relay
+ *  events that arrive before the engine exists wait for it: a resumed room
+ *  delivers what it held for us right after the ack. */
+function hostWiring(socket: Socket, events: SessionEvents) {
+  let engine: HostEngine | null = null;
+  const early: ((e: HostEngine) => void)[] = [];
+  const run = (fn: (e: HostEngine) => void) => (engine ? fn(engine) : early.push(fn));
+  socket.on("joinRequest", ({ socketId, name, avatar, token }: { socketId: string; name: string; avatar: string; token?: string }) =>
+    run((e) => e.handleJoinRequest(socketId, name, avatar, token ?? "")),
+  );
+  socket.on("intent", ({ fromSocket, payload }: { fromSocket: string; payload: Intent }) => run((e) => e.handleIntent(fromSocket, payload)));
+  socket.on("peerDisconnected", ({ socketId }: { socketId: string }) => run((e) => e.handlePeerDisconnected(socketId)));
+
+  return {
+    start(code: string, hostKey: string, makeEngine: (transport: Transport) => HostEngine): HostSession {
+      const log: MatchEvent[] = [];
+      const logState = createEventLogger((e) => log.push(e));
+      // v0.14: saved on every change, so a reload carries on from exactly here.
+      const save = () => {
+        if (!engine || !hostSaving) return;
+        try {
+          const data: HostSave = { code, hostKey, savedAt: Date.now(), snap: engine.snapshot() };
+          sessionStorage.setItem(HOST_SAVE, JSON.stringify(data));
+        } catch {
+          /* storage full or blocked: a reload just can't take the room back */
+        }
+      };
+      const transport: Transport = {
+        toAll: (event, payload) => socket.emit("toAll", { event, payload }),
+        toPlayer: (socketId, event, payload) => socket.emit("toPlayer", { socketId, event, payload }),
+        local: (event, payload) => {
+          if (event === "state") {
+            const state = (payload as { state: PublicState }).state;
+            save();
+            logState(state, serverNow());
+            events.onState(state);
+          }
+          if (event === "secret") events.onSecret((payload as { secret: SecretState }).secret);
+        },
+      };
+      const e = makeEngine(transport);
+      engine = e;
+      hostSaving = true;
+      for (const fn of early.splice(0)) fn(e);
+      save();
+      window.addEventListener("pagehide", save);
+      // The whole game lives in this page, so a dropped connection is NOT the end:
+      // the relay holds the room (HOST_GRACE_MS) while this phone reconnects and
+      // takes it back, then everyone gets the current state again.
+      let closed = false;
+      socket.on("disconnect", (reason) => {
+        if (!closed && reason !== "io client disconnect") events.onNet?.("reconnecting");
+      });
+      socket.on("connect", () => {
+        if (closed) return;
+        socket.emit("resumeRoom", { code, hostKey }, (res: { ok: boolean }) => {
+          if (res?.ok) {
+            e.resync();
+            events.onNet?.("online");
+          } else {
+            closed = true;
+            socket.disconnect();
+            events.onClosed("Your phone was away too long, so the classroom closed.");
+          }
+        });
+      });
+      reviveOnReturn(socket);
+      // Push the initial snapshot to the host UI.
+      events.onState(e.publicState());
+      return {
+        kind: "host",
+        engine: e,
+        code,
+        selfId: e.hostPlayer.id,
+        eventLog: () =>
+          [JSON.stringify({ type: "logHeader", version: EVENT_LOG_VERSION, room: code, exportedAt: new Date().toISOString() }), ...log.map((x) => JSON.stringify(x))].join("\n") + "\n",
+      };
+    },
   };
 }
 

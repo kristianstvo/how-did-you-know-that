@@ -28,7 +28,7 @@ export interface App {
   secret: SecretState;
   error: string | null;
   closedReason: string | null;
-  home: { name: string; code: string; avatar: string; busy: boolean };
+  home: { name: string; code: string; avatar: string; busy: boolean; resuming?: string };
   ui: UiFlags;
   fixture: boolean; // replaying a recorded match (no network)
 }

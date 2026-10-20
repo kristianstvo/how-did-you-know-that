@@ -81,6 +81,7 @@ export const home: Screen = {
     </h1>
     <p class="tagline hm-tagline" id="hm-tagline">Pop quiz! One classmate secretly sees the answers. Catch them before they graduate.</p>
     ${app.closedReason ? `<div class="warn hm-closed" id="hm-closed" role="status">🚪 ${esc(app.closedReason)}</div>` : ""}
+    ${h.resuming ? `<div class="warn hm-closed hm-resuming" id="hm-resuming" role="status">📡 Taking classroom ${esc(h.resuming)} back…</div>` : ""}
 
     <div class="card hm-card hm-namecard ${needName ? "need-name" : ""}" id="hm-namecard">
       <div class="hello">

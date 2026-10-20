@@ -13,5 +13,6 @@ code ||= run(["tsx", "sim/hallway-check.ts"]);
 code ||= run(["tsx", "sim/yearbook-check.ts"]);
 code ||= run(["tsx", "sim/pack-check.ts"]);
 code ||= run(["tsx", "sim/practice-check.ts"]);
+code ||= run(["tsx", "sim/resume-check.ts"]);
 code ||= run(["playwright", "test", ...process.argv.slice(2)], { PW_DISABLE_TS_ESM: "1" });
 process.exit(code);

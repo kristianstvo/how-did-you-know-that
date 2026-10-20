@@ -74,6 +74,17 @@ function median(xs: number[]): number {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 }
 
+/** v0.14: an EvidenceTracker as plain JSON (a reloaded host carries on). */
+export interface EvidenceSave {
+  streak: Record<string, number>;
+  hardSeen: number;
+  hardCorrect: Record<string, number>;
+  nearLineFiredAtGap: number | null; // Infinity doesn't survive JSON
+  lastKind: CalloutKind | null;
+  cleared: string[];
+  history: EvidenceResult[];
+}
+
 /** Tracks one match's public history and produces callouts per reveal.
  *  Deterministic: the same reveal sequence always yields the same callouts,
  *  so every phone computes identical evidence without extra network traffic. */
@@ -88,6 +99,30 @@ export class EvidenceTracker {
   readonly history: EvidenceResult[] = [];
 
   constructor(private params: EvidenceParams = DEFAULT_EVIDENCE) {}
+
+  save(): EvidenceSave {
+    return {
+      streak: { ...this.streak },
+      hardSeen: this.hardSeen,
+      hardCorrect: { ...this.hardCorrect },
+      nearLineFiredAtGap: Number.isFinite(this.nearLineFiredAtGap) ? this.nearLineFiredAtGap : null,
+      lastKind: this.lastKind,
+      cleared: [...this.cleared],
+      history: [...this.history],
+    };
+  }
+
+  static load(s: EvidenceSave, params: EvidenceParams = DEFAULT_EVIDENCE): EvidenceTracker {
+    const t = new EvidenceTracker(params);
+    t.streak = { ...s.streak };
+    t.hardSeen = s.hardSeen;
+    t.hardCorrect = { ...s.hardCorrect };
+    t.nearLineFiredAtGap = s.nearLineFiredAtGap ?? Infinity;
+    t.lastKind = s.lastKind;
+    for (const id of s.cleared) t.cleared.add(id);
+    t.history.push(...s.history);
+    return t;
+  }
 
   /** After a wrong detention drops the line and the match CONTINUES, anyone
    *  now at/above it is proven innocent immediately (not at the next reveal).

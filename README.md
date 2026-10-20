@@ -12,6 +12,8 @@ Built from the specs in `00-overview.md` … `07-ui-screens.md`.
 
 Newest first (details in `CHANGELOG.md`, decisions in `PRODUCT.md`):
 
+- **The unkillable host** (v0.14) — the teacher's page can reload mid-game
+  and take the class back.
 - **Rules at a glance** (v0.13) — How to play is four cards, open for
   first-timers.
 - **Your report card** (v0.12) — every phone remembers its own record.

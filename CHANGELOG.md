@@ -19,6 +19,40 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.14.0 — The unkillable host · 2026-10-20 05:13
+
+**Why:** the whole game lives in the teacher's page. Until now, a single
+pull-to-refresh, a browser crash, or a phone that threw a background tab away
+(iPhones do this often) ended the class for everyone, mid-period, and the room
+was gone.
+
+**Added**
+- **The teacher's page can reload without ending the class.** After every
+  change, the game is saved in that browser tab; nothing leaves the phone.
+  When the page comes back, it takes its classroom back by itself: same code,
+  same period, same scores, the same secret cheater. The timers carry on
+  where they were. The class sees "📵 The teacher's phone dropped out" for a
+  moment, then carries on.
+- This works within the 90 seconds the relay holds a room, which covers a
+  reload, a crash, or a tab the browser restores. "Back to school" (leaving on
+  purpose) forgets the save.
+
+**Unchanged on purpose**
+- The teacher's page still asks before leaving mid-game. A reload is safe
+  now, but closing the tab still ends the class once the 90 seconds run out.
+
+**Evidence**
+- `sim/resume-check.ts` (in `test:e2e`) plays bot periods on the real engine
+  and "reloads" the host at every phase: role, question, reveal, vote, vote
+  result, report card, homeroom. Each time, the restored host shows exactly
+  the same state, keeps the same cheater, and plays on: to the end of the
+  period, back to homeroom, or into the next period. A save is about 5–10 KB.
+- New phone test: the teacher reloads mid-question. The page comes back to
+  the same period, not the home screen. Bea's phone recovers by itself, both
+  answer, the reveal reaches both, and the grade book shows the same four
+  seats with Bea connected.
+- The full suite passes.
+
 ## v0.13.0 — Rules at a glance · 2026-10-20 04:58
 
 **Why:** How to play was seven paragraphs, and nobody reads seven paragraphs

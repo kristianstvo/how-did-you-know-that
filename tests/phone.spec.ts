@@ -2,6 +2,7 @@
 // on a phone-sized touch screen (375×553 = an iPhone SE with Safari's bars).
 //   · the host's phone drops out mid-match (screen lock, app switch, signal)
 //     and comes back — nobody is kicked, the game carries on
+//   · the host's page reloads mid-match and takes the class back (v0.14)
 //   · a player's phone drops out and comes back to the same seat
 //   · a reload mid-match takes the seat back without retyping anything
 //   · a fumbled double-tap on ACCUSE does nothing
@@ -93,6 +94,29 @@ test("phone: the host's phone drops out mid-match and comes back; nobody is kick
   await answer(bea).catch(() => {});
   await bea.waitForSelector(".screen-reveal", { timeout: 30000 });
   await host.page.waitForSelector(".screen-reveal", { timeout: 30000 });
+  await close();
+});
+
+test("phone: the host's page reloads mid-match and takes the class back", async ({ browser }) => {
+  const { host, players, close } = await classroom(browser, ["Bea"], 2);
+  const bea = players[0].page;
+  await bea.waitForSelector("button.opt:not([disabled])", { timeout: 30000 });
+  host.page.on("dialog", (d) => void d.accept()); // "Leave site?": yes, reload
+  await host.page.reload();
+  // Straight back into the same period: no home screen, no new room.
+  await expect(host.page.locator(".screen-question, .screen-reveal").first()).toBeVisible({ timeout: 20000 });
+  expect(await host.page.locator(".screen-home").count()).toBe(0);
+  // The class only saw "the teacher's phone dropped out" for a moment.
+  await expect.poll(async () => (await banner(bea)).on, { timeout: 20000 }).toBe(false);
+  expect(await bea.locator(".screen-home").count()).toBe(0);
+  // The game carries on: both answer, the reveal reaches both phones…
+  await answer(host.page).catch(() => {});
+  await answer(bea).catch(() => {});
+  await bea.waitForSelector(".screen-reveal", { timeout: 30000 });
+  await host.page.waitForSelector(".screen-reveal", { timeout: 30000 });
+  // …with the same class: Bea in her seat and connected, nobody added.
+  await expect(host.page.locator('.gb-row[title="Bea"]')).toBeAttached({ timeout: 15000 });
+  await expect(host.page.locator(".gb-row")).toHaveCount(4);
   await close();
 });
 

@@ -19,7 +19,18 @@ import { clockStatus, serverNow } from "./clock";
 import { startFixture } from "./fixture";
 import { buzz } from "./haptics";
 import { setSound, sfx, soundOn } from "./sound";
-import { createHostSession, hasSeat, joinAsPlayer, type HostSession, type NetStatus, type PlayerSession } from "./net";
+import {
+  clearHostSave,
+  createHostSession,
+  hasSeat,
+  joinAsPlayer,
+  loadHostSave,
+  resumeHostSession,
+  type HostSave,
+  type HostSession,
+  type NetStatus,
+  type PlayerSession,
+} from "./net";
 import { createRenderer, reducedMotion, type Router, type TransitionKind } from "./render";
 import { home } from "./screens/home";
 import { lobby } from "./screens/lobby";
@@ -218,6 +229,7 @@ function onSecret(secret: SecretState): void {
 }
 
 function onClosed(reason: string): void {
+  clearHostSave();
   session = null;
   keepAwake(false);
   onNet("online");
@@ -290,6 +302,28 @@ async function createLobby(bots = 0): Promise<void> {
     showError((e as Error).message);
   }
   app.home.busy = false;
+  render();
+}
+
+/** v0.14: this tab was hosting and its page reloaded (or the browser threw
+ *  the tab away): take the classroom back instead of ending it for everyone. */
+async function resumeHost(save: HostSave): Promise<void> {
+  app.home.busy = true;
+  app.home.resuming = save.code;
+  render();
+  try {
+    session = await resumeHostSession(save, { onState, onSecret, onClosed, onNet });
+    keepAwake(true);
+    app.isHost = true;
+    app.selfId = session.selfId;
+    app.screen = "game";
+    app.closedReason = null;
+  } catch (e) {
+    clearHostSave();
+    app.closedReason = (e as Error).message;
+  }
+  app.home.busy = false;
+  app.home.resuming = undefined;
   render();
 }
 
@@ -532,6 +566,7 @@ root.addEventListener("click", (ev) => {
       focusSoon(app.ui.boardOpen ? ".overlay .sheet button" : ".sess-tab");
       break;
     case "home":
+      clearHostSave(); // leaving on purpose: a reload must not take the room back
       location.hash = "";
       location.reload();
       break;
@@ -652,11 +687,14 @@ if (fixtureMatch) {
   // Back on a classroom link with this phone's seat token — a reload, or the
   // browser threw the tab away while it sat in the background: take the seat
   // straight back instead of making them type it all again.
-  if (hashJoin && app.home.name && hasSeat(app.home.code, app.home.name)) void joinLobby();
+  const hostSave = loadHostSave();
+  if (hostSave) void resumeHost(hostSave);
+  else if (hashJoin && app.home.name && hasSeat(app.home.code, app.home.name)) void joinLobby();
 }
 
-// The host's page IS the game: leaving it (reload, closing the tab, a stray
-// swipe back) ends it for everyone, so the browser asks first.
+// The host's page IS the game. A reload takes the class back (v0.14), but
+// closing the tab or a stray swipe back ends it for everyone once the relay
+// stops holding the room, so the browser still asks first.
 window.addEventListener("beforeunload", (ev) => {
   if (session?.kind !== "host" || !app.state || app.state.phase === "sessionEnd") return;
   ev.preventDefault();

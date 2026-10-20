@@ -15,7 +15,7 @@ import {
   TALK_HOLD_MS,
   voteResultTimeline,
 } from "../../shared/choreo";
-import { DEFAULT_EVIDENCE, EvidenceTracker, type CalloutKind } from "../../shared/evidence";
+import { DEFAULT_EVIDENCE, EvidenceTracker, type CalloutKind, type EvidenceSave } from "../../shared/evidence";
 import { DEFAULT_HUMAN, normal, sampleAnswer } from "../../shared/humanModel";
 import {
   AVATARS,
@@ -70,6 +70,50 @@ interface AnswerRecord {
 }
 
 type RevealState = NonNullable<NonNullable<PublicState["match"]>["reveal"]>;
+
+/** v0.14: the engine as plain JSON, saved by the host's page on every change
+ *  so a reload (or a tab the browser threw away) can carry on. Timers aren't
+ *  saved: restore() re-arms them from the phase and its deadlines. */
+export interface EngineSnapshot {
+  v: 1;
+  roomCode: string;
+  fields: Record<string, unknown>;
+  evidence: EvidenceSave;
+}
+
+/** Every field that changes during a session (the rest are per page: the
+ *  clock, the transport, timer epochs, the in-flight question fetch). */
+const SAVED_FIELDS = [
+  "players",
+  "settings",
+  "sessionBoard",
+  "matchNumber",
+  "phase",
+  "phaseStartedAt",
+  "questions",
+  "cheaterId",
+  "botCheaterCareful",
+  "qIdx",
+  "threshold",
+  "wrongDetentions",
+  "hallway",
+  "usedFallback",
+  "questionDeadline",
+  "answers",
+  "voteLog",
+  "peakPointers",
+  "firstPointAtCheater",
+  "sessionStats",
+  "dayAwards",
+  "reveal",
+  "revealMinFrom",
+  "caseFile",
+  "vote",
+  "voteResult",
+  "end",
+  "matchDelta",
+  "forceCheaterName", // the local test hook survives a reload too
+] as const;
 
 export interface Transport {
   toAll(event: string, payload: unknown): void;
@@ -435,7 +479,7 @@ export class HostEngine {
   /** Bots answer like the simulated humans: knowledge and speed from the
    *  research-based model. A bot cheater plays either "mimic" (always right,
    *  human timing) or "careful" (sandbags some easy/medium questions). */
-  private planBotAnswer(bot: InternalPlayer): void {
+  private planBotAnswer(bot: InternalPlayer, elapsed = 0): void {
     const q = this.questions[this.qIdx];
     const isCheater = bot.id === this.cheaterId;
     const a = sampleAnswer(Math.random, DEFAULT_HUMAN, "mid", q.tier, bot.ability, bot.speed);
@@ -462,7 +506,9 @@ export class HostEngine {
       if (Math.random() > DEFAULT_HUMAN.lastSecondTap) return; // ran out of time
       rt = timer - 1500 + Math.random() * 1400;
     }
-    this.after(rt, () => {
+    // Restored mid-question (v0.14): a bot that would have answered by now answers soon.
+    if (rt <= elapsed) rt = Math.min(timer - 250, elapsed + 300 + Math.random() * 1200);
+    this.after(Math.max(0, rt - elapsed), () => {
       if (this.phase !== "question" || bot.answeredCurrent) return;
       this.onAnswer(bot, this.qIdx, pick, rt);
     });
@@ -1162,6 +1208,52 @@ export class HostEngine {
     const s = this.secretFor(playerId);
     const bare = JSON.stringify({ ...s, _: "" }).length;
     return { ...s, _: " ".repeat(Math.max(0, SECRET_JSON_LEN - bare)) };
+  }
+
+  /** v0.14: everything restore() needs, as JSON-safe data (serialize it
+   *  right away: it shares objects with the live engine). */
+  snapshot(): EngineSnapshot {
+    const self = this as unknown as Record<string, unknown>;
+    const fields: Record<string, unknown> = {};
+    for (const k of SAVED_FIELDS) fields[k] = self[k];
+    return { v: 1, roomCode: this.roomCode, fields, evidence: this.evidence.save() };
+  }
+
+  /** v0.14: the host's page reloaded. Rebuild the engine from its last
+   *  snapshot and re-arm whatever the phase was waiting for. */
+  static restore(snap: EngineSnapshot, transport: Transport, source: QuestionSource = openTdbSource, options: EngineOptions = {}): HostEngine {
+    const players = snap.fields.players as InternalPlayer[];
+    const host = players.find((p) => p.isHost)!;
+    const engine = new HostEngine(snap.roomCode, host.name, host.avatar, transport, source, options);
+    Object.assign(engine as unknown as Record<string, unknown>, snap.fields);
+    engine.evidence = EvidenceTracker.load(snap.evidence);
+    engine.loadingQuestions = false; // a fetch in flight died with the page: Start again
+    engine.rearm();
+    return engine;
+  }
+
+  /** After restore(): the timers the current phase was waiting on. */
+  private rearm(): void {
+    const now = this.now();
+    if (this.phase === "role") {
+      this.after(Math.max(0, this.phaseStartedAt - this.lead + ROLE_SCREEN_MS - now), () => this.startQuestion(0));
+    } else if (this.phase === "question") {
+      this.after(Math.max(0, this.questionDeadline - this.lead + 400 - now), () => this.endQuestion());
+      const elapsed = Math.max(0, now - (this.questionDeadline - this.settings.questionTimerMs));
+      for (const bot of this.bots()) if (!bot.answeredCurrent) this.planBotAnswer(bot, elapsed);
+      this.maybeEndQuestionEarly();
+    } else if (this.phase === "reveal") {
+      this.scheduleBotAccusations();
+      this.scheduleBotPointers();
+    } else if (this.phase === "vote" && this.vote) {
+      const left = this.vote.deadline - now;
+      this.after(Math.max(0, left + 400), () => this.resolveVote());
+      for (const bot of this.bots()) {
+        if (!bot.votedCurrent) this.after(Math.max(0, Math.min(left - 600, 800 + Math.random() * 2500)), () => this.botVote(bot));
+      }
+      this.maybeResolveVoteEarly();
+    }
+    // voteResult, matchEnd, lobby, sessionEnd: they wait for the host's tap.
   }
 
   /** The host's phone is back after dropping out: everyone gets the current
