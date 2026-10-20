@@ -1,8 +1,8 @@
 # Changelog
 
 Every version is a git tag. New work lives on the **`product-lead`** branch;
-`main` has everything up to v0.18.0 (merged on 2026-10-20) and takes newer
-versions when you decide to merge. At most two versions per hour.
+`main` takes it when you decide to merge (`git log main -1` shows how far it
+has come). At most two versions per hour.
 
 **Try a version**
 
