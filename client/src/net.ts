@@ -18,6 +18,9 @@ export interface SessionEvents {
   onSecret(secret: SecretState): void;
   onClosed(reason: string): void;
   onNet?(status: NetStatus): void;
+  /** The id this phone plays as, on every (re)join: it changes if the seat
+   *  was cleared or a hallway place lapsed while the phone was away. */
+  onSelf?(id: string): void;
 }
 
 export interface HostSession {
@@ -200,7 +203,8 @@ export async function joinAsPlayer(code: string, name: string, avatar: string, e
       } catch {
         /* storage unavailable: name-only rejoin between matches still works */
       }
-      // Secret first, so the first render of a (re)joined screen is correct.
+      // Id and secret first, so the first render of a (re)joined screen is correct.
+      events.onSelf?.(msg.playerId);
       events.onSecret(msg.secret);
       events.onState(msg.state);
       events.onNet?.("online");

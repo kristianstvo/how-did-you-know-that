@@ -119,8 +119,8 @@ function onBeat(screenKey: string, beatKey: string, prev: string, settled: boole
   beatScreen = screenKey;
   if (settled) return;
   const added = beatKey.split(",").filter((b) => b && !prev.split(",").includes(b));
-  if (screenKey.startsWith("vote-") && entered) buzz([60, 40, 60]);
-  if (screenKey.startsWith("matchEnd") && entered) buzz([90, 50, 90]);
+  if (screenKey.startsWith("vote-") && added.includes("in")) buzz([60, 40, 60]);
+  if (screenKey.startsWith("matchEnd") && added.includes("takeover")) buzz([90, 50, 90]);
   if (added.includes("answer")) buzz(25);
   if (added.includes("verdict") && screenKey.startsWith("voteResult")) buzz(70);
   if (added.includes("unmask")) buzz([40, 30, 120]);
@@ -146,17 +146,17 @@ function beatSounds(screenKey: string, added: string[], entered: boolean): void 
     if (added.includes("evidence")) sfx.stamp();
     if (added.includes("grade") && m.reveal.lastBell.length) sfx.bell();
   }
-  if (phase === "vote" && entered) sfx.gavel();
+  if (phase === "vote" && added.includes("in")) sfx.gavel();
   if (phase === "voteResult") {
     if (added.includes("verdict")) sfx.stamp();
     if (added.includes("drop")) sfx.slide();
   }
-  if (phase === "matchEnd" && entered && m?.end) {
+  if (phase === "matchEnd" && added.includes("takeover") && m?.end) {
     if (m.end.reason === "cheater_threshold") sfx.siren();
     else if (m.end.reason === "cheater_banished") sfx.fanfare();
     else sfx.bell();
   }
-  if (phase === "sessionEnd" && entered) sfx.fanfare();
+  if (phase === "sessionEnd" && added.includes("crown")) sfx.fanfare(); // the valedictorian stamp
 }
 
 const renderer = createRenderer(root, router, app, tick, tick, onBeat);
@@ -181,6 +181,7 @@ function onState(state: PublicState): void {
   }
   app.state = state;
   lastPhase = state.phase;
+  if (state.phase === "role") lastQuestionKey = "";
   banner();
   if (state.phase === "question" && state.match?.question) {
     const qk = `${state.matchNumber}:${state.match.questionIdx}`;
@@ -300,7 +301,7 @@ async function joinLobby(): Promise<void> {
   app.error = null;
   render();
   try {
-    session = await joinAsPlayer(code, name, app.home.avatar, { onState, onSecret, onClosed, onNet });
+    session = await joinAsPlayer(code, name, app.home.avatar, { onState, onSecret, onClosed, onNet, onSelf: (id) => (app.selfId = id) });
     keepAwake(true);
     app.isHost = false;
     app.selfId = session.selfId;
@@ -326,13 +327,26 @@ function showError(msg: string): void {
   render();
 }
 
+const toastEl = document.createElement("div");
+toastEl.setAttribute("role", "status");
+toastEl.setAttribute("aria-live", "polite");
+document.body.append(toastEl);
 let toastTimer = 0;
 function toast(msg: string): void {
-  app.ui.toast = msg;
+  const inLobby = app.screen === "game" && app.state?.phase === "lobby";
+  app.ui.toast = inLobby ? msg : null;
+  toastEl.replaceChildren();
+  if (!inLobby) {
+    const t = document.createElement("div");
+    t.className = "toast";
+    t.textContent = msg;
+    toastEl.append(t);
+  }
   render();
   clearTimeout(toastTimer);
   toastTimer = window.setTimeout(() => {
     app.ui.toast = null;
+    toastEl.replaceChildren();
     render();
   }, 2200);
 }
@@ -413,6 +427,9 @@ root.addEventListener("click", (ev) => {
     case "removePlayer":
       host?.engine.removePlayer(btn.dataset.id!);
       break;
+    case "practiceRole":
+      host?.engine.updateSettings({ practiceRole: btn.dataset.role as "random" | "innocent" | "cheater" });
+      break;
     case "pace":
       host?.engine.updateSettings({ questionTimerMs: Number(btn.dataset.ms) });
       break;
@@ -483,6 +500,7 @@ root.addEventListener("click", (ev) => {
     case "pointSheet":
       app.ui.pointOpen = !app.ui.pointOpen;
       render();
+      focusSoon(app.ui.pointOpen ? "#pt-sheet .pt-row" : "#rv-point");
       break;
     case "point":
       // Free and public; "" = stop pointing.
@@ -491,6 +509,7 @@ root.addEventListener("click", (ev) => {
       sfx.click();
       act({ kind: "point", targetPlayerId: btn.dataset.id || null });
       render();
+      focusSoon("#rv-point");
       break;
     case "toggleSound":
       setSound(!soundOn());
@@ -502,10 +521,12 @@ root.addEventListener("click", (ev) => {
     case "toggleQr":
       app.ui.qrOpen = !app.ui.qrOpen;
       render();
+      focusSoon(app.ui.qrOpen ? "#lb-qr-close" : "#lb-qr-btn");
       break;
     case "toggleBoard":
       app.ui.boardOpen = !app.ui.boardOpen;
       render();
+      focusSoon(app.ui.boardOpen ? ".overlay .sheet button" : ".sess-tab");
       break;
     case "home":
       location.hash = "";
@@ -556,6 +577,12 @@ root.addEventListener("change", (ev) => {
   else if (key === "strikes") session.engine.updateSettings({ strikes: Math.max(0, Math.min(3, Math.round(num))) });
 });
 
+/** Dialogs take focus when they open and give it back when they close (v0.11),
+ *  so keyboards and screen readers land where the action is. */
+function focusSoon(selector: string): void {
+  requestAnimationFrame(() => document.querySelector<HTMLElement>(selector)?.focus({ preventScroll: true }));
+}
+
 function handIn(): void {
   const id = app.ui.voteSel;
   if (!id || app.ui.myVote || app.state?.phase !== "vote") return;
@@ -576,7 +603,7 @@ function tick(): void {
   });
   // A picked-but-not-handed-in ballot goes in just before the vote closes.
   const v = app.state?.phase === "vote" ? app.state.match?.vote : null;
-  if (v && app.ui.voteSel && !app.ui.myVote && now >= v.deadline - AUTO_HAND_IN_MS) handIn();
+  if (v && app.ui.voteSel && !app.ui.myVote && now >= v.deadline - AUTO_HAND_IN_MS) queueMicrotask(handIn);
   // Host "Next" respects the reveal minimum (spec 01).
   root.querySelectorAll<HTMLButtonElement>("[data-min-next]").forEach((el) => {
     const off = now < Number(el.dataset.minNext);

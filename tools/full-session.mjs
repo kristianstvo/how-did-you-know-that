@@ -25,6 +25,7 @@ await page.goto(base);
 await page.fill("#playerName", "Teach");
 await page.click("#hm-practice");
 await page.waitForSelector(".screen-lobby");
+await page.click("#lb-adv summary"); // the custom timer lives under Advanced (v0.10)
 await page.fill("#set-timer", "5");
 await page.locator("#set-timer").dispatchEvent("change");
 await page.click("#lb-start");

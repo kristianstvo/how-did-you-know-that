@@ -18,6 +18,7 @@ const URGENT_MS = 5000; // same urgency window as the question timer
 const windowMs = (s: PublicState) => Math.max(0, (s.match?.vote?.deadline ?? s.phaseStartedAt) - s.phaseStartedAt);
 
 function beats(ctx: RenderCtx): string[] {
+  if (ctx.elapsed < 0) return []; // the beat lead: the gavel waits for the shared clock
   const w = windowMs(ctx.s);
   const out = ["in"];
   if (ctx.elapsed >= w - URGENT_MS) out.push("urgent");

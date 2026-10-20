@@ -265,6 +265,8 @@ test("phone: the lobby shows a scan-to-join QR big enough to read across a table
   await page.click("#lb-qr-btn");
   const code = page.locator(".lb-qr-code svg");
   await expect(code).toBeVisible();
+  // The dialog takes focus (keyboards, screen readers)…
+  await expect.poll(() => page.evaluate(() => document.activeElement?.id)).toBe("lb-qr-close");
   expect((await code.boundingBox())!.width, "QR width on an SE").toBeGreaterThanOrEqual(240);
   // Tapping the card itself (someone pointing at it) keeps it up; Done closes it.
   await page.click(".lb-qr-card h2");
@@ -273,6 +275,8 @@ test("phone: the lobby shows a scan-to-join QR big enough to read across a table
   expect(done.y + done.height, "Done sits on screen").toBeLessThanOrEqual(553);
   await page.click("#lb-qr-close");
   await expect(page.locator("#lb-qr")).toHaveCount(0);
+  // …and gives it back to the button that opened it.
+  await expect.poll(() => page.evaluate(() => document.activeElement?.id)).toBe("lb-qr-btn");
   await ctx.close();
 });
 

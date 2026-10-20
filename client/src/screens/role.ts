@@ -14,7 +14,10 @@ import { reached, ROLE_TIMELINE, type RoleBeat } from "../../../shared/choreo";
 import type { Screen } from "./types";
 
 // Same emoji on both: a yellow 😎 vs white 👀 was readable from across a room.
-export const CHEATER_LINE = "It's you. Play it cool. 🤫";
+// v0.11: the cheater's note now says how they see the answers — a first-time
+// cheater used to miss the faint dot and play as an innocent. Still exactly
+// as long as the innocent note (26), so the boxes stay identical.
+export const CHEATER_LINE = "It's you. Find the dot. 🤫";
 export const INNOCENT_LINE = "Not you. Watch closely. 🤫";
 /** In the hallway (v0.7): not playing this period, so no role at all. */
 export const HALLWAY_LINE = "Hallway. Watch and learn. 👀";

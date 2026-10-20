@@ -224,3 +224,12 @@
 .lb-adv-sum { margin-left: auto; font-size: 0.78rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 .lb-adv[open] .settings-grid { margin-top: 6px; }
 @media (prefers-reduced-motion: reduce) { .lb-pace-btn:active { transform: none; opacity: 0.85; } }
+
+/* Practice as (v0.11): only in a room of bots. */
+.lb-roles { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 8px; }
+.lb-roles-l { color: var(--dim); font-weight: 700; font-size: 0.85rem; margin-right: auto; }
+.lb-role-btn {
+  min-height: 44px; padding: 0 10px; border-radius: 999px; background: var(--card2);
+  border: 2px dashed var(--chalk-line); font-weight: 700; font-size: 0.88rem; white-space: nowrap;
+}
+.lb-role-btn.on { border-style: solid; border-color: var(--accent2); background: rgba(255, 209, 102, 0.12); }

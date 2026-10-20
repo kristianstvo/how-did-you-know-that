@@ -54,8 +54,15 @@ const PACES = [
   { icon: "🧘", label: "Relaxed", ms: 25_000 },
 ] as const;
 
+// v0.11: practice as a chosen role (only when everyone else is a bot).
+const PRACTICE_ROLES = [
+  { id: "random", icon: "🎲", label: "Random" },
+  { id: "innocent", icon: "🕵️", label: "Innocent" },
+  { id: "cheater", icon: "🤫", label: "Cheater" },
+] as const;
+
 const RULES = [
-  "The class answers the same <b>10 questions</b>, each from a different school subject (100 → 200 → 400 points). One classmate is secretly <b>the cheater</b> and sees the correct answers.",
+  "The class answers the same <b>10 questions</b>, each from a different school subject (100 → 200 → 400 points). One classmate is secretly <b>the cheater</b> and sees the correct answers: a faint dot in the corner of the right one.",
   "The cheater <b>graduates instantly</b> by reaching the public score line on the grade book. Everyone else wins by catching them first.",
   "After every question, everyone's picks and <b>answer times</b> go up on the board. Suspicious? Each player holds <b>one accusation</b> per period — raise your hand during a reveal to force a vote. Plurality goes to <b>detention</b>.",
   "Detention for the cheater → class wins. Detention for an innocent → they keep answering but lose their vote, and the cheater's graduation line <b>drops by {drop}</b>.{strikes} Ties send nobody.",
@@ -166,6 +173,14 @@ export const lobby: Screen = {
               const on = s.settings.questionTimerMs === p.ms;
               return `<button class="lb-pace-btn${on ? " on" : ""}" id="pace-${p.label.toLowerCase()}" data-action="pace" data-ms="${p.ms}" aria-pressed="${on}"><span class="lb-pace-ic" aria-hidden="true">${p.icon}</span><b>${p.label}</b><small>${p.ms / 1000}s a question</small></button>`;
             }).join("")}</div>
+            ${
+              s.players.length > 1 && s.players.every((p) => p.isHost || p.isBot)
+                ? `<div class="lb-roles" role="group" aria-label="Practice as"><span class="lb-roles-l">Practice as</span>${PRACTICE_ROLES.map((r) => {
+                    const on = s.settings.practiceRole === r.id;
+                    return `<button class="lb-role-btn${on ? " on" : ""}" id="role-${r.id}" data-action="practiceRole" data-role="${r.id}" aria-pressed="${on}"><span aria-hidden="true">${r.icon}</span> ${r.label}</button>`;
+                  }).join("")}</div>`
+                : ""
+            }
             <details class="lb-adv" id="lb-adv">
               <summary><span>Advanced</span><span class="lb-adv-sum">line ${s.settings.threshold} · −${s.settings.thresholdDrop} · ${k} strike${k === 1 ? "" : "s"}</span><span class="lb-chev" aria-hidden="true">▾</span></summary>
             <div class="settings-grid">

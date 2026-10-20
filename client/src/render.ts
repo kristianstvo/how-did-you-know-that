@@ -105,7 +105,29 @@ export function createRenderer(
   const htmlFor = (screen: Screen, ctx: RenderCtx | null) =>
     ctx ? screen.render(ctx) : screen.render({ app, s: null as never, now: serverNow(), elapsed: 0, reduced: reducedMotion() });
 
+  // A render asked for from inside one (afterRender can act; on the host an
+  // intent re-broadcasts synchronously) runs right after it instead, so the
+  // outer render can't overwrite the beat bookkeeping with a stale frame.
+  let rendering = false;
+  let renderAgain = false;
   function renderNow(): void {
+    if (rendering) {
+      renderAgain = true;
+      return;
+    }
+    rendering = true;
+    try {
+      renderOnce();
+    } finally {
+      rendering = false;
+    }
+    if (renderAgain) {
+      renderAgain = false;
+      renderNow();
+    }
+  }
+
+  function renderOnce(): void {
     const { key, screen, ctx, transition } = router.screenFor(app, lastScreenKey);
     const html = htmlFor(screen, ctx);
     const beatKey = ctx && screen.beatKey ? screen.beatKey(ctx) : "";

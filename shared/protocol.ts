@@ -42,8 +42,13 @@ export interface Settings {
   /** The cheater graduates on this many wrong detentions, whatever their
    *  score (v0.4). 0 = off. Stops "send everyone in turn" from being free. */
   strikes: number; // default 2
+  /** v0.11: in a practice room (everyone else is a bot) the host may choose
+   *  their role. Ignored as soon as another human is in the class. */
+  practiceRole: PracticeRole; // default "random"
   tierPoints: Record<Tier, number>; // 100 / 200 / 400
 }
+
+export type PracticeRole = "random" | "innocent" | "cheater";
 
 export const DEFAULT_SETTINGS: Settings = {
   questionTimerMs: 15000,
@@ -54,6 +59,7 @@ export const DEFAULT_SETTINGS: Settings = {
   threshold: 2100,
   thresholdDrop: 200,
   strikes: 2,
+  practiceRole: "random",
   tierPoints: { easy: 100, medium: 200, hard: 400 },
 };
 

@@ -34,7 +34,8 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.8.0 | The yearbook: superlatives every period, the day's yearbook, Share the day | shipped |
 | v0.9.0 | Question bank 2.0: 189 curated questions, a fetcher that stops getting rate-limited | shipped |
 | v0.10.0 | Hosting made easy: pace presets, New day same class, clear a seat | shipped |
-| later | Bot difficulty; a "how to play" picture card; accessibility pass on the new screens | ideas |
+| v0.11.0 | Fair start: the cheater learns the dot, Practice as a chosen role, dialog focus | shipped |
+| later | A "how to play" picture card; your own report card across days | ideas |
 
 Later versions take the best of what playtests and audits turn up.
 
@@ -70,3 +71,7 @@ Later versions take the best of what playtests and audits turn up.
 | v0.10.0 | ✅ Presets change the pace only | The line and strikes are balance (simulated); a preset that quietly changed them would undo v0.4's tuning |
 | v0.10.0 | ✅ New day keeps the room and the code | Rejoining with a new code was the biggest reason a good night ended |
 | v0.10.0 | ❌ Kicking someone who is still connected | Too easy to abuse in a party game; only seats of people who left can be cleared |
+| v0.11.0 | ✅ Tell the cheater how they see answers | The mechanic isn't the secret, the identity is; a cheater who misses the dot breaks the game |
+| v0.11.0 | ✅ Choose your role, but only with bots | Practicing the cheater role needs it; with any other human it would be cheating |
+| v0.11.0 | ✅ Every sound waits for its beat on the shared clock, never for a packet | A gavel landing 200ms apart on ten phones sounds like a glitch; the motion was already synced, the sound now is too |
+| v0.11.0 | ❌ Bot smarts (Easy / Normal / Sharp) | Simulated: "Sharp" (more accusations) made the cheater win more under two strikes; Easy ≈ Normal. Built, measured, not shipped |

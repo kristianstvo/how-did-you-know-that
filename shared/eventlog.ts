@@ -62,7 +62,8 @@ export type MatchEvent =
 
 /** Feed every public snapshot (with its timestamp); events come out once each. */
 export function createEventLogger(emit: (e: MatchEvent) => void): (s: PublicState, t: number) => void {
-  let match = 0;
+  let match = 0; // counts periods itself (New day restarts s.matchNumber)
+  let lastMatchNumber = -1;
   let lastPhase = "";
   let lastQ = -1;
   const revealed = new Set<string>();
@@ -96,9 +97,11 @@ export function createEventLogger(emit: (e: MatchEvent) => void): (s: PublicStat
 
   return (s, t) => {
     const m = s.match;
-    if (s.phase === "role" && s.matchNumber !== match) {
-      match = s.matchNumber;
+    if (s.phase === "role" && (lastPhase !== "role" || s.matchNumber !== lastMatchNumber)) {
+      match += 1;
+      lastMatchNumber = s.matchNumber;
       lastQ = -1;
+      revealed.clear();
       emit({
         type: "matchStart",
         t,

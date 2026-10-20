@@ -31,6 +31,7 @@ import {
   type MatchEndReason,
   type Phase,
   type PublicPlayer,
+  type PracticeRole,
   type PublicState,
   type Question,
   type RevealRow,
@@ -107,6 +108,16 @@ const SECRET_JSON_LEN = 56;
  *  so a room of bots catches a bot cheater about half the time. */
 export const BOT_TUNING = { lineHeat: 1, accuseAt: 2, minLead: 0.5, accuseChance: 0.4 };
 
+/** v0.11: who may be dealt the cheater. A practice room (everyone besides the
+ *  host is a bot) honours the host's chosen role — there's nobody to deceive.
+ *  Any other room: everyone present, uniformly (spec 02). */
+export function cheaterPool<P extends { isHost: boolean; isBot: boolean }>(present: P[], role: PracticeRole): P[] {
+  const practice = present.length > 1 && present.every((p) => p.isHost || p.isBot);
+  if (!practice || role === "random") return present;
+  const pool = role === "cheater" ? present.filter((p) => p.isHost) : present.filter((p) => !p.isHost);
+  return pool.length ? pool : present;
+}
+
 /** How much each announced callout raises a bot's suspicion of its subject. */
 const SUSPICION: Partial<Record<CalloutKind, number>> = {
   lone_correct: 2,
@@ -137,6 +148,8 @@ export class HostEngine {
   private wrongDetentions = 0; // strikes this match (settings.strikes ends it)
   /** v0.7: late arrivals watching this period; seated back in homeroom. */
   private hallway: InternalPlayer[] = [];
+  private pointBroadcastAt = 0; // pointer changes share broadcasts (v0.11)
+  private pointBroadcastPending = false;
   private usedFallback = false;
   private questionDeadline = 0;
   private answers: Record<string, AnswerRecord>[] = []; // per question: playerId -> record
@@ -245,8 +258,9 @@ export class HostEngine {
     // watches this period and takes a seat at the next one, instead of being
     // turned away.
     const midPeriod = (this.phase !== "lobby" && this.phase !== "matchEnd") || this.loadingQuestions;
-    if (midPeriod) {
-      const waiting = this.hallway.find((h) => h.name.toLowerCase() === name.toLowerCase());
+    const waitingByName = this.hallway.find((h) => h.name.toLowerCase() === name.toLowerCase());
+    if (midPeriod || waitingByName) {
+      const waiting = waitingByName;
       if (waiting && waiting.connected && !(token && token === waiting.token)) {
         this.transport.toPlayer(socketId, "joinRejected", { reason: `"${waiting.name}" is already in the hallway. Pick another name.` });
         return;
@@ -282,9 +296,13 @@ export class HostEngine {
   }
 
   handlePeerDisconnected(socketId: string): void {
-    // Someone in the hallway left: they never sat down, so they simply go.
-    if (this.hallway.some((h) => h.socketId === socketId)) {
-      this.hallway = this.hallway.filter((h) => h.socketId !== socketId);
+    // Someone in the hallway dropped out: keep their place (connected=false)
+    // so the same phone coming back keeps the same id; seatHallway() only
+    // seats people who are here.
+    const waiting = this.hallway.find((h) => h.socketId === socketId);
+    if (waiting) {
+      waiting.connected = false;
+      waiting.socketId = null;
       this.broadcast();
       return;
     }
@@ -353,7 +371,7 @@ export class HostEngine {
 
   addBot(): void {
     if ((this.phase !== "lobby" && this.phase !== "matchEnd") || this.loadingQuestions) return;
-    if (this.players.length >= MAX_PLAYERS) return;
+    if (this.players.length + this.hallway.length >= MAX_PLAYERS) return;
     const name = HostEngine.BOT_NAMES.find((n) => !this.players.some((p) => p.name === n));
     if (!name) return;
     const avatar = AVATARS.find((a) => !this.players.some((p) => p.avatar === a)) ?? "";
@@ -391,8 +409,23 @@ export class HostEngine {
     this.matchNumber = 0;
     this.end = null;
     this.seatHallway();
+    this.clearPeriodFlags();
     this.setPhase("lobby");
     this.broadcast();
+  }
+
+  /** Back in homeroom nobody is still "in detention" from last period, and
+   *  everyone's accusation and pointer are fresh (they used to linger until
+   *  the next bell, showing stale DETENTION badges in the lobby). */
+  private clearPeriodFlags(): void {
+    for (const p of this.players) {
+      p.banished = false;
+      p.tokenUsed = false;
+      p.votingRights = true;
+      p.answeredCurrent = false;
+      p.votedCurrent = false;
+      p.pointingAt = null;
+    }
   }
 
   private bots(): InternalPlayer[] {
@@ -529,6 +562,9 @@ export class HostEngine {
     // The room may have changed during the wait (up to ~8s): re-check it.
     const ready = this.players.filter((p) => p.connected);
     if ((this.phase !== "lobby" && this.phase !== "matchEnd") || ready.length < MIN_PLAYERS) {
+      // The start fell through: anyone who arrived while the quiz printed
+      // takes their seat now instead of waiting in an empty hallway.
+      if (this.phase === "lobby" || this.phase === "matchEnd") this.seatHallway();
       this.broadcast();
       return;
     }
@@ -562,7 +598,8 @@ export class HostEngine {
     }
     // Cheater: uniform random among players present at match start (spec 02).
     const forced = this.forceCheaterName && present.find((p) => p.name.toLowerCase() === this.forceCheaterName!.toLowerCase());
-    this.cheaterId = (forced || present[Math.floor(Math.random() * present.length)]).id;
+    const pool = cheaterPool(present, this.settings.practiceRole);
+    this.cheaterId = (forced || pool[Math.floor(Math.random() * pool.length)]).id;
     this.botCheaterCareful = Math.random() < 0.5;
     // A seat that wasn't connected at the bell cannot be the cheater. Say so
     // publicly, so nobody gains a private elimination from noticing it.
@@ -591,6 +628,7 @@ export class HostEngine {
     } else if (this.phase === "matchEnd" && this.end) {
       if (now >= this.phaseStartedAt + matchEndTimeline(this.end.reason).end) {
         this.seatHallway();
+        this.clearPeriodFlags();
         this.setPhase("lobby");
         this.broadcast();
       }
@@ -717,7 +755,6 @@ export class HostEngine {
   private onPoint(player: InternalPlayer, targetId: string | null): void {
     if (!POINT_PHASES.has(this.phase)) return;
     const now = this.now();
-    if (now - player.pointedAt < POINT_GUARD_MS) return; // flood guard
     const target = targetId ? this.players.find((p) => p.id === targetId) : null;
     if (targetId && (!target || target.id === player.id || target.banished)) return;
     const next = target ? target.id : null;
@@ -729,7 +766,19 @@ export class HostEngine {
       if (next === this.cheaterId && this.firstPointAtCheater[player.id] === undefined) this.firstPointAtCheater[player.id] = this.qIdx;
     }
     player.pointedAt = now;
-    this.broadcast();
+    // Every change counts (the latest wins); a flurry of them shares one
+    // broadcast per POINT_GUARD_MS instead of flooding every phone.
+    if (now - this.pointBroadcastAt >= POINT_GUARD_MS) {
+      this.pointBroadcastAt = now;
+      this.broadcast();
+    } else if (!this.pointBroadcastPending) {
+      this.pointBroadcastPending = true;
+      setTimeout(() => {
+        this.pointBroadcastPending = false;
+        this.pointBroadcastAt = this.now();
+        this.broadcast();
+      }, POINT_GUARD_MS);
+    }
   }
 
   /** Bots point at their top suspect once the board is graded (the cheater
@@ -923,7 +972,7 @@ export class HostEngine {
       else if (reason === "cheater_threshold")
         give(
           struckOut
-            ? { icon: "🎭", title: "Let them dig", playerId: cheater.id, why: "Watched two innocents go to detention" }
+            ? { icon: "🎭", title: "Let them dig", playerId: cheater.id, why: `Watched ${this.wrongDetentions} innocent${this.wrongDetentions === 1 ? "" : "s"} go to detention` }
             : { icon: "🎓", title: "Graduated early", playerId: cheater.id, why: `Crossed the line at Q${qn}` },
         );
       else give({ icon: "🎭", title: winnerIds.includes(cheater.id) ? "Master of disguise" : "Hid in plain sight", playerId: cheater.id, why: "Never caught" });

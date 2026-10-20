@@ -19,6 +19,85 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.11.0 — Fair start · 2026-10-20 03:58
+
+**Why:** the cheater's first game decides whether the game works at all, and
+nothing told a first-time cheater how they see the answers. A cheater who
+missed the faint dot played as an innocent, and the class had nobody to catch.
+Solo players also couldn't practice being the cheater: the role is random, 1
+in 6.
+
+**Changed**
+- The cheater's note now reads **"It's you. Find the dot. 🤫"**. It's exactly
+  as long as the innocent's note, so the boxes stay identical (parity).
+- How to play says how the cheater sees answers: a faint dot in the corner of
+  the right one. *Who* the cheater is stays secret; how the trick works never
+  was.
+
+**Added**
+- **Practice as 🎲 Random / 🕵️ Innocent / 🤫 Cheater**, in a room where
+  everyone else is a bot (there's nobody to deceive). The choice is ignored
+  the moment another person is in the class.
+- Dialogs take focus when they open (the 👉 sheet, the QR card, the standings
+  sheet) and give it back when they close, for keyboards and screen readers.
+- **The playtest report measures the new features.** `sim/report-logs.ts`
+  now reports:
+  - points per match, and who pointed
+  - how accurate the class's pointers were at the end
+  - how often detention went to the most-pointed-at classmate
+  - wrong detentions per match, and strike-outs
+
+  On 200 simulated bot matches: 71% of final pointers on the cheater, 94% of
+  detentions to the top-pointed.
+
+**Fixed**
+- Back in homeroom, players sent to detention last period no longer wear a
+  stale DETENTION badge. Per-period flags (detention, accusation used,
+  pointer) are cleared on the way back and on New day. This bug was there
+  since v0.1.
+- **Nine fixes from a code review of v0.4–v0.10:**
+  - A phone that drops out while waiting in the hallway keeps its place and
+    comes back as the same person. If the place lapsed, or the host cleared
+    the seat, the phone now follows its new seat instead of a stale one.
+  - The vote's gavel, the period's ending sting and the day's fanfare play on
+    the shared clock, so every phone plays them together. They used to play
+    whenever each phone's packet landed. The fanfare now waits for the
+    valedictorian stamp.
+  - A quick change of 👉 suspect is never dropped: the latest one counts, and
+    the class sees it within a third of a second.
+  - "Copied. Paste it in the group chat!" now shows on the yearbook screen.
+    It only ever showed in the lobby.
+  - Add bot can't overfill a room whose hallway is full. A name waiting in
+    the hallway can't be taken at the report card. If a start falls through,
+    the hallway takes its seats.
+  - After a New day, the first question no longer risks keeping your pick
+    from day 1. The playtest log no longer files day 2's periods under day
+    1's numbers, which used to drop their reveals.
+  - The "Let them dig" superlative counts the real number of wrong
+    detentions. It always said two.
+  - On the host's phone, a ballot handing itself in could start a render
+    inside a render. Renders now queue.
+
+**Removed before shipping**
+- "Bot smarts" (Easy / Normal / Sharp). The simulator showed that "sharp" bots
+  made the cheater win *more* (49–66% vs 30–43%): with two strikes, quick-to-
+  accuse bots send innocents to detention. A misleading label, so it didn't
+  ship.
+
+**Evidence**
+- `sim/practice-check.ts` (6 checks, in `test:e2e`): the choice is honoured
+  in practice rooms and ignored as soon as another human is present.
+- `sim/hallway-check.ts` grows to 17 checks: the same id after a drop-out, a
+  lapsed place isn't seated, the full room, the name at the report card, and
+  a quick change of suspect. `sim/yearbook-check.ts` plays a period on day 2
+  and checks that the log counts periods 1, 2, 3. Each new check fails on
+  v0.10.
+- Earlier Playwright runs (v0.3–v0.10) reused a local server started before
+  v0.3.0, so they ran against the old relay. `sim/relay-check.ts` always
+  tested the current relay. From v0.11 on, the suite gets a fresh server.
+- The phone audit shows no regressions since v0.3.0.
+- The QR test now checks focus.
+
 ## v0.10.0 — Hosting made easy · 2026-10-20 03:13
 
 **Why:** the teacher runs the night from a phone. Typing seconds into a number
