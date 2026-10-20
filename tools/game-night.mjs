@@ -54,12 +54,13 @@ const check = (ok, what) => {
 // ---- Homeroom ----
 const host = await open("hana", base);
 await host.fill("#playerName", "Hana");
+await host.click("#hm-next");
 await host.click('[data-action="create"]');
 const code = (await host.locator(".roomcode").innerText({ timeout: 15000 })).replace(/\s/g, "");
 for (const name of ["Bea", "Cy"]) {
   const p = await open(name.toLowerCase(), `${base}/#/join/${code}`);
   await p.fill("#playerName", name);
-  await p.click('[data-action="join"]');
+  await p.click("#hm-next");
   await p.waitForSelector(".screen-lobby");
 }
 const tv = await open("tv", `${base}/#/tv/${code}`, { width: 1280, height: 720 }, false);

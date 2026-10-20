@@ -48,6 +48,7 @@ const clickAfter = async (page, sel, ms) => {
 // accusation sends an innocent to detention and the period runs on.
 const host = await open("hana", `${base}/?debugCheater=Hana`, { width: 375, height: 553 }, true);
 await host.fill("#playerName", "Hana");
+await host.click("#hm-next");
 await host.click('[data-action="create"]');
 const code = (await host.locator(".roomcode").innerText({ timeout: 15000 })).replace(/\s/g, "");
 const tv = await open("tv", `${base}/#/tv/${code}`, { width: 1280, height: 720 }, false);

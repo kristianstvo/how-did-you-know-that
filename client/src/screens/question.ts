@@ -17,6 +17,7 @@
 // class, element, text length or animation depends on the secret.
 import { actOf, esc, LETTERS, sessionTab, tierTicks } from "./common";
 import type { RenderCtx, Screen } from "./types";
+import { face } from "../avatars";
 
 const URGENT_MS = 5000;
 /** After this long into the question, the entrance has finished: later
@@ -129,7 +130,7 @@ export const question: Screen = {
         const me = p.id === app.selfId;
         const label = `${p.name}${me ? " (you)" : ""}: ${isIn ? "locked in" : p.connected ? "still thinking" : "reconnecting"}`;
         return `<span class="qz-desk${me ? " me" : ""}${p.connected ? "" : " off"}" id="qz-desk-${qk}-${p.id}" role="listitem" title="${attr(label)}" aria-label="${attr(label)}">${
-          isIn ? `<span class="qz-desk-av" id="qz-av-${qk}-${p.id}" aria-hidden="true">${p.avatar}</span>` : ""
+          isIn ? `<span class="qz-desk-av" id="qz-av-${qk}-${p.id}" aria-hidden="true">${face(p.avatar)}</span>` : ""
         }</span>`;
       })
       .join("");

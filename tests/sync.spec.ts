@@ -52,6 +52,7 @@ async function answerWhenAsked(page: Page) {
 for (const latency of [0, 150]) test(`sync: beats land within 150ms across three phones with skewed clocks${latency ? ` and +${latency}ms network latency on one` : ""}`, async ({ browser }) => {
   const host = await phone(browser, 0, "/?debugCheater=Bea");
   await host.page.fill("#playerName", "Hana");
+  await host.page.click("#hm-next");
   await host.page.click('[data-action="create"]');
   const code = (await host.page.locator(".roomcode").innerText({ timeout: 15000 })).replace(/\s/g, "");
 
@@ -62,7 +63,7 @@ for (const latency of [0, 150]) test(`sync: beats land within 150ms across three
     [p2, "Cy"],
   ] as const) {
     await p.page.fill("#playerName", name);
-    await p.page.click('[data-action="join"]');
+    await p.page.click("#hm-next");
   }
   await host.page.waitForFunction(() => document.querySelectorAll('[id^="roster-"]').length >= 3, null, { timeout: 15000 });
   await host.page.click('[data-action="addBot"]');

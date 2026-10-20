@@ -14,7 +14,7 @@ export type { Screen };
 export const reducedMotion = (): boolean => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /** Which kind of screen change this is — picks the View Transition style. */
-export type TransitionKind = "slide" | "takeover" | "flip" | "fade" | "rise";
+export type TransitionKind = "slide" | "back" | "takeover" | "flip" | "fade" | "rise";
 
 export interface Router {
   /** prevKey = the screen currently on display (for picking the transition). */

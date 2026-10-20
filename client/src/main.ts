@@ -60,7 +60,7 @@ const app: App = {
   secret: { isCheater: false, correctIdx: -1 },
   error: null,
   closedReason: null,
-  home: { name: "", code: "", avatar: "", busy: false },
+  home: { name: "", code: "", avatar: "", busy: false, step: 1 },
   ui: { accuseConfirm: false, myPick: null, voteSel: null, myVote: null, boardOpen: false, qrOpen: false, pointOpen: false, toast: null },
   fixture: false,
 };
@@ -79,9 +79,10 @@ let lastQuestionKey = "";
 
 const hashJoin = location.hash.match(/#\/join\/([A-Za-z0-9]+)/);
 const hashTv = location.hash.match(/#\/tv\/([A-Za-z0-9]+)/); // v0.16 big screen
-if (hashJoin) app.home.code = hashJoin[1].toUpperCase();
+if (hashJoin) app.home.code = app.home.invite = hashJoin[1].toUpperCase();
 app.home.name = localStorage.getItem("hdykt-name") ?? "";
-app.home.avatar = localStorage.getItem("hdykt-avatar") ?? AVATARS[Math.floor(Math.random() * AVATARS.length)];
+const savedAvatar = localStorage.getItem("hdykt-avatar") ?? "";
+app.home.avatar = AVATARS.includes(savedAvatar) ? savedAvatar : AVATARS[Math.floor(Math.random() * AVATARS.length)];
 
 // ---------------- Routing ----------------
 
@@ -111,7 +112,9 @@ const router: Router = {
   screenFor(a, prevKey) {
     const s = a.state;
     if (a.screen === "home" || !s) {
-      return { key: "home", screen: home, ctx: null, transition: "slide" };
+      // v0.21: Next turns the page on to step 2; Change turns it back.
+      const back = prevKey === "home-2" && a.home.step === 1;
+      return { key: `home-${a.home.step}`, screen: home, ctx: null, transition: back ? "back" : "slide" };
     }
     const m = s.match;
     const key =
@@ -244,6 +247,8 @@ function onClosed(reason: string): void {
   app.state = null;
   app.closedReason = reason;
   app.home.busy = false;
+  app.home.invite = undefined; // that class is over: back to where to
+  if (app.home.name.trim()) homeStep(2);
   render();
 }
 
@@ -286,8 +291,8 @@ function act(intent: Intent): void {
 // ---------------- Actions ----------------
 
 async function createLobby(bots = 0): Promise<void> {
-  const name = (document.getElementById("playerName") as HTMLInputElement).value.trim();
-  if (!name) return showError("Write your name on the name tag first.");
+  const name = app.home.name.trim();
+  if (!name) return needName();
   saveName(name);
   app.home.busy = true;
   app.error = null;
@@ -444,10 +449,13 @@ async function resumeHost(save: HostSave): Promise<void> {
 }
 
 async function joinLobby(): Promise<void> {
-  const code = (document.getElementById("joinCode") as HTMLInputElement).value.trim().toUpperCase();
-  const name = (document.getElementById("playerName") as HTMLInputElement).value.trim();
-  if (code.length !== 5) return showError("Classroom codes are 5 characters.");
-  if (!name) return showError("Write your name on the name tag first.");
+  const code = app.home.code.trim().toUpperCase();
+  const name = app.home.name.trim();
+  if (!name) return needName();
+  if (code.length !== 5) {
+    homeStep(2); // the code box lives there
+    return showError("Classroom codes are 5 characters.");
+  }
   saveName(name);
   app.home.code = code;
   app.home.busy = true;
@@ -462,6 +470,7 @@ async function joinLobby(): Promise<void> {
     app.closedReason = null;
     history.replaceState(null, "", `${location.pathname}${location.search}#/join/${code}`); // rejoinable link
   } catch (e) {
+    homeStep(2); // an invite that went stale: the code can be fixed there
     showError((e as Error).message);
   }
   app.home.busy = false;
@@ -472,6 +481,46 @@ function saveName(name: string): void {
   app.home.name = name;
   localStorage.setItem("hdykt-name", name);
   localStorage.setItem("hdykt-avatar", app.home.avatar);
+}
+
+/** v0.21: the home screen's two steps. Step 2 gets its own history entry, so
+ *  a phone's back gesture returns to step 1 instead of leaving the game. */
+function homeStep(step: 1 | 2): void {
+  if (app.screen !== "home" || app.home.step === step) return;
+  if (step === 2) history.pushState({ hdyktHome: 2 }, "");
+  else if (history.state?.hdyktHome === 2) {
+    history.back(); // popstate (below) shows step 1
+    return;
+  }
+  app.home.step = step;
+  app.error = null;
+  render();
+}
+
+window.addEventListener("popstate", () => {
+  if (app.screen !== "home" || app.home.busy) return;
+  const step = history.state?.hdyktHome === 2 ? 2 : 1;
+  if (step === app.home.step) return;
+  app.home.step = step;
+  app.error = null;
+  render();
+});
+
+/** Step 1's button: on to step 2, or, from an invite link, straight in. */
+function homeNext(): void {
+  const name = app.home.name.trim();
+  if (!name) return needName();
+  saveName(name);
+  if (app.home.invite && app.home.code === app.home.invite) void joinLobby();
+  else homeStep(2);
+}
+
+function needName(): void {
+  if (app.home.step === 2) {
+    app.home.step = 1; // the sticker to write on is on step 1
+    if (history.state?.hdyktHome === 2) history.replaceState(null, "");
+  }
+  showError("Write your name on the name tag first.");
 }
 
 function showError(msg: string): void {
@@ -570,13 +619,26 @@ root.addEventListener("click", (ev) => {
       void shareLink(btn.dataset.url!);
       break;
     case "pickAvatar": {
+      if (!AVATARS.includes(btn.dataset.av!)) break;
       app.home.avatar = btn.dataset.av!;
-      const nameInput = document.getElementById("playerName") as HTMLInputElement | null;
-      if (nameInput) app.home.name = nameInput.value;
       localStorage.setItem("hdykt-avatar", app.home.avatar);
+      sfx.click();
       render();
       break;
     }
+    case "homeNext": // v0.21: step 1 → where to
+      homeNext();
+      break;
+    case "homeBack":
+      homeStep(1);
+      break;
+    case "homeElsewhere": // invited, but starting a class of their own
+      if (!app.home.name.trim()) needName();
+      else {
+        saveName(app.home.name.trim());
+        homeStep(2);
+      }
+      break;
     case "addBot":
       host?.engine.addBot();
       break;
@@ -699,15 +761,15 @@ root.addEventListener("input", (ev) => {
   const input = ev.target as HTMLInputElement;
   if (input.id === "playerName") {
     app.home.name = input.value;
+    if (app.error && input.value.trim()) app.error = null; // the sticker has a name now
     render();
   }
   // Keep a half-typed code in state so re-renders never wipe it.
   if (input.id === "joinCode") app.home.code = input.value.toUpperCase();
 });
 
-// Phone keyboards: "Go" on the classroom code joins. On the name, "Go" joins
-// when the code is already there (an invite link); otherwise it just closes
-// the keyboard so Join and Create come back into view.
+// Phone keyboards: "Go" on the classroom code joins. On the name, "Next"
+// does what step 1's button does (an invite link's "Go" joins).
 root.addEventListener("keydown", (ev) => {
   if (ev.key !== "Enter" || app.home.busy) return;
   const el = ev.target as HTMLInputElement;
@@ -716,9 +778,8 @@ root.addEventListener("keydown", (ev) => {
     void joinLobby();
   } else if (el.id === "playerName") {
     ev.preventDefault();
-    const code = (document.getElementById("joinCode") as HTMLInputElement | null)?.value.trim() ?? "";
-    if (code.length === 5) void joinLobby();
-    else el.blur();
+    el.blur();
+    homeNext();
   }
 });
 

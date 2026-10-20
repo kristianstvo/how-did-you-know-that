@@ -19,6 +19,59 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.21.0 — Meet the class · 2026-10-20 21:17
+
+**Why:** Home asked for everything at once: your name, an avatar, a code,
+and a choice between joining and starting a class. The avatars were emoji,
+which never felt like classmates. Now Home asks who you are first, then
+where to, and the class is sixteen cartoon students.
+
+**Added**
+- **Sixteen students**, drawn for the game in a late-90s TV cartoon style
+  (wobbly ink, flat colours, goofy proportions):
+  - the Overpacker, the Bookworm, the Doodler, the Mad Scientist;
+  - the Big Brain, the Square, the Artiste, the Too-Cool Kid;
+  - the Jock, the Teacher's Pet, the Mathlete, the Explorer;
+  - the Crayon Eater, the Beanpole, the Band Kid, the Hacker.
+
+  All are original characters, made with an image model on ElevenLabs as
+  one character sheet (`media/students.webp`) and cut into 16 portraits
+  (WebP, about 15 KB each). `npm run avatars` cuts them again.
+- **They replace the emoji wherever a classmate appears:** the attendance
+  list, the locked-in desks, the reveal's trays and grade book, the vote and
+  its verdict, the report card, the yearbook, graduation day, the big
+  screen's "In class" list, and the how-to-play video (`media/how-to-play.mp4`
+  is re-rendered).
+- **Home in two steps.**
+  - Step 1 is you: write your name on the HELLO sticker and pick your
+    student from the class photo (four rows of four). Their yearbook
+    nickname pops up.
+  - Step 2 is where to: Join a class by its code, Start a class, or
+    Practice with bots, under a small name tag with ✏️ Change.
+- **Invite links skip step 2.** From a QR or a shared link, step 1's button
+  reads "Join class ABCDE". A code that no longer works lands on step 2 with
+  the error, where it can be fixed. "or start your own class" is under the
+  button.
+- The phone's back gesture goes from step 2 back to step 1 instead of
+  leaving the game. Next stays in thumb reach, docked like the lobby's
+  Start class.
+- Tests: Home's two steps, the back gesture and the saved pick; a forged
+  avatar from a hand-made client never reaches a screen.
+
+**Fixed**
+- **A security hole.** A joining phone's avatar went into every screen's
+  HTML unchecked, so a hand-made client could inject markup into everyone's
+  game. Now the host accepts only one of the sixteen students (anything else
+  gets a random one), and the portrait renderer escapes anything it doesn't
+  know.
+- Typing a full classroom code by hand showed the INVITED stamp.
+- An avatar saved on the phone that isn't one of the students is replaced.
+
+**Changed**
+- Home's credits: "Host voice and students drawn with ElevenLabs".
+- The server caches the portraits for a day, like the voice clips.
+- Tests and tools tap Next between the name and Create or Join.
+
 ## v0.20.0 — How to play, in a minute · 2026-10-20 09:54
 
 **Why:** the rules were four cards in the lobby and a teacher's note in the

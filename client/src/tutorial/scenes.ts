@@ -4,6 +4,7 @@
 // Cues come from the words Amy says: c.at("dot") is the moment she starts
 // saying "dot". Nothing here reads a real game: it's a staged class of five,
 // with Priya (🧪) as the cheater. Strings are fixed copy, never user input.
+import { face } from "../avatars";
 import { gone, inOut, kf, lerp, linear, out, p, pose, POP, RISE, SLAP, STAMP } from "./anim";
 
 export type SfxName = "bell" | "pop" | "tick" | "whistle" | "slaps" | "drumroll" | "sting" | "stamp" | "gavel" | "slide" | "siren" | "fanfare" | "click";
@@ -124,9 +125,12 @@ const CLASS = [
 const PRIYA = 3;
 const ROW_X = (i: number) => 140 + i * 200; // avatar centres in a row of five
 
+/** The staged class's portraits (v0.21: the game's students). */
+export const CLASS_FACES = CLASS.map(([a]) => a);
+
 function av(i: number, cx: number, cy: number, size = 130, name = true): HTMLElement {
-  const [face, nm] = CLASS[i];
-  const e = E("tut-av", `<span class="tut-face">${face}</span>${name ? `<span class="tut-name">${nm}</span>` : ""}`, cx - size / 2, cy - size / 2, size, size);
+  const [a, nm] = CLASS[i];
+  const e = E("tut-av", `<span class="tut-face">${face(a)}</span>${name ? `<span class="tut-name">${nm}</span>` : ""}`, cx - size / 2, cy - size / 2, size, size);
   e.style.setProperty("--sz", `${size}px`);
   return e;
 }
@@ -633,7 +637,7 @@ const outro: SceneDef = {
   build(c) {
     const ph = E(
       "tut-phone tut-home",
-      `<div class="tut-scr"><div class="tut-home-t"><span>🏫 How Did You</span><b>Know That?!</b></div><div class="tut-hello"><b>HELLO</b><small>my name is</small><span>🧪 Priya</span></div><div class="tut-home-btn">Join</div><div class="tut-home-btn ghost">Create</div></div>`,
+      `<div class="tut-scr"><div class="tut-home-t"><span>🏫 How Did You</span><b>Know That?!</b></div><div class="tut-hello"><b>HELLO</b><small>my name is</small><span>${face("🧪")} Priya</span></div><div class="tut-home-btn">Join</div><div class="tut-home-btn ghost">Create</div></div>`,
       330,
       280,
       420,

@@ -23,6 +23,7 @@ page.on("console", (m) => {
 
 await page.goto(base);
 await page.fill("#playerName", "Teach");
+await page.click("#hm-next");
 await page.click("#hm-practice");
 await page.waitForSelector(".screen-lobby");
 await page.click("#lb-adv summary"); // the custom timer lives under Advanced (v0.10)

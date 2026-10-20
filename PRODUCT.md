@@ -44,6 +44,7 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.18.0 | Game night ready: a whole-evening smoke test, the big screen rolls, balance re-checked | shipped |
 | v0.19.0 | Your host tonight: a recorded game-show host voices the big screen | shipped |
 | v0.20.0 | How to play, in a minute: a narrated video on Home and the big screen, and as an MP4 | shipped |
+| v0.21.0 | Meet the class: sixteen cartoon students, Home in two steps (you, then where to) | shipped |
 | later | A big-screen layout that uses the width (side-by-side reveal) | ideas |
 
 Later versions take the best of what playtests and audits turn up.
@@ -120,3 +121,10 @@ Later versions take the best of what playtests and audits turn up.
 | v0.20.0 | ✅ The big screen plays it after the welcome | The room waits for latecomers anyway; teaching everyone at once beats everyone reading |
 | v0.20.0 | ✅ Captions burned in, word by word | Most vertical video is watched muted, and game night is loud |
 | v0.20.0 | ❌ Background music | The game has none; her voice and the game's own effects keep the video sounding like the game |
+| v0.21.0 | ✅ Home in two steps: you, then where to | Your call. It also gives the class photo room for big portraits, and leaves one decision per screen |
+| v0.21.0 | ✅ An invite link joins from step 1 | Most players arrive by QR or link; for them step 2 would be a tap with nothing to decide |
+| v0.21.0 | ✅ Original students in a late-90s cartoon style, not the shows' characters | Your call on the style; Ed, Edd n Eddy and Dexter belong to their studios |
+| v0.21.0 | ✅ One character sheet, cut into 16 | Drawn together, the students share one style, for one generation (about 2,600 credits) instead of 16 |
+| v0.21.0 | ✅ The emoji stays the avatar's ID | No protocol change: saved games, fixtures and older phones keep working, and the emoji is the text fallback |
+| v0.21.0 | ✅ The host accepts only the sixteen students | Every phone renders every avatar; accepting anything let one phone inject markup into everyone's game |
+| v0.21.0 | ❌ Uploading your own photo | Moderation, storage and privacy, for a party game that must start in seconds |

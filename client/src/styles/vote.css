@@ -130,7 +130,7 @@
   border: 2px dashed var(--chalk-line);
 }
 .vo-slot.in { border-style: solid; border-color: var(--good); }
-.vo-in { font-size: 1rem; line-height: 1; animation: hd-pop var(--t-stamp) var(--e-standard) both; }
+.vo-in { display: block; width: 100%; height: 100%; font-size: 1rem; line-height: 1; animation: hd-pop var(--t-stamp) var(--e-standard) both; }
 
 /* ---- The dock: Hand in (thumb reach), or why there is nothing to do ---- */
 .vo-dock {

@@ -1,14 +1,19 @@
 // 1. Home / Join (spec 07; motion: 08-reveal-direction.md §4).
+// v0.21: two steps. Step 1 is you: your name on the "HELLO my name is"
+// sticker and your student from the class photo. Step 2 is where to: join a
+// class by its code, start one, or practice with bots. An invite link
+// (#/join/CODE) needs no step 2: step 1's button joins that class.
 // Beats (all on insertion; the shell morphs, so nothing replays per keystroke):
-//   title wobble-in at 0 · tagline 150 · name tag / Join / Start cards rise
-//   with the 50ms deco stagger from 200 · footer 400.
-// You write your name straight onto the "HELLO my name is" sticker (the input
-// IS the sticker's name line; the focused input is never clobbered by a
-// re-render) next to the chosen avatar, which pops on every pick. Long names
-// shrink the marker as they are typed (data-size, set live below).
-// Errors shake (hd-shake) — and shake again on every Join/Create tap that
-// repeats the same error.
+//   title wobble-in at 0 · tagline 150 · cards rise with the 50ms deco
+//   stagger from 200 · footer 400. Next slides the page on; Change slides it back.
+// You write your name straight onto the sticker (the input IS the sticker's
+// name line; the focused input is never clobbered by a re-render) next to your
+// student, who pops on every pick. Long names shrink the marker as they are
+// typed (data-size, set live below).
+// Errors shake (hd-shake) — and shake again on every tap that repeats the
+// same error.
 import { AVATARS } from "../../../shared/protocol";
+import { face, STUDENTS } from "../avatars";
 import { loadRecord } from "../record";
 import { esc } from "./common";
 import type { Screen } from "./types";
@@ -27,17 +32,12 @@ const tagSize = (name: string) => {
   return n > 15 ? "xs" : n > 10 ? "sm" : "";
 };
 
-// The morph re-syncs every NON-focused input to its rendered value, and the
-// shell only stores the typed name. Remember what was typed into the code box
-// here, so a name keystroke or an avatar tap never wipes a half-typed code.
-let typedCode: string | null = null;
+// The morph leaves a focused input alone, so size the marker as it's typed.
 if (typeof document !== "undefined") {
   document.addEventListener(
     "input",
     (ev) => {
       const el = ev.target as HTMLInputElement | null;
-      if (el?.id === "joinCode") typedCode = el.value;
-      // The morph leaves a focused input alone, so size the marker here.
       if (el?.id === "playerName") el.dataset.size = tagSize(el.value.trim());
     },
     true,
@@ -67,40 +67,34 @@ function reportCard(): string {
   </details>`;
 }
 
+const nick = (avatar: string) => STUDENTS[avatar]?.title ?? "";
+
+const notices = (closedReason: string | null, resuming: string | undefined) =>
+  `${closedReason ? `<div class="warn hm-closed" id="hm-closed" role="status">🚪 ${esc(closedReason)}</div>` : ""}${
+    resuming ? `<div class="warn hm-closed hm-resuming" id="hm-resuming" role="status">📡 Taking classroom ${esc(resuming)} back…</div>` : ""
+  }`;
+
+const errorLine = (error: string | null) => (error ? `<div class="err hm-err" id="hm-err-${keyOf(error)}" role="alert">✏️ ${esc(error)}</div>` : "");
+
 export const home: Screen = {
   render({ app }) {
     const h = app.home;
     const name = h.name.trim();
-    const code = typedCode ?? h.code;
-    const invited = h.code.length === 5; // deep link #/join/CODE pre-filled it
-    const needName = !!app.error && !name;
-    return `<section class="screen screen-home" id="scr-home">
-    <h1 class="title hm-title" id="hm-title">
-      <span class="hm-t1"><span aria-hidden="true">🏫 </span>How Did You</span>
-      <span class="hm-t2">Know That?!</span>
-    </h1>
-    <p class="tagline hm-tagline" id="hm-tagline">Pop quiz! One classmate secretly sees the answers. Catch them before they graduate.</p>
-    <button class="btn ghost hm-howto" id="hm-howto" data-action="howto"><span aria-hidden="true">▶</span> How to play <small>1 min</small></button>
-    ${app.closedReason ? `<div class="warn hm-closed" id="hm-closed" role="status">🚪 ${esc(app.closedReason)}</div>` : ""}
-    ${h.resuming ? `<div class="warn hm-closed hm-resuming" id="hm-resuming" role="status">📡 Taking classroom ${esc(h.resuming)} back…</div>` : ""}
+    const invited = !!h.invite && h.code === h.invite; // a deep link #/join/CODE
 
-    <div class="card hm-card hm-namecard ${needName ? "need-name" : ""}" id="hm-namecard">
-      <div class="hello">
-        <div class="hello-band" aria-hidden="true"><span class="hello-big">HELLO</span><span class="hello-small">my name is</span></div>
-        <div class="hello-body">
-          <span class="hello-av" id="hello-av-${keyOf(h.avatar)}" aria-hidden="true">${h.avatar}</span>
-          <label class="hm-sr" for="playerName">Your name</label>
-          <input id="playerName" class="hello-input" data-size="${tagSize(name)}" placeholder="your name here" maxlength="20" autocomplete="off"
-                 autocapitalize="words" spellcheck="false" enterkeyhint="${invited ? "go" : "done"}" value="${esc(h.name)}" />
-        </div>
-      </div>
-      <div class="av-grid" role="group" aria-label="Pick your avatar">
-        ${AVATARS.map(
-          (a) =>
-            `<button class="av-pick ${h.avatar === a ? "sel" : ""}" data-action="pickAvatar" data-av="${a}" aria-label="Avatar ${a}" aria-pressed="${h.avatar === a}"><span class="av-face" aria-hidden="true">${a}</span></button>`,
-        ).join("")}
-      </div>
+    if (h.step === 2) {
+      return `<section class="screen screen-home hm-step2" id="scr-home">
+    <div class="card hm-card hm-me" id="hm-me">
+      <span class="hm-me-face" id="hm-me-face-${keyOf(h.avatar)}">${face(h.avatar)}</span>
+      <span class="hm-me-txt">
+        <span class="hm-me-hi" aria-hidden="true">HELLO my name is</span>
+        <b class="hm-me-name" title="${esc(name)}">${esc(name)}</b>
+        <small class="hm-me-nick">${esc(nick(h.avatar))}</small>
+      </span>
+      <button class="btn ghost hm-change" id="hm-change" data-action="homeBack" aria-label="Change your name or student"><span aria-hidden="true">✏️</span> Change</button>
     </div>
+    ${notices(app.closedReason, h.resuming)}
+    <h2 class="hm-where" id="hm-where">Where to?</h2>
 
     <div class="duo" id="hm-duo">
       <div class="card hm-card hm-join ${invited ? "invited" : ""}" id="hm-join">
@@ -108,7 +102,7 @@ export const home: Screen = {
         ${invited ? `<span class="hm-invited" aria-hidden="true">INVITED</span>` : ""}
         <label class="hm-sr" for="joinCode">Classroom code</label>
         <input id="joinCode" placeholder="CODE" maxlength="5" autocapitalize="characters" autocomplete="off" spellcheck="false"
-               enterkeyhint="go" value="${esc(code)}" class="code-input" />
+               enterkeyhint="go" value="${esc(h.code)}" class="code-input" />
         <button class="btn ${h.busy ? "hm-busy" : ""}" data-action="join" ${h.busy ? "disabled" : ""}><span>${h.busy ? "Joining…" : "Join"}</span></button>
       </div>
       <div class="card hm-card hm-create" id="hm-create">
@@ -118,10 +112,51 @@ export const home: Screen = {
       </div>
     </div>
     <button class="btn ghost hm-practice" id="hm-practice" data-action="practice" ${h.busy ? "disabled" : ""}><span aria-hidden="true">🤖 </span>Practice with bots</button>
-    ${app.error ? `<div class="err hm-err" id="hm-err-${keyOf(app.error)}" role="alert">✏️ ${esc(app.error)}</div>` : ""}
-    ${reportCard()}
+    ${errorLine(app.error)}
     <p class="footer-note hm-foot" id="hm-foot">3–10 classmates · phones out · one voice call · bots welcome</p>
-    <p class="hm-credits" id="hm-credits">Some questions from <a href="https://opentdb.com" target="_blank" rel="noopener">Open Trivia Database</a> (<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>) · Host voice by ElevenLabs</p>
+    </section>`;
+    }
+
+    const needName = !!app.error && !name;
+    const go = invited ? `Join class ${esc(h.invite!)}` : "Next";
+    return `<section class="screen screen-home hm-step1" id="scr-home">
+    <h1 class="title hm-title" id="hm-title">
+      <span class="hm-t1"><span aria-hidden="true">🏫 </span>How Did You</span>
+      <span class="hm-t2">Know That?!</span>
+    </h1>
+    <p class="tagline hm-tagline" id="hm-tagline">Pop quiz! One classmate secretly sees the answers. Catch them before they graduate.</p>
+    <button class="btn ghost hm-howto" id="hm-howto" data-action="howto"><span aria-hidden="true">▶</span> How to play <small>1 min</small></button>
+    ${notices(app.closedReason, h.resuming)}
+
+    <div class="card hm-card hm-namecard ${needName ? "need-name" : ""}" id="hm-namecard">
+      <div class="hello">
+        <div class="hello-band" aria-hidden="true"><span class="hello-big">HELLO</span><span class="hello-small">my name is</span></div>
+        <div class="hello-body">
+          <span class="hello-av" id="hello-av-${keyOf(h.avatar)}" aria-hidden="true">${face(h.avatar)}</span>
+          <label class="hm-sr" for="playerName">Your name</label>
+          <input id="playerName" class="hello-input" data-size="${tagSize(name)}" placeholder="your name here" maxlength="20" autocomplete="off"
+                 autocapitalize="words" spellcheck="false" enterkeyhint="${invited ? "go" : "next"}" value="${esc(h.name)}" />
+        </div>
+      </div>
+      <div class="hm-photo-head">
+        <span id="hm-photo-h">📸 Pick your student</span>
+        <b class="hm-nick" id="hm-nick-${keyOf(h.avatar)}" aria-live="polite">${esc(nick(h.avatar))}</b>
+      </div>
+      <div class="av-grid" role="group" aria-labelledby="hm-photo-h">
+        ${AVATARS.map(
+          (a) =>
+            `<button class="av-pick ${h.avatar === a ? "sel" : ""}" data-action="pickAvatar" data-av="${a}" aria-label="${esc(nick(a))}" aria-pressed="${h.avatar === a}"><span class="av-face" aria-hidden="true">${face(a)}</span></button>`,
+        ).join("")}
+      </div>
+    </div>
+
+    <div class="hm-next-dock" id="hm-next-dock">
+      <button class="btn hm-next ${h.busy ? "hm-busy" : ""}" id="hm-next" data-action="homeNext" ${h.busy ? "disabled" : ""}><span>${h.busy ? "Joining…" : `${go} <span aria-hidden="true">→</span>`}</span></button>
+      ${invited ? `<button class="btn ghost hm-elsewhere" id="hm-elsewhere" data-action="homeElsewhere" ${h.busy ? "disabled" : ""}>or start your own class</button>` : ""}
+    </div>
+    ${errorLine(app.error)}
+    ${reportCard()}
+    <p class="hm-credits" id="hm-credits">Some questions from <a href="https://opentdb.com" target="_blank" rel="noopener">Open Trivia Database</a> (<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>) · Host voice and students drawn with ElevenLabs</p>
     </section>`;
   },
 };

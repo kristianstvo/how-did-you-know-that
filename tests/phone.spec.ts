@@ -14,8 +14,11 @@
 //     leaving mid-game
 //   · your report card counts a finished period once, across a reload (v0.12)
 //   · a big screen (#/tv/CODE) shows the show without joining the class (v0.16)
+//   · Home is you first (name, student), then where to; back returns (v0.21)
+//   · an avatar that isn't one of the students never reaches a screen (v0.21)
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import { io } from "socket.io-client";
 
 const SE = { width: 375, height: 553 };
 
@@ -53,13 +56,14 @@ async function phone(browser: Browser, url = "/", viewport = SE) {
 async function classroom(browser: Browser, humans: string[], bots: number) {
   const host = await phone(browser);
   await host.page.fill("#playerName", "Hana");
+  await host.page.click("#hm-next");
   await host.page.click('[data-action="create"]');
   const code = (await host.page.locator(".roomcode").innerText({ timeout: 15000 })).replace(/\s/g, "");
   const players: { name: string; page: Page; ctx: Awaited<ReturnType<typeof phone>>["ctx"] }[] = [];
   for (const name of humans) {
     const p = await phone(browser, `/#/join/${code}`);
     await p.page.fill("#playerName", name);
-    await p.page.click('[data-action="join"]');
+    await p.page.click("#hm-next");
     await p.page.waitForSelector(".screen-lobby");
     players.push({ name, ...p });
   }
@@ -221,12 +225,13 @@ test("phone: your report card counts a finished period once, across a reload", a
   // Bea is the cheater (local test hook); the class catches her after Q1.
   const host = await phone(browser, "/?debugCheater=Bea");
   await host.page.fill("#playerName", "Hana");
+  await host.page.click("#hm-next");
   await host.page.click('[data-action="create"]');
   const code = (await host.page.locator(".roomcode").innerText({ timeout: 15000 })).replace(/\s/g, "");
   const join = async (name: string) => {
     const p = await phone(browser, `/#/join/${code}`);
     await p.page.fill("#playerName", name);
-    await p.page.click('[data-action="join"]');
+    await p.page.click("#hm-next");
     await p.page.waitForSelector(".screen-lobby");
     return p;
   };
@@ -262,7 +267,7 @@ test("phone: your report card counts a finished period once, across a reload", a
   await bea.page.close();
   const again = await bea.ctx.newPage();
   await again.goto(`/#/join/${code}`);
-  await again.click('[data-action="join"]');
+  await again.click("#hm-next"); // v0.21: the invite's Join
   await again.waitForSelector(".screen-matchEnd", { timeout: 20000 });
   const record = async (ctx: Awaited<ReturnType<typeof phone>>["ctx"]) => {
     const tab = await ctx.newPage(); // a new tab on the same phone, days later
@@ -286,6 +291,7 @@ test("phone: your report card counts a finished period once, across a reload", a
 test("big screen: a TV shows the show without joining the class", async ({ browser }) => {
   const host = await phone(browser);
   await host.page.fill("#playerName", "Hana");
+  await host.page.click("#hm-next");
   await host.page.click('[data-action="create"]');
   const code = (await host.page.locator(".roomcode").innerText({ timeout: 15000 })).replace(/\s/g, "");
   const tvCtx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
@@ -326,6 +332,7 @@ test("big screen: a game-show host voices the night, from the TV only (v0.19)", 
     if (r.url().includes("/voice/")) phoneClips.push(r.url());
   });
   await host.page.fill("#playerName", "Hana");
+  await host.page.click("#hm-next");
   await host.page.click('[data-action="create"]');
   const code = (await host.page.locator(".roomcode").innerText({ timeout: 15000 })).replace(/\s/g, "");
   const tvCtx = await browser.newContext({ viewport: { width: 1280, height: 720 }, isMobile: false, hasTouch: false });
@@ -424,6 +431,7 @@ test("how to play: Home's one-minute video plays with her voice and captions, an
 test("how to play: the big screen plays it after the welcome, the way in beside it; the bell ends it (v0.20)", async ({ browser }) => {
   const host = await phone(browser);
   await host.page.fill("#playerName", "Hana");
+  await host.page.click("#hm-next");
   await host.page.click('[data-action="create"]');
   const code = (await host.page.locator(".roomcode").innerText({ timeout: 15000 })).replace(/\s/g, "");
   const tvCtx = await browser.newContext({ viewport: { width: 1280, height: 720 }, isMobile: false, hasTouch: false });
@@ -461,7 +469,7 @@ test("phone: someone arriving mid-period watches from the hallway, without answe
   await host.page.waitForSelector("button.opt:not([disabled])", { timeout: 30000 });
   const late = await phone(browser, `/#/join/${code}`);
   await late.page.fill("#playerName", "Eve");
-  await late.page.click('[data-action="join"]');
+  await late.page.click("#hm-next");
   // In, watching the period: not turned away, not on the home screen.
   await expect(late.page.locator(".screen-question, .screen-reveal").first()).toBeVisible({ timeout: 15000 });
   await expect.poll(async () => (await banner(late.page)).status, { timeout: 5000 }).toBe("hallway");
@@ -478,11 +486,12 @@ test("phone: someone arriving mid-period watches from the hallway, without answe
 test("phone: the teacher sets the pace with one tap, and everyone sees it", async ({ browser }) => {
   const host = await phone(browser);
   await host.page.fill("#playerName", "Hana");
+  await host.page.click("#hm-next");
   await host.page.click('[data-action="create"]');
   const code = (await host.page.locator(".roomcode").innerText({ timeout: 15000 })).replace(/\s/g, "");
   const guest = await phone(browser, `/#/join/${code}`);
   await guest.page.fill("#playerName", "Bea");
-  await guest.page.click('[data-action="join"]');
+  await guest.page.click("#hm-next");
   await guest.page.waitForSelector(".screen-lobby");
   expect((await host.page.locator("#pace-quick").boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await host.page.click("#pace-quick");
@@ -497,6 +506,7 @@ test("phone: the teacher sets the pace with one tap, and everyone sees it", asyn
 test("phone: Practice with bots puts a solo player in a ready classroom", async ({ browser }) => {
   const { ctx, page } = await phone(browser);
   await page.fill("#playerName", "Solo");
+  await page.click("#hm-next");
   await page.click("#hm-practice");
   await page.waitForSelector(".screen-lobby");
   await expect(page.locator(".lb-row.is-bot")).toHaveCount(5);
@@ -639,4 +649,62 @@ test("phone: no field small enough for iOS to zoom; nothing scrolls sideways at 
     expect(r.small, `${url}: iOS would zoom into these`).toEqual([]);
     await ctx.close();
   }
+});
+
+test("home: you first (name and student), then where to; the back gesture returns (v0.21)", async ({ browser }) => {
+  const { ctx, page } = await phone(browser);
+  // Step 1: the class photo, sixteen portraits, every one loaded. No code box yet.
+  await expect(page.locator(".av-pick img.face")).toHaveCount(16);
+  await expect
+    .poll(() => page.evaluate(() => [...document.querySelectorAll<HTMLImageElement>(".av-pick img.face")].every((i) => i.complete && i.naturalWidth > 0)))
+    .toBe(true);
+  expect(await page.locator("#joinCode").count()).toBe(0);
+  // Next with no name: the sticker asks for one, and the ask goes once it has one.
+  await page.click("#hm-next");
+  await expect(page.locator(".hm-err")).toContainText("name tag");
+  await page.fill("#playerName", "Maya");
+  await expect(page.locator(".hm-err")).toHaveCount(0);
+  await page.click('[data-av="🧪"]');
+  await expect(page.locator(".hm-nick")).toHaveText("The Mad Scientist");
+  await expect(page.locator(".hello-av img.face")).toHaveAttribute("src", /testtube\.webp$/);
+  await expect(page.locator('[data-av="🧪"]')).toHaveAttribute("aria-pressed", "true");
+  // Step 2: you in a nutshell, then join, start or practice.
+  await page.click("#hm-next");
+  await expect(page.locator("#hm-me .hm-me-name")).toHaveText("Maya");
+  await expect(page.locator("#hm-me img.face")).toHaveAttribute("src", /testtube\.webp$/);
+  await expect(page.locator('[data-action="join"]')).toBeVisible();
+  await expect(page.locator('[data-action="create"]')).toBeVisible();
+  await expect(page.locator("#hm-practice")).toBeVisible();
+  // The phone's back gesture returns to step 1 (not out of the game), name and pick kept.
+  await page.goBack();
+  await expect(page.locator("#playerName")).toHaveValue("Maya");
+  await expect(page.locator('[data-av="🧪"]')).toHaveClass(/sel/);
+  // Change does too.
+  await page.click("#hm-next");
+  await page.click("#hm-change");
+  await expect(page.locator("#playerName")).toBeVisible();
+  expect(await page.evaluate(() => [localStorage.getItem("hdykt-name"), localStorage.getItem("hdykt-avatar")])).toEqual(["Maya", "🧪"]);
+  await ctx.close();
+});
+
+test("an avatar that isn't one of the students never reaches anyone's screen (v0.21)", async ({ browser }) => {
+  const host = await phone(browser);
+  await host.page.fill("#playerName", "Hana");
+  await host.page.click("#hm-next");
+  await host.page.click('[data-action="create"]');
+  const code = (await host.page.locator(".roomcode").innerText({ timeout: 15000 })).replace(/\s/g, "");
+  // A hand-rolled client skips the game's own checks and sends markup.
+  const sock = io("http://localhost:3000", { transports: ["websocket"] });
+  const forged = '<img src=x onerror="window.__pwned=1">';
+  await new Promise<void>((resolve, reject) =>
+    sock.emit("join", { code, name: "Mallory", avatar: forged }, (res: { ok: boolean }) => (res.ok ? resolve() : reject(new Error("join failed")))),
+  );
+  const row = host.page.locator(".lb-row", { hasText: "Mallory" });
+  await expect(row).toBeVisible({ timeout: 10000 });
+  // The host gave them one of the students instead.
+  await expect(row.locator("img.face")).toHaveAttribute("src", /\/avatars\/\w+\.webp$/);
+  expect(await host.page.locator('img[src="x"]').count()).toBe(0);
+  expect(await host.page.evaluate(() => (window as unknown as { __pwned?: number }).__pwned ?? 0)).toBe(0);
+  sock.disconnect();
+  await host.ctx.close();
 });

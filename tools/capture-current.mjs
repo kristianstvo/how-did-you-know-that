@@ -88,7 +88,7 @@ function instrument() {
     else if (has(".timer-wrap")) phase = "question";
     else if (has(".role-screen")) phase = "role";
     else if (has(".roomcode")) phase = "lobby";
-    else if (has("#joinCode")) phase = "home";
+    else if (has("#scr-home")) phase = "home";
     const qm = app.querySelector(".qnum")?.textContent.match(/Q(\d+)/);
     let q = qm ? Number(qm[1]) : null;
     if (q !== null) lastQ = q;
@@ -705,15 +705,16 @@ async function parityProbe(browser, maxAttempts = 6) {
     try {
       for (const x of [h, p]) await x.context.route(/opentdb\.com/, (r) => r.abort());
       await h.page.goto(BASE, { waitUntil: "load" });
-      await h.page.waitForSelector("#joinCode");
+      await h.page.waitForSelector("#playerName");
       await h.page.fill("#playerName", "Host");
+      await h.page.click("#hm-next");
       await h.page.click("[data-action=create]");
       await h.page.waitForSelector(".roomcode", { timeout: 15000 });
       const code = (await h.page.textContent(".roomcode")).trim();
       await p.page.goto(`${BASE}/#/join/${code}`, { waitUntil: "load" });
-      await p.page.waitForSelector("#joinCode");
+      await p.page.waitForSelector("#playerName");
       await p.page.fill("#playerName", "Player2");
-      await p.page.click("[data-action=join]");
+      await p.page.click("#hm-next");
       await p.page.waitForSelector(".roomcode", { timeout: 15000 });
       for (let i = 0; i < 2; i++) {
         const before = await h.page.locator(".player-li").count();
@@ -1352,10 +1353,11 @@ async function main() {
   try {
     // Home + create
     await host.page.goto(BASE, { waitUntil: "load" });
-    await host.page.waitForSelector("#joinCode");
+    await host.page.waitForSelector("#playerName");
     await sleep(800);
     await shot("host", host.page, "home");
     await host.page.fill("#playerName", "Host");
+    await host.page.click("#hm-next");
     await act("host", "create room", () => host.page.click("[data-action=create]"));
     await host.page.waitForSelector(".roomcode", { timeout: 15000 });
     const code = (await host.page.textContent(".roomcode")).trim();
@@ -1363,11 +1365,11 @@ async function main() {
 
     // Player2 joins via deep link
     await p2.page.goto(`${BASE}/#/join/${code}`, { waitUntil: "load" });
-    await p2.page.waitForSelector("#joinCode");
+    await p2.page.waitForSelector("#playerName");
     await sleep(500);
     await shot("player2", p2.page, "home-deeplink");
     await p2.page.fill("#playerName", "Player2");
-    await act("player2", "join room", () => p2.page.click("[data-action=join]"));
+    await act("player2", "join room", () => p2.page.click("#hm-next"));
     await p2.page.waitForSelector(".roomcode", { timeout: 15000 });
 
     // Bots + lobby

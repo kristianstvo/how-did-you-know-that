@@ -14,6 +14,7 @@ import { matchEndTimeline, reached, type MatchEndBeat } from "../../../shared/ch
 import type { CaseEntry, PublicPlayer, PublicState } from "../../../shared/protocol";
 import { calloutCopy, esc, fmtTime, playerBadges, PLAYTEST } from "./common";
 import type { RenderCtx, Screen } from "./types";
+import { face } from "../avatars";
 
 type Variant = "caught" | "graduated" | "top";
 type MatchState = NonNullable<PublicState["match"]>;
@@ -92,14 +93,14 @@ function hero(ctx: RenderCtx, v: Variant, b: Set<MatchEndBeat>, drum: { at: numb
   const cheater = s.players.find((p) => p.id === e.cheaterId);
   const unmasked = b.has("unmask") && !!cheater;
 
-  const face = unmasked
-    ? `<span class="me-face-real" id="me-face-real" aria-hidden="true">${cheater!.avatar}</span>`
+  const pic = unmasked
+    ? `<span class="me-face-real" id="me-face-real" aria-hidden="true">${face(cheater!.avatar)}</span>`
     : `<span class="me-face-mask" id="me-face-mask" aria-hidden="true">?</span>`;
   const stamp = unmasked ? `<span class="me-stamp-wrap"><span class="me-stamp" id="me-stamp">CHEATER</span></span>` : "";
   const name = unmasked
     ? `<span class="me-name" id="me-name" title="${esc(cheater!.name)}">${esc(cheater!.name)}</span>`
     : `<span class="me-redact" id="me-redact" aria-hidden="true"></span><span class="me-sr">not revealed yet</span>`;
-  const photo = `<div class="me-face">${face}${stamp}</div>`;
+  const photo = `<div class="me-face">${pic}${stamp}</div>`;
 
   if (v === "graduated" && e.struckOut) {
     // The final blow was a vote, not an answer: the last innocent sent away.
@@ -107,7 +108,7 @@ function hero(ctx: RenderCtx, v: Variant, b: Set<MatchEndBeat>, drum: { at: numb
     const sent = vr?.banishedId ? s.players.find((p) => p.id === vr.banishedId) : undefined;
     const accuser = vr ? s.players.find((p) => p.id === vr.accuserId) : undefined;
     const blow = b.has("finalBlow");
-    const line1 = sent ? `<span class="me-fx">${sent.avatar} <b class="me-drop-nm" title="${esc(sent.name)}">${esc(sent.name)}</b> was innocent <b class="me-no">✗</b></span>` : "";
+    const line1 = sent ? `<span class="me-fx">${face(sent.avatar)} <b class="me-drop-nm" title="${esc(sent.name)}">${esc(sent.name)}</b> was innocent <b class="me-no">✗</b></span>` : "";
     const line2 = `<span class="me-fx">${"✗".repeat(Math.max(1, m.wrongDetentions))} strike ${m.wrongDetentions} · <b>${cheater?.score ?? 0}</b> 🎓 <span class="me-dimtxt">line ${m.threshold}</span></span>`;
     const story = `${accuser ? `🙋 ${esc(accuser.name)} raised a hand, and the` : "The"} class sent ${sent ? esc(sent.name) : "an innocent"} to detention.`;
     return `<div class="card me-hero me-blow" id="me-hero" role="status" aria-live="polite" aria-atomic="false">
@@ -144,7 +145,7 @@ function hero(ctx: RenderCtx, v: Variant, b: Set<MatchEndBeat>, drum: { at: numb
       : `${row?.pointsGained ? `<b>+${row.pointsGained}</b> → ` : ""}<b>${score}</b>&nbsp;🎓 <span class="me-dimtxt">line ${m.threshold}</span>`;
     const banished = lineDrop && vr!.banishedId ? s.players.find((p) => p.id === vr!.banishedId) : undefined;
     const drop = banished
-      ? `📉 ${banished.avatar} <b class="me-drop-nm" title="${esc(banished.name)}">${esc(banished.name)}</b>’s detention lowered the line: ${vr!.newThreshold! + s.settings.thresholdDrop} → ${vr!.newThreshold}`
+      ? `📉 ${face(banished.avatar)} <b class="me-drop-nm" title="${esc(banished.name)}">${esc(banished.name)}</b>’s detention lowered the line: ${vr!.newThreshold! + s.settings.thresholdDrop} → ${vr!.newThreshold}`
       : "";
     return `<div class="card me-hero me-blow" id="me-hero" role="status" aria-live="polite" aria-atomic="false">
       <div class="me-hk">💥 Final blow · ${qLabel}${q ? ` · ${q.subjectEmoji} ${esc(q.subject)}` : ""}</div>
@@ -214,7 +215,7 @@ function reportCard(ctx: RenderCtx, b: Set<MatchEndBeat>): string {
           const share = (Math.max(0, p.score) / top).toFixed(4);
           return `<div class="me-rc-row${win ? " win" : ""}${isCheater ? " is-cheater" : ""}${p.id === app.selfId ? " self" : ""}" id="me-rc-${p.id}" role="listitem" style="--i:${i}">
             <span class="me-rank">${rk[i]}</span>
-            <span class="av" aria-hidden="true">${p.avatar}</span>
+            <span class="av" aria-hidden="true">${face(p.avatar)}</span>
             <span class="me-rc-main">
               <span class="me-rc-top"><span class="me-nm" title="${esc(p.name)}">${esc(p.name)}</span>${isCheater ? `<span class="badge me-badge-cheater">CHEATER</span>` : ""}${playerBadges(p, s)}</span>
               <span class="me-bar" aria-hidden="true"><span class="me-bar-fill" style="--share:${share}"></span><span class="me-bar-line"></span></span>
@@ -251,8 +252,8 @@ function caseFileRecap(ctx: RenderCtx, b: Set<MatchEndBeat>): string {
     const names = esc(who.map((p) => p.name).join(", "));
     const whoHtml =
       who.length === 1
-        ? `${who[0].avatar}&nbsp;${esc(who[0].name)}`
-        : who.map((p) => `<span class="${p.id === e.cheaterId ? "me-cf-hit" : ""}">${p.avatar}</span>`).join("");
+        ? `${face(who[0].avatar)}&nbsp;${esc(who[0].name)}`
+        : who.map((p) => `<span class="${p.id === e.cheaterId ? "me-cf-hit" : ""}">${face(p.avatar)}</span>`).join("");
     return `<div class="me-cf-line ${cls}" id="me-cf-${idx}" style="--i:${k++}">
       <span class="me-cf-ic" aria-hidden="true">${c.icon}</span>
       <span class="me-cf-q">Q${x.q + 1}</span>
@@ -301,8 +302,8 @@ function tellsCard(ctx: RenderCtx, b: Set<MatchEndBeat>): string {
         !callers.length
           ? "Nobody was pointing at them at the end."
           : callers.length <= 2
-            ? `Called it: ${callers.map((p) => `${p.avatar}&nbsp;<b>${esc(p.name)}</b>`).join(", ")}`
-            : `Called it: ${callers.map((p) => `<span title="${esc(p.name)}">${p.avatar}</span>`).join(" ")} · <b>${callers.length} of ${s.players.length - 1}</b>`,
+            ? `Called it: ${callers.map((p) => `${face(p.avatar)}&nbsp;<b>${esc(p.name)}</b>`).join(", ")}`
+            : `Called it: ${callers.map((p) => `<span title="${esc(p.name)}">${face(p.avatar)}</span>`).join(" ")} · <b>${callers.length} of ${s.players.length - 1}</b>`,
       )
     : "";
   return `<section class="card me-sec me-tells" id="me-tells" aria-labelledby="me-tells-h">
@@ -325,7 +326,7 @@ function superlatives(ctx: RenderCtx, b: Set<MatchEndBeat>): string {
           return `<div class="me-aw-row" id="me-aw-${i}" role="listitem" style="--i:${i}">
             <span class="me-aw-ic" aria-hidden="true">${a.icon}</span>
             <span class="me-aw-main"><span class="me-aw-t">${esc(a.title)}</span><span class="me-aw-why">${esc(a.why)}</span></span>
-            <span class="me-aw-who">${p ? `<span aria-hidden="true">${p.avatar}</span> <b title="${esc(p.name)}">${esc(p.name)}</b>` : ""}</span>
+            <span class="me-aw-who">${p ? `<span aria-hidden="true">${face(p.avatar)}</span> <b title="${esc(p.name)}">${esc(p.name)}</b>` : ""}</span>
           </div>`;
         })
         .join("")
@@ -362,7 +363,7 @@ function semester(ctx: RenderCtx, b: Set<MatchEndBeat>): string {
           return `<div class="me-sem-row${p.id === app.selfId ? " self" : ""}" id="me-sem-${p.id}" role="listitem" style="transform:translateY(${i * SEM_ROW}px)">
             <div class="me-sem-in">
               <span class="me-rank">${rk[i]}</span>
-              <span class="av" aria-hidden="true">${p.avatar}</span>
+              <span class="av" aria-hidden="true">${face(p.avatar)}</span>
               <span class="me-nm" title="${esc(p.name)}">${esc(p.name)}</span>
               <span class="delta me-delta ${d > 0 ? "pos" : d < 0 ? "neg" : "zero"}" style="--j:${popOrder.get(p.id)}">${d > 0 ? "+" : d < 0 ? "−" : "±"}${Math.abs(d)}</span>
               <span class="me-tot">${value(p.id)}</span>

@@ -57,8 +57,8 @@ function phaseAt(name, phase, qi) {
 // Moments, each with the controls that matter on that screen.
 const fx = (name, view, t, extra = "") => `${BASE}/#/fixture/${name}?as=${view}&t=${t}&paused=1&ui=0${extra}`;
 const MOMENTS = [
-  { id: "home", url: `${BASE}/`, primary: ["#playerName", '[data-action="join"]', '[data-action="create"]'] },
-  { id: "home-invited", url: `${BASE}/#/join/ABCDE`, primary: ["#playerName", '[data-action="join"]'] },
+  { id: "home", url: `${BASE}/`, primary: ["#playerName", ".av-pick", "#hm-next"] },
+  { id: "home-invited", url: `${BASE}/#/join/ABCDE`, primary: ["#playerName", "#hm-next"] },
   { id: "lobby-host-10", url: fx("fullclass", "innocent", -1500, "&host=1"), primary: ["#lb-start", "#lb-share"] },
   { id: "lobby-guest-6", url: fx("caught", "innocent", -1500), primary: [".lb-wait"] },
   { id: "role", url: fx("caught", "innocent", phaseAt("caught", "role") + 2400), primary: [] },
@@ -213,6 +213,7 @@ for (const phone of PHONES) {
   const page = await ctx.newPage();
   await page.goto(`${BASE}/`);
   await page.fill("#playerName", "Tapper");
+  await page.click("#hm-next");
   await page.click('[data-action="create"]');
   await page.waitForSelector("#lb-addbot");
   for (let i = 0; i < 3; i++) {

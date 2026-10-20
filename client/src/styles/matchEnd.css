@@ -95,6 +95,8 @@
 .me-face-mask { font-family: var(--hand); font-size: 2.3rem; font-weight: 900; color: var(--dim); line-height: 1; }
 .b-drumroll:not(.b-unmask) .me-face-mask { animation: hd-pulse 900ms ease-in-out infinite; }
 .me-face-real { font-size: 2.5rem; line-height: 1; animation: hd-spin-in var(--t-scene) var(--e-enter) both; }
+/* v0.21: the student's portrait is the yearbook photo, edge to edge. */
+.me-face-real > img.face { display: block; width: 64px; height: 64px; border-radius: 10px; }
 .me-stamp-wrap { position: absolute; left: -10px; right: -10px; bottom: 3px; display: flex; justify-content: center; pointer-events: none; }
 .me-stamp {
   display: inline-block; padding: 1px 6px; border: 2.5px solid var(--accent); border-radius: 5px;

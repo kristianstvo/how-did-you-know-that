@@ -28,7 +28,9 @@ export interface App {
   secret: SecretState;
   error: string | null;
   closedReason: string | null;
-  home: { name: string; code: string; avatar: string; busy: boolean; resuming?: string };
+  /** v0.21: step 1 is you (name and student), step 2 is where to. `invite`
+   *  is the code an invite link (#/join/CODE) brought. */
+  home: { name: string; code: string; avatar: string; busy: boolean; resuming?: string; step: 1 | 2; invite?: string };
   ui: UiFlags;
   fixture: boolean; // replaying a recorded match (no network)
   /** v0.16: this page is a big screen (#/tv/CODE): it watches, never plays. */

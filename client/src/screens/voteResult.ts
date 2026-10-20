@@ -8,6 +8,7 @@ import { reached, VOTE_FLIP_STAGGER, voteResultTimeline } from "../../../shared/
 import type { PublicPlayer, PublicState } from "../../../shared/protocol";
 import { av, esc, sessionTab } from "./common";
 import type { RenderCtx, Screen } from "./types";
+import { face } from "../avatars";
 
 type Outcome = "caught" | "innocent" | "tie";
 
@@ -174,7 +175,7 @@ export const voteResult: Screen = {
           let row = lastX.findIndex((lx) => x - lx >= 7);
           if (row === -1) row = lastX.length < 2 ? lastX.length : lastX.indexOf(Math.min(...lastX));
           lastX[row] = x;
-          return `<span class="vr-pin${p.banished ? " out" : ""}" style="--x:${x}%;--row:${row}" title="${esc(p.name)}: ${p.score}">${p.avatar}</span>`;
+          return `<span class="vr-pin${p.banished ? " out" : ""}" style="--x:${x}%;--row:${row}" title="${esc(p.name)}: ${p.score}">${face(p.avatar)}</span>`;
         })
         .join("");
       after = `<div class="vr-gb" id="vr-gb" aria-label="Graduation line ${drop ? `drops ${drop}, from ${old} to ${now}` : `stays at ${now}`}" ${enter(vAt + 300, el)}>
@@ -222,7 +223,7 @@ export const voteResult: Screen = {
     <div class="vr-after">${after}</div>
     ${n ? `<div class="vr-tally" style="--rows:${tallyRows}">${chips}</div>` : ""}
     ${n ? `<ol class="vr-lines" aria-label="Ballots, in seat order">${lines}</ol>` : `<p class="vr-empty">Nobody voted. Cowards.</p>`}
-    ${abstained.length ? `<p class="vr-abstain">Didn't vote: ${abstained.map((p) => `${p.avatar} ${esc(p.name)}`).join(", ")}</p>` : ""}
+    ${abstained.length ? `<p class="vr-abstain">Didn't vote: ${abstained.map((p) => `${face(p.avatar)} ${esc(p.name)}`).join(", ")}</p>` : ""}
     <div class="vr-dock">${
       done
         ? app.isHost

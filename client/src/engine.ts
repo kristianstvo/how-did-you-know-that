@@ -251,7 +251,7 @@ export class HostEngine {
     return {
       id: genId(),
       name,
-      avatar: avatar || AVATARS[Math.floor(Math.random() * AVATARS.length)],
+      avatar: AVATARS.includes(avatar) ? avatar : AVATARS[Math.floor(Math.random() * AVATARS.length)],
       socketId,
       connected: true,
       isHost,
@@ -272,7 +272,10 @@ export class HostEngine {
 
   // ---------------- Joining (spec 05) ----------------
 
-  handleJoinRequest(socketId: string, rawName: string, avatar = "", token = "", watch = false): void {
+  handleJoinRequest(socketId: string, rawName: string, rawAvatar = "", token = "", watch = false): void {
+    // v0.21: an avatar is one of the students, nothing else. It reaches every
+    // phone's screen, so a made-up one (or markup) never gets in.
+    const avatar = AVATARS.includes(rawAvatar) ? rawAvatar : "";
     // v0.16: a big screen watches the show. Not a player, not in the
     // hallway, never the cheater: it only ever gets the public state.
     if (watch) {

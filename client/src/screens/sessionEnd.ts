@@ -7,6 +7,7 @@
 import type { PublicPlayer, PublicState } from "../../../shared/protocol";
 import { esc, PLAYTEST } from "./common";
 import type { RenderCtx, Screen } from "./types";
+import { face } from "../avatars";
 
 type SessionBeat = "start" | "rise3" | "rise2" | "rise1" | "crown" | "list" | "done";
 
@@ -85,7 +86,7 @@ export const sessionEnd: Screen = {
       const r = rk[place - 1];
       return `<div class="se-col se-p${place} se-r${Math.min(r, 3)}" id="se-col-${place}" style="--h:${BLOCK_H[Math.min(r, 3)]}px">
         <div class="se-fig">
-          <span class="se-av" aria-hidden="true">${p.avatar}</span>
+          <span class="se-av" aria-hidden="true">${face(p.avatar)}</span>
           <span class="se-nm" title="${esc(p.name)}">${esc(p.name)}</span>
           <span class="se-pts">${pts(s, p.id)} ⭐</span>
         </div>
@@ -103,7 +104,7 @@ export const sessionEnd: Screen = {
           .map(
             (p, i) => `<div class="se-row${p.id === app.selfId ? " self" : ""}" id="se-row-${p.id}" role="listitem" style="--i:${i}">
               <span class="se-rank">${MEDAL[rk[i]] ? `<span role="img" aria-label="rank ${rk[i]}">${MEDAL[rk[i]]}</span>` : rk[i]}</span>
-              <span class="av" aria-hidden="true">${p.avatar}</span>
+              <span class="av" aria-hidden="true">${face(p.avatar)}</span>
               <span class="se-row-nm" title="${esc(p.name)}">${esc(p.name)}</span>${badges(p)}
               <span class="se-row-pts">${pts(s, p.id)}</span>
             </div>`,
@@ -124,7 +125,7 @@ export const sessionEnd: Screen = {
                     return `<div class="me-aw-row" id="se-aw-${i}" role="listitem" style="--i:${i + sorted.length}">
                       <span class="me-aw-ic" aria-hidden="true">${a.icon}</span>
                       <span class="me-aw-main"><span class="me-aw-t">${esc(a.title)}</span><span class="me-aw-why">${esc(a.why)}</span></span>
-                      <span class="me-aw-who">${p ? `<span aria-hidden="true">${p.avatar}</span> <b title="${esc(p.name)}">${esc(p.name)}</b>` : ""}</span>
+                      <span class="me-aw-who">${p ? `<span aria-hidden="true">${face(p.avatar)}</span> <b title="${esc(p.name)}">${esc(p.name)}</b>` : ""}</span>
                     </div>`;
                   })
                   .join("")

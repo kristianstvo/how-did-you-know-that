@@ -8,6 +8,7 @@
 import type { PublicPlayer, PublicState } from "../../../shared/protocol";
 import { av, esc, exhibitBadges, fmtTime, pointerChip, sessionTab } from "./common";
 import type { RenderCtx, Screen } from "./types";
+import { face } from "../avatars";
 
 /** Entrance beats, ms from the vote phase start. Local to this screen: the
  *  vote has no host-gated beats, so they don't belong in shared/choreo.ts. */
@@ -119,7 +120,7 @@ export const vote: Screen = {
 
     const slot = (p: PublicPlayer) =>
       `<span class="vo-slot${p.votedCurrent ? " in" : ""}" id="vs-${p.id}" title="${esc(p.name)}${p.votedCurrent ? " handed in" : " is still deciding"}">${
-        p.votedCurrent ? `<span class="vo-in" id="vi-${p.id}" aria-hidden="true">${p.avatar}</span>` : ""
+        p.votedCurrent ? `<span class="vo-in" id="vi-${p.id}" aria-hidden="true">${face(p.avatar)}</span>` : ""
       }</span>`;
 
     const cls = ["screen", "screen-vote", ...[...b].map((x) => `b-${x}`), candidates.length <= 6 ? "roomy" : "", voted ? "has-voted" : "", sel ? "has-sel" : "", rights ? "" : "no-rights"]
@@ -129,7 +130,7 @@ export const vote: Screen = {
     ${sessionTab(app, s)}
     <div class="vo-top">Q${m.questionIdx + 1}/${m.questionCount} · 🗳️ CLASS VOTE</div>
     <div class="vo-accuser" id="vo-accuser" ${enter(AT.stamp, elapsed)}>
-      <span class="vo-bigav" id="vo-bigav" aria-hidden="true" ${enter(AT.avatar, elapsed)}>${accuser?.avatar ?? "🙋"}</span>
+      <span class="vo-bigav" id="vo-bigav" aria-hidden="true" ${enter(AT.avatar, elapsed)}>${accuser ? face(accuser.avatar) : "🙋"}</span>
       <div class="vo-stamp" id="vo-stamp" role="alert" ${enter(AT.stamp, elapsed)}>
         <span class="vo-stamp-name" title="${esc(accuser?.name ?? "")}">🙋 ${esc(accuser?.name ?? "Someone")}</span>
         <span class="vo-stamp-line">raises a hand</span>

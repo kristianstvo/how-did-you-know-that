@@ -42,6 +42,7 @@
 .tut-side .code { font: 900 2.4rem/1 system-ui, sans-serif; letter-spacing: 0.18em; }
 .tut-side .who { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 320px; }
 .tut-side .who span { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; background: var(--card); font: 700 1rem system-ui, sans-serif; }
+.tut-side .who .face { width: 1.7em; height: 1.7em; margin-left: -6px; }
 .tut-side .note { color: var(--dim); font-size: 1rem; }
 
 /* ---- The stage ---- */

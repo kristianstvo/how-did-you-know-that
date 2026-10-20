@@ -2,6 +2,7 @@
 import type { CaseEntry, PublicPlayer, PublicState } from "../../../shared/protocol";
 import { soundOn } from "../sound";
 import type { App } from "./types";
+import { face } from "../avatars";
 
 export const esc = (s: string) =>
   s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -12,10 +13,10 @@ export const playerOf = (s: PublicState, id: string) => s.players.find((p) => p.
 
 export const nameOf = (s: PublicState, id: string) => {
   const p = playerOf(s, id);
-  return p ? `${p.avatar} ${esc(p.name)}` : "???";
+  return p ? `${face(p.avatar)} ${esc(p.name)}` : "???";
 };
 
-export const av = (p: PublicPlayer, extra = "") => `<span class="av ${extra}" aria-hidden="true">${p.avatar}</span>`;
+export const av = (p: PublicPlayer, extra = "") => `<span class="av ${extra}" aria-hidden="true">${face(p.avatar)}</span>`;
 
 export const fmtTime = (ms: number) => `${(ms / 1000).toFixed(1)}s`;
 
@@ -109,7 +110,7 @@ export function pointSheet(app: App, s: PublicState): string {
       const on = mine === p.id;
       return `<button class="pt-row${on ? " on" : ""}" id="pt-${p.id}" data-action="point" data-id="${p.id}" aria-pressed="${on}" aria-label="Point at ${esc(p.name)}${by.length ? `, ${by.length} already pointing` : ""}">
         ${av(p)}<span class="pt-nm">${esc(p.name)}</span>${exhibitBadges(s, p.id)}
-        <span class="pt-by" aria-hidden="true">${by.map((x) => `<span class="pt-by-av" title="${esc(x.name)}">${x.avatar}</span>`).join("")}</span>
+        <span class="pt-by" aria-hidden="true">${by.map((x) => `<span class="pt-by-av" title="${esc(x.name)}">${face(x.avatar)}</span>`).join("")}</span>
         ${on ? `<span class="pt-on" aria-hidden="true">👉 you</span>` : ""}
       </button>`;
     })

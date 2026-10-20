@@ -43,9 +43,11 @@ async function load(path: string, size: number, mtime: number): Promise<{ raw: B
 }
 
 /** Vite fingerprints everything under /assets/: those never change. Voice
- *  clips change rarely; the page itself is always checked. */
+ *  clips and the students' portraits change rarely; the page itself is
+ *  always checked. */
+const DAY_CACHED = new Set([".mp3", ".webp"]);
 const cacheFor = (urlPath: string, file: string) =>
-  urlPath.startsWith("/assets/") ? "public, max-age=31536000, immutable" : extname(file) === ".mp3" ? "public, max-age=86400" : "no-cache";
+  urlPath.startsWith("/assets/") ? "public, max-age=31536000, immutable" : DAY_CACHED.has(extname(file)) ? "public, max-age=86400" : "no-cache";
 
 const httpServer = createServer(async (req, res) => {
   // Static file serving for the built client; the app (hash routes) for any

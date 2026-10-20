@@ -10,9 +10,10 @@
 // clock IS the audio clock, so the words and the pictures never drift apart.
 import "../styles/tutorial.css";
 import { renderSVG } from "uqr";
+import { faceUrl } from "../avatars";
 import { sfx, sfxOffline, soundOn, wakeAudio } from "../sound";
 import { CLIPS, type Clip } from "./narration";
-import { SCENES, type Cues, type Scene, type SceneDef, type SfxCue } from "./scenes";
+import { CLASS_FACES, SCENES, type Cues, type Scene, type SceneDef, type SfxCue } from "./scenes";
 
 const FADE = 350; // the dissolve between scenes
 const FX_GAIN = 0.85; // the effects a little under her voice
@@ -290,7 +291,14 @@ export function playTutorial(opts: TutorialOptions = {}): void {
     side.who.replaceChildren(
       ...people.map((p) => {
         const s = document.createElement("span");
-        s.textContent = `${p.face} ${p.name}`;
+        const url = faceUrl(p.face);
+        if (url) {
+          const img = s.appendChild(document.createElement("img"));
+          img.className = "face";
+          img.src = url;
+          img.alt = "";
+        } else s.append(p.face);
+        s.append(` ${p.name}`);
         return s;
       }),
     );
@@ -401,7 +409,15 @@ export function mountTutorialRender(): void {
   const fx = effectsOf(placed);
   (window as unknown as { __tut: unknown }).__tut = {
     total,
-    ready: document.fonts.ready.then(() => true),
+    // Fonts, and the class's portraits decoded, before the first frame is shot.
+    ready: Promise.all([
+      document.fonts.ready,
+      ...CLASS_FACES.map((a) => {
+        const img = new Image();
+        img.src = faceUrl(a);
+        return img.decode().catch(() => {});
+      }),
+    ]).then(() => true),
     seek: (ms: number) => stage.render(ms),
     /** The soundtrack, mixed offline: base64 of a 48 kHz mono 16-bit WAV. */
     async renderAudio(): Promise<string> {

@@ -18,6 +18,7 @@ import { REVEAL_TIMING, reached, revealTimeline, slapAt, type RevealBeat, type T
 import { TIER_PLAN, type PublicPlayer, type RevealRow } from "../../../shared/protocol";
 import { actOf, calloutCopy, CALLOUT_ICON, esc, exhibitBadges, fmtTime, lastBellLine, LETTERS, nameOf, pointerChip, pointSheet, sessionTab, speedOrder, tierTicks } from "./common";
 import type { RenderCtx, Screen } from "./types";
+import { face } from "../avatars";
 
 function timeline(ctx: RenderCtx): Timeline<RevealBeat> {
   const r = ctx.s.match!.reveal!;
@@ -106,7 +107,7 @@ export const reveal: Screen = {
       const rank = !none && i < 3 ? `<span class="tav-rank">${i + 1}</span>` : "";
       const mark = none ? "" : `<span class="tav-mark ${row.correct ? "ok" : "no"}">${row.correct ? "✓" : "✗"}</span>`;
       const tip = `${esc(p.name)}${none ? " · no answer" : ` · ${fmtTime(row.timeMs)}`}`;
-      return `<span class="tav${p.id === app.selfId ? " me" : ""}" id="tav-${p.id}" title="${tip}" style="--d:${delay}ms;--dj:${dj}ms;z-index:${20 - j}"><span class="av">${p.avatar}</span>${rank}${mark}</span>`;
+      return `<span class="tav${p.id === app.selfId ? " me" : ""}" id="tav-${p.id}" title="${tip}" style="--d:${delay}ms;--dj:${dj}ms;z-index:${20 - j}"><span class="av">${face(p.avatar)}</span>${rank}${mark}</span>`;
     };
     const tray = (list: RevealRow[]) =>
       `<span class="tray" aria-hidden="true" style="--ov:${traySpacing(list.length)}px">${list.map((row, j) => tav(row, j, list.length)).join("")}</span>`;
@@ -211,7 +212,7 @@ export const reveal: Screen = {
         const cls = ["gb-row", p.id === app.selfId ? "me" : "", p.banished ? "banished" : "", !p.connected && !p.isBot ? "off" : "", y0 !== y1 ? "moved" : ""].filter(Boolean).join(" ");
         return `<div class="${cls}" id="gb-${p.id}" title="${esc(p.name)}${!p.connected && !p.isBot ? " (reconnecting…)" : ""}"
             style="--y0:${y0}px;--y1:${y1}px;--s0:${share(p0 / max)};--s1:${share(p.score / max)};--dr:${Math.round(prevRank.get(p.id)! * decoStep(players.length))}ms">
-          <span class="av" aria-hidden="true">${p.avatar}</span>
+          <span class="av" aria-hidden="true">${face(p.avatar)}</span>
           <span class="gb-name"><span class="gb-nm">${esc(p.name)}</span>${exhibitBadges(s, p.id, m.questionIdx - 1)}${newEx}${pointerChip(s, p.id)}</span>
           <span class="gb-time${p.id === fastestCorrect ? " fast" : ""}">${time}</span>
           <span class="gb-pts${row.pointsGained > 0 ? " pos" : ""}">${pts}</span>
@@ -233,7 +234,7 @@ export const reveal: Screen = {
     // ---- 👉 Point (v0.5): free and public; opens the sheet ----
     const myPtr = self?.pointingAt ? s.players.find((p) => p.id === self.pointingAt) : undefined;
     const pointBtn = `<button class="btn secondary rv-point${myPtr ? " on" : ""}" id="rv-point" data-action="pointSheet" aria-haspopup="dialog" aria-expanded="${app.ui.pointOpen}" ${self ? "" : "disabled"}
-        aria-label="${myPtr ? `Pointing at ${esc(myPtr.name)}. Change` : "Point at a suspect"}"><span aria-hidden="true">👉${myPtr ? `<span class="rv-point-av">${myPtr.avatar}</span>` : ""}</span></button>`;
+        aria-label="${myPtr ? `Pointing at ${esc(myPtr.name)}. Change` : "Point at a suspect"}"><span aria-hidden="true">👉${myPtr ? `<span class="rv-point-av">${face(myPtr.avatar)}</span>` : ""}</span></button>`;
 
     // ---- ACCUSE dock ----
     const armed = b.has("accuse");

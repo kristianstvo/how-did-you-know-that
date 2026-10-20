@@ -14,6 +14,9 @@ Built from the specs in `00-overview.md` … `07-ui-screens.md`.
 
 Newest first (details in `CHANGELOG.md`, decisions in `PRODUCT.md`):
 
+- **Meet the class** (v0.21) — sixteen cartoon students to play as, and a
+  Home in two steps: who you are (name and student), then where to (join,
+  start, or practice).
 - **How to play, in a minute** (v0.20) — a narrated video on Home and on the
   big screen while the class joins, and as an MP4 to share
   (`media/how-to-play.mp4`).
@@ -54,8 +57,12 @@ Newest first (details in `CHANGELOG.md`, decisions in `PRODUCT.md`):
   seats for solo testing. Bots answer with tier-scaled accuracy (a bot cheater
   "reads the marker"), vote in every detention vote, and occasionally burn
   their own accusation when the cheater is closing in on graduation.
-- **School-themed avatars** — pick an emoji avatar on the name tag; it follows
-  you across the roster, reveals, votes, and report cards.
+- **Cartoon students** — pick one of sixteen students from the class photo
+  (`client/public/avatars/`); they follow you across the roster, reveals,
+  votes, and report cards. The protocol still names them by emoji
+  (`AVATARS` in `shared/protocol.ts`); `client/src/avatars.ts` draws them,
+  and `npm run avatars` cuts them from the character sheet
+  (`media/students.webp`).
 - **Subjects** — every match draws 10 distinct school subjects (Math, Science,
   History, P.E., Mythology, …), one per question, mapped to OpenTDB categories.
 
@@ -117,9 +124,9 @@ memory, so it needs a host that keeps one process running with WebSockets
 - **Credits:** some questions come live from the
   [Open Trivia Database](https://opentdb.com) under
   [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), credited
-  on Home. The host's voice and the tutorial's narration were generated
-  with ElevenLabs; public or commercial use depends on the ElevenLabs plan
-  they were made with.
+  on Home. The host's voice, the tutorial's narration and the students'
+  portraits were generated with ElevenLabs; public or commercial use
+  depends on the ElevenLabs plan they were made with.
 
 ## Architecture (spec 05)
 

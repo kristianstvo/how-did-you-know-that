@@ -165,7 +165,7 @@ hd-qsheet.qz { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 }
 .qz-desk.me { border: 2px solid var(--accent2); }
 .qz-desk.off { opacity: 0.45; }
-.qz-desk-av { font-size: 1.05rem; line-height: 1; animation: hd-pop var(--t-stamp) var(--e-impact) backwards; }
+.qz-desk-av { display: block; width: 100%; height: 100%; font-size: 1.05rem; line-height: 1; animation: hd-pop var(--t-stamp) var(--e-impact) backwards; }
 
 .qz-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
