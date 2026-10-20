@@ -6,6 +6,7 @@
 //     back (v0.14); the period runs to its report card
 //   · End the day → graduation on every screen → New day → homeroom
 //   · the big screen (v0.16) follows every phase; nobody hits a page error
+//   · the big screen's host (v0.19) voices both periods; the phones stay silent
 // Usage (server running): node tools/game-night.mjs [--base http://localhost:3000]
 import { chromium } from "@playwright/test";
 import { mkdirSync } from "node:fs";
@@ -143,6 +144,13 @@ await pages.hana.click("#se-again");
 for (const name of ["hana", "bea", "cy", "tv"]) await pages[name].waitForSelector(".screen-lobby", { timeout: 20000 }).catch(() => {});
 check((await Promise.all(Object.values(pages).map((p) => screenOf(p)))).every((s) => s === "screen-lobby"), "New day: everyone back in homeroom, same room");
 check((await pages.bea.locator(".lb-row").count()) === 5, "…with the same class of five");
+
+// v0.19: the big screen's host voiced the evening, and only the big screen.
+const said = await tv.evaluate(() => (window.__hdykt.voice ?? []).map((v) => v.id));
+const hosted = ["period_first", "period_next", "se_crown"].every((id) => said.includes(id)) && said.some((id) => /^(answer|quick)_/.test(id));
+check(hosted, `the big screen's host opened both periods, called answers and crowned the day (${said.length} lines)`);
+const phoneLines = await Promise.all(["hana", "bea", "cy"].map((n) => pages[n].evaluate(() => (window.__hdykt.voice ?? []).length)));
+check(phoneLines.every((n) => n === 0), "…and no phone said a word");
 
 await note();
 const phases = Object.fromEntries(Object.entries(seen).map(([k, v]) => [k, [...v].sort()]));

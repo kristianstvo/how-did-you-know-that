@@ -12,6 +12,9 @@ Built from the specs in `00-overview.md` … `07-ui-screens.md`.
 
 Newest first (details in `CHANGELOG.md`, decisions in `PRODUCT.md`):
 
+- **Your host tonight** (v0.19) — a recorded game-show host (an ElevenLabs
+  voice) calls the questions, the answers and the verdicts from the big
+  screen. Phones stay silent; V on the TV mutes her.
 - **Game night ready** (v0.18) — `npm run game-night` plays a whole evening;
   the big screen rolls long screens by itself.
 - **Called it** (v0.17) — after the unmask: how the cheater played against the
@@ -72,7 +75,8 @@ share the invite link (`/#/join/CODE`). 3–10 players, 4+ recommended.
    the invite link. 4–8 players is the sweet spot, and bots fill seats.
 3. **A TV or the laptop can be the big screen.** The teacher's QR card shows
    its link (`/#/tv/CODE`). Click once there for sound. It shows the whole
-   show for the room and never plays.
+   show for the room and never plays, and a game-show host voices the night
+   from it (press V to mute her).
 4. **The teacher's phone is the game.** A reload, a crash or a locked
    screen is fine: the class waits a few seconds and carries on. Closing
    the tab for more than 90 seconds ends the class.

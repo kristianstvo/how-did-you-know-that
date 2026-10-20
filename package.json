@@ -17,7 +17,8 @@
     "sim:determinism": "tsx sim/determinism.ts",
     "playtest:report": "tsx sim/report-logs.ts",
     "test:e2e": "npm run build && node tools/e2e.mjs",
-    "game-night": "node tools/game-night.mjs"
+    "game-night": "node tools/game-night.mjs",
+    "host-voice": "node tools/host-voice.mjs"
   },
   "dependencies": {
     "idiomorph": "^0.8.0",

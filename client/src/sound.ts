@@ -18,6 +18,7 @@ try {
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
+let duckNode: GainNode | null = null; // v0.19: the effects step back while the TV host speaks
 let noiseBuf: AudioBuffer | null = null;
 
 function audio(): AudioContext | null {
@@ -31,7 +32,8 @@ function audio(): AudioContext | null {
       ctx = new AC();
       master = ctx.createGain();
       master.gain.value = 0.32;
-      master.connect(ctx.destination);
+      duckNode = ctx.createGain();
+      master.connect(duckNode).connect(ctx.destination);
       noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
       const d = noiseBuf.getChannelData(0);
       for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -167,6 +169,23 @@ for (const name of Object.keys(sfx)) {
 }
 
 export const soundOn = (): boolean => enabled;
+
+/** v0.19: the audio context, but only once a click or a key has let it run
+ *  (sound off, or still locked: null). The TV host speaks through it. */
+export function liveAudio(): AudioContext | null {
+  const c = audio();
+  return c && c.state === "running" ? c : null;
+}
+
+/** v0.19: the effects duck under the host's voice from `from` to `to`
+ *  (AudioContext seconds). A newer line replaces the window of the one it cuts. */
+export function duckSfx(from: number, to: number): void {
+  if (!duckNode) return;
+  const g = duckNode.gain;
+  g.cancelScheduledValues(from);
+  g.setTargetAtTime(0.45, from, 0.04);
+  g.setTargetAtTime(1, Math.max(from, to), 0.2);
+}
 
 export function setSound(on: boolean): void {
   enabled = on;

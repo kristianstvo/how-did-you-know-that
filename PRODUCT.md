@@ -42,6 +42,7 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.16.0 | The big screen: a TV or laptop shows the show for the room | shipped |
 | v0.17.0 | Called it: the cheater's record vs the class's, and who saw it coming | shipped |
 | v0.18.0 | Game night ready: a whole-evening smoke test, the big screen rolls, balance re-checked | shipped |
+| v0.19.0 | Your host tonight: a recorded game-show host voices the big screen | shipped |
 | later | A big-screen layout that uses the width (side-by-side reveal) | ideas |
 
 Later versions take the best of what playtests and audits turn up.
@@ -104,3 +105,11 @@ Later versions take the best of what playtests and audits turn up.
 | v0.18.0 | ✅ A whole-evening test before calling it ready | Each feature passed its own tests; only playing them together (TV + reload + votes + New day) proves the evening works |
 | v0.18.0 | ✅ Re-measure balance after a night of features | Nothing should have moved it, and the simulator says nothing did: 34–56% at 6 players, as tuned in v0.4 |
 | v0.18.0 | ✅ An independent code review before the last version | The night’s save/resume and big-screen code found 5 real issues no test had hit (a flaky-Wi-Fi reload ending the class, a duplicated tab splitting it); all fixed before tagging |
+| v0.19.0 | ✅ A recorded host on the big screen only | The TV is the room's stage; a host voice from every phone would be ten echoes, and phones keep their own sound switch |
+| v0.19.0 | ✅ A female host (ElevenLabs "Amy", an upbeat Aussie presenter) | Your call: a woman for the host |
+| v0.19.0 | ❌ Reading the questions aloud | Players read at their own pace on their phones; a voice would favour whoever sits nearest the TV and slow every question to her speed |
+| v0.19.0 | ✅ Pre-recorded lines, not live text-to-speech | Instant and offline on game night, no API key in the browser, and every line's timing is known before it plays |
+| v0.19.0 | ✅ The answer's letter lands on the beat it lights up | The drumroll only pays off if she says "B!" as B lights up; a short "It's... B!" covers quick reveals, which leave too little runway for the long line |
+| v0.19.0 | ✅ The bell holds 6.4 s (not 3.2 s) when a big screen is in the room | Her intro otherwise ran 5 s into question one and "Question one!" never came; phone-only rooms keep the faster start |
+| v0.19.0 | ✅ Each evidence quip once per period | Hearing "Genius... or cheat sheet?" four times in one period grated in testing; line alerts (near the line, cleared) repeat because they carry news |
+| v0.19.0 | ❌ Captions for the host | She never says anything the screen doesn't already show, so captions would only add clutter |

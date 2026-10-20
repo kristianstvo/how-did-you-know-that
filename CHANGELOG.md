@@ -1,8 +1,8 @@
 # Changelog
 
 Every version is a git tag. New work lives on the **`product-lead`** branch;
-`main` stays at v0.2.0 (what was pushed to GitHub) until you decide to merge.
-At most two versions per hour.
+`main` has everything up to v0.18.0 (merged on 2026-10-20) and takes newer
+versions when you decide to merge. At most two versions per hour.
 
 **Try a version**
 
@@ -18,6 +18,56 @@ git checkout product-lead    # back to the newest
 `git checkout main && git merge v0.3.0`.
 
 ---
+
+## v0.19.0 — Your host tonight · 2026-10-20 08:45
+
+**Why:** a TV game night needs a host. The big screen had the show and the
+sound effects, but nobody was talking to the room. Nobody called the
+questions, built up the answer or reacted to the evidence.
+
+**Added**
+- **A game-show host on the big screen.** Amy is an ElevenLabs voice
+  ("cheerful and friendly Aussie presenter", model `eleven_v4`). She hosts
+  from the TV only, with 47 recorded lines. The clips are in
+  `client/public/voice/` (3.4 MB); the script is `client/src/hostLines.ts`.
+  - Homeroom: she welcomes the room as soon as the TV has sound.
+  - The bell: she opens the period.
+  - Every question: she calls it as it lands ("Question four! It's getting
+    harder.").
+  - The clock: "Five seconds!" while someone is still thinking, and "Pencils
+    down!" on hard questions.
+  - **The answer: "The answer is... B!"** The letter lands as the answer
+    lights up (within 10 ms in testing). Quick reveals, which leave too little
+    runway for the long line, get a short "It's... B!".
+  - The evidence card: a line for each kind. Each quip plays once per period;
+    "close to the line" and "cleared" play every time.
+  - On the first reveals she says how to accuse, until someone does.
+  - The vote, its five-second warning, the verdict, a warning when the class
+    has one strike left, the end of the period, and graduation day.
+- **What she never does:** read a question out (players read at their own
+  pace, and a spoken question would favour whoever sits nearest the TV), or
+  say anything the screen doesn't show. Phones never download a clip.
+- **One voice at a time.**
+  - A headline cuts in, but she gets to finish a sentence that ends within
+    about 2 seconds.
+  - An aside ("Five seconds!") speaks only into silence.
+  - A follow-up still waiting when the screen changes is dropped.
+  - The sound effects duck under her voice, and every line is
+    loudness-matched as it loads.
+- **V** on the TV's keyboard mutes her (remembered). The TV hint now reads
+  "Click or press any key for sound and your host".
+- **`npm run host-voice`** (`tools/host-voice.mjs`) plays one period on a TV
+  and prints the host's lines next to the screens. It times each answer call
+  against the answer lighting up and checks that she never talks over
+  herself. `-- --fast` plays a teacher who never waits.
+- Test: "big screen: a game-show host voices the night, from the TV only".
+  `npm run game-night` also checks her now: she opens both periods, calls
+  answers and crowns the day, and no phone says a word.
+
+**Changed**
+- **With a big screen in the room, the bell holds 6.4 s instead of 3.2 s.**
+  Before, her intro ran 5 seconds into question one and "Question one!"
+  never came. Rooms without a TV are unchanged.
 
 ## v0.18.0 — Game night ready · 2026-10-20 07:13
 

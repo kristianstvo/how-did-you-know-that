@@ -18,6 +18,7 @@ import { AVATARS, type Intent, type PublicState, type SecretState } from "../../
 import { clockStatus, serverNow } from "./clock";
 import { startFixture } from "./fixture";
 import { buzz } from "./haptics";
+import { hostCue } from "./host";
 import { setSound, sfx, soundOn } from "./sound";
 import {
   clearHostSave,
@@ -33,6 +34,7 @@ import {
   type PlayerSession,
 } from "./net";
 import { createRenderer, reducedMotion, type Router, type TransitionKind } from "./render";
+import { startHostVoice, toggleHostVoice } from "./voice";
 import { home } from "./screens/home";
 import { lobby } from "./screens/lobby";
 import { matchEnd } from "./screens/matchEnd";
@@ -131,8 +133,9 @@ function onBeat(screenKey: string, beatKey: string, prev: string, settled: boole
   // during its beat lead with no beat yet, then reach beat 0).
   const entered = screenKey !== beatScreen;
   beatScreen = screenKey;
-  if (settled) return;
   const added = beatKey.split(",").filter((b) => b && !prev.split(",").includes(b));
+  if (app.tv) hostCue(app.state, screenKey, added, entered, settled); // v0.19: the big screen's host
+  if (settled) return;
   if (screenKey.startsWith("vote-") && added.includes("in")) buzz([60, 40, 60]);
   if (screenKey.startsWith("matchEnd") && added.includes("takeover")) buzz([90, 50, 90]);
   if (added.includes("answer")) buzz(25);
@@ -319,10 +322,16 @@ async function watchTv(code: string): Promise<void> {
   // Browsers only start sound after a click: say so until someone does.
   const hint = document.createElement("div");
   hint.id = "tv-sound";
-  hint.textContent = "🔊 Click or press any key for sound";
+  hint.textContent = "🔊 Click or press any key for sound and your host";
   document.body.append(hint);
   document.addEventListener("pointerdown", () => hint.remove(), { once: true });
   document.addEventListener("keydown", () => hint.remove(), { once: true }); // a TV remote
+  // v0.19: a game-show host voices the night from here (never on a phone).
+  startHostVoice();
+  document.addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() !== "v" || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    toast(toggleHostVoice() ? "🎙️ Host voice on" : "🎙️ Host voice off (press V for her again)");
+  });
   app.home.code = code;
   app.home.busy = true;
   render();
@@ -457,7 +466,8 @@ toastEl.setAttribute("aria-live", "polite");
 document.body.append(toastEl);
 let toastTimer = 0;
 function toast(msg: string): void {
-  const inLobby = app.screen === "game" && app.state?.phase === "lobby";
+  // The lobby's toast slides out of its dock, which a big screen hides.
+  const inLobby = !app.tv && app.screen === "game" && app.state?.phase === "lobby";
   app.ui.toast = inLobby ? msg : null;
   toastEl.replaceChildren();
   if (!inLobby) {

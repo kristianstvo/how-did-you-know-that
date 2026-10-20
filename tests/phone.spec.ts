@@ -315,6 +315,88 @@ test("big screen: a TV shows the show without joining the class", async ({ brows
   await host.ctx.close();
 });
 
+type VoiceLine = { id: string; at: number; hit: number; end: number; heard: boolean; cut?: number };
+const voiceOf = (page: Page) => page.evaluate(() => (window as unknown as { __hdykt?: { voice?: VoiceLine[] } }).__hdykt?.voice ?? []);
+const beatsOf = (page: Page) => page.evaluate(() => window.__hdykt?.beats ?? []);
+
+test("big screen: a game-show host voices the night, from the TV only (v0.19)", async ({ browser }) => {
+  const host = await phone(browser);
+  const phoneClips: string[] = [];
+  host.page.on("request", (r) => {
+    if (r.url().includes("/voice/")) phoneClips.push(r.url());
+  });
+  await host.page.fill("#playerName", "Hana");
+  await host.page.click('[data-action="create"]');
+  const code = (await host.page.locator(".roomcode").innerText({ timeout: 15000 })).replace(/\s/g, "");
+  const tvCtx = await browser.newContext({ viewport: { width: 1280, height: 720 }, isMobile: false, hasTouch: false });
+  const tv = await tvCtx.newPage();
+  await tv.goto(`/#/tv/${code}`);
+  await expect(tv.locator("#lb-tvjoin")).toBeVisible({ timeout: 15000 });
+  await tv.waitForFunction(() => (window as unknown as { __hdykt?: { voiceReady?: boolean } }).__hdykt?.voiceReady === true, null, { timeout: 30000 });
+  // She greets the room as soon as the TV may play sound: on a real TV after
+  // the first click or key (the browser's rule), here at once.
+  await tv.keyboard.press("Enter");
+  await expect.poll(async () => (await voiceOf(tv)).map((v) => v.id), { timeout: 5000 }).toContain("welcome");
+  // V mutes her from homeroom too (the lobby's own toast lives in a dock the TV hides).
+  await tv.keyboard.press("v");
+  await expect(tv.getByText("Host voice off")).toBeVisible();
+  await tv.keyboard.press("v");
+  await expect(tv.getByText("Host voice on")).toBeVisible();
+
+  for (let i = 0; i < 2; i++) {
+    await host.page.click("#lb-addbot");
+    await host.page.waitForTimeout(120);
+  }
+  await host.page.click("#lb-start");
+  await expect(tv.locator(".screen-question")).toBeVisible({ timeout: 30000 });
+  await answer(host.page);
+  await expect(tv.locator(".screen-reveal")).toBeVisible({ timeout: 40000 });
+  const lit = () =>
+    beatsOf(tv).then((b) => b.find((x) => x.key.startsWith("reveal-1-0|") && x.key.split("|")[1].split(",").includes("answer")));
+  await expect.poll(lit, { timeout: 15000 }).toBeTruthy();
+  const answerLit = (await lit())!.server;
+  const correct = Number((await tv.locator(".ob-row.is-correct").first().getAttribute("id"))!.slice(3));
+  const beats = await beatsOf(tv);
+  const voice = await voiceOf(tv);
+  const ids = voice.map((v) => v.id);
+
+  // The bell holds for her intro when a big screen is in the room, then she calls question one.
+  const bell = beats.find((b) => b.key.startsWith("role-1-0|"))!.server;
+  const q1 = beats.find((b) => b.key.startsWith("question-1-0|"))!.server;
+  expect(q1 - bell).toBeGreaterThan(6000);
+  expect(q1 - bell).toBeLessThan(7000);
+  expect(ids.indexOf("period_first")).toBeGreaterThan(-1);
+  expect(ids.indexOf("q1")).toBeGreaterThan(ids.indexOf("period_first"));
+  // The answer call says the right letter, and the letter lands as it lights up.
+  const call = voice.find((v) => /^(answer|quick)_[a-d]$/.test(v.id))!;
+  expect(call, `an answer call in ${ids.join(", ")}`).toBeTruthy();
+  expect(call.id.slice(-1)).toBe("abcd"[correct]);
+  expect(Math.abs(call.hit - answerLit)).toBeLessThan(80);
+  // Heard (audio unlocked), one voice at a time.
+  expect(voice.every((v) => v.heard)).toBe(true);
+  for (let i = 1; i < voice.length; i++) {
+    const prev = voice[i - 1];
+    expect(voice[i].at, `${voice[i].id} starts over ${prev.id}`).toBeGreaterThanOrEqual(Math.min(prev.end, prev.cut ?? Infinity) - 40);
+  }
+
+  // V on the TV's keyboard sends her off: the next question passes in silence.
+  await tv.keyboard.press("v");
+  await expect(tv.getByText("Host voice off")).toBeVisible();
+  const said = (await voiceOf(tv)).length;
+  await host.page.locator('#rv-host[data-action="advance"]:not([disabled])').click({ timeout: 20000 });
+  await expect(tv.locator(".screen-question")).toBeVisible({ timeout: 15000 });
+  await tv.waitForTimeout(1500);
+  expect((await voiceOf(tv)).length).toBe(said);
+  await tv.keyboard.press("v");
+  await expect(tv.getByText("Host voice on")).toBeVisible();
+
+  // The phones: never a clip, never a line.
+  expect(phoneClips).toEqual([]);
+  expect(await voiceOf(host.page)).toEqual([]);
+  await tvCtx.close();
+  await host.ctx.close();
+});
+
 test("phone: someone arriving mid-period watches from the hallway, without answering", async ({ browser }) => {
   const { host, code, close } = await classroom(browser, [], 3);
   await host.page.waitForSelector("button.opt:not([disabled])", { timeout: 30000 });

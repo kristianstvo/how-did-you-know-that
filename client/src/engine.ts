@@ -12,6 +12,7 @@ import {
   revealStakes,
   revealTimeline,
   ROLE_SCREEN_MS,
+  ROLE_SCREEN_TV_MS,
   TALK_HOLD_MS,
   voteResultTimeline,
 } from "../../shared/choreo";
@@ -97,6 +98,7 @@ const SAVED_FIELDS = [
   "qIdx",
   "threshold",
   "wrongDetentions",
+  "roleMs",
   "hallway",
   "usedFallback",
   "questionDeadline",
@@ -191,6 +193,7 @@ export class HostEngine {
   private qIdx = 0;
   private threshold = 0;
   private wrongDetentions = 0; // strikes this match (settings.strikes ends it)
+  private roleMs = ROLE_SCREEN_MS; // v0.19: longer with a big screen (its host opens the period)
   /** v0.7: late arrivals watching this period; seated back in homeroom. */
   private hallway: InternalPlayer[] = [];
   /** v0.16: sockets of big screens (TV, laptop). Never players, never saved:
@@ -679,7 +682,8 @@ export class HostEngine {
     this.setPhase("role");
     this.broadcast();
     this.sendSecrets();
-    this.after(ROLE_SCREEN_MS, () => this.startQuestion(0));
+    this.roleMs = this.watchers.size ? ROLE_SCREEN_TV_MS : ROLE_SCREEN_MS;
+    this.after(this.roleMs, () => this.startQuestion(0));
   }
 
   /** Context-sensitive host "Next": reveal → next question / Q10 end,
@@ -1296,7 +1300,7 @@ export class HostEngine {
   private rearm(): void {
     const now = this.now();
     if (this.phase === "role") {
-      this.after(Math.max(0, this.phaseStartedAt - this.lead + ROLE_SCREEN_MS - now), () => this.startQuestion(0));
+      this.after(Math.max(0, this.phaseStartedAt - this.lead + this.roleMs - now), () => this.startQuestion(0));
     } else if (this.phase === "question") {
       this.after(Math.max(0, this.questionDeadline - this.lead + 400 - now), () => this.endQuestion());
       const elapsed = Math.max(0, now - (this.questionDeadline - this.settings.questionTimerMs));
