@@ -327,6 +327,7 @@ async function watchTv(code: string): Promise<void> {
   try {
     session = await joinAsPlayer(code, "Big screen", "📺", { onState, onSecret, onClosed, onNet }, { watch: true });
     keepAwake(true);
+    tvRoll();
     app.isHost = false;
     app.selfId = "";
     app.screen = "game";
@@ -336,6 +337,46 @@ async function watchTv(code: string): Promise<void> {
   }
   app.home.busy = false;
   render();
+}
+
+/** v0.18: a TV has no thumb to scroll with. Long screens (homeroom with the
+ *  rules, the period's report, graduation day) roll slowly to the bottom once
+ *  their show has landed, hold, then start again from the top. */
+function tvRoll(): void {
+  const ROLL = new Set(["lobby", "matchEnd", "sessionEnd"]);
+  const SPEED = 30; // px per second
+  let key = "";
+  let pos = 0;
+  let startAt = 0;
+  let holdUntil = 0;
+  let last = performance.now();
+  const frame = (now: number) => {
+    const dt = Math.min(100, now - last) / 1000;
+    last = now;
+    const s = app.state;
+    const k = s && app.screen === "game" ? `${s.phase}-${s.matchNumber}` : "";
+    if (k !== key) {
+      key = k;
+      pos = 0;
+      startAt = now + 7000; // let the show land first
+      holdUntil = 0;
+    }
+    const max = document.documentElement.scrollHeight - innerHeight;
+    if (s && ROLL.has(s.phase) && max > 4 && now > startAt) {
+      if (pos < max) {
+        pos = Math.min(max, pos + SPEED * dt);
+        window.scrollTo(0, Math.round(pos));
+      } else if (!holdUntil) holdUntil = now + 6000;
+      else if (now > holdUntil) {
+        pos = 0;
+        window.scrollTo(0, 0);
+        startAt = now + 6000;
+        holdUntil = 0;
+      }
+    }
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
 }
 
 /** v0.14: this tab was hosting and its page reloaded (or the browser threw

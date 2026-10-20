@@ -19,6 +19,43 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.18.0 — Game night ready · 2026-10-20 07:13
+
+**Why:** eight versions in one night, each tested on its own. Before anyone
+hosts a real evening, the whole product has to work at once: three phones, a
+TV, an accusation, a teacher whose page reloads, two periods, the end of the
+day and the start of a new one.
+
+**Added**
+- **`npm run game-night`** (`tools/game-night.mjs`) plays a whole evening on
+  one relay: teacher Hana, Bea, Cy, two bots and a big screen.
+  - Period 1: Cy accuses after the first reveal and the class votes.
+  - Period 2: the teacher's page reloads on the first question.
+  - Then End the day, and New day.
+  - It checks that every screen, the big screen included, reaches every phase
+    with the same class, and that nothing throws a page error.
+- **The big screen rolls long screens by itself.** A TV has no thumb to scroll
+  with. Homeroom with the rules, the period's report and graduation day now
+  roll slowly to the bottom once their show has landed, hold, then start
+  again from the top.
+- README: **Hosting a game night**, the evening in five steps: Wi-Fi, the
+  QR, the big screen, reloads, practice.
+
+**Evidence**
+- **`npm run game-night`:** 12 of 12 checks pass with no page errors on any
+  of the four screens (three phones and a 1280×720 big screen). The first
+  run's only failure was in the script, which counted a report card's rows
+  before they had landed. It was not a game bug.
+- **Balance re-check** with the simulator (`sim/tune-line.ts`, line 2100,
+  two strikes, 200 matches per cell): a cheater who hides wins 34–56% at 6
+  players, against a target of 35–55%. That is unchanged since v0.4. At 4 or
+  8 players it's 31–60%, and built-in bots at 4/6/8 players win 27/37/46%.
+  Fourteen versions of features didn't move the balance.
+- **Big screen roll:** at 720p the lobby's scroll position, sampled every 2.5
+  seconds, read 0, 0, 26, 101, 176 and 252. It waits 7 seconds, then rolls
+  at 30 px/s.
+- The full suite passes.
+
 ## v0.17.0 — Called it · 2026-10-20 06:58
 
 **Why:** the moment after the unmask is when a class decides whether to play

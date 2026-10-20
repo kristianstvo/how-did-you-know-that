@@ -41,6 +41,7 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.15.0 | Fresh eyes: an independent review's fixes; ⭐ gold stars | shipped |
 | v0.16.0 | The big screen: a TV or laptop shows the show for the room | shipped |
 | v0.17.0 | Called it: the cheater's record vs the class's, and who saw it coming | shipped |
+| v0.18.0 | Game night ready: a whole-evening smoke test, the big screen rolls, balance re-checked | shipped |
 | later | A big-screen layout that uses the width (side-by-side reveal) | ideas |
 
 Later versions take the best of what playtests and audits turn up.
@@ -100,3 +101,5 @@ Later versions take the best of what playtests and audits turn up.
 | v0.16.0 | ❌ Making the big screen required | Phone first: the game must stay complete on phones alone, for remote classes on a call |
 | v0.17.0 | ✅ Show the cheater's record next to the class's after every period | Deduction must beat guessing: seeing how a cheater actually played (often right, sometimes slow) teaches what to look for |
 | v0.17.0 | ❌ Quick emoji reactions on the reveal | The reveal is the busiest screen on the smallest phones, and voices already do the job; a reaction bar would crowd ACCUSE |
+| v0.18.0 | ✅ A whole-evening test before calling it ready | Each feature passed its own tests; only playing them together (TV + reload + votes + New day) proves the evening works |
+| v0.18.0 | ✅ Re-measure balance after a night of features | Nothing should have moved it, and the simulator says nothing did: 34–56% at 6 players, as tuned in v0.4 |

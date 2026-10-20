@@ -12,6 +12,8 @@ Built from the specs in `00-overview.md` … `07-ui-screens.md`.
 
 Newest first (details in `CHANGELOG.md`, decisions in `PRODUCT.md`):
 
+- **Game night ready** (v0.18) — `npm run game-night` plays a whole evening;
+  the big screen rolls long screens by itself.
 - **Called it** (v0.17) — after the unmask: how the cheater played against the
   class, and who was pointing at them.
 - **The big screen** (v0.16) — open `#/tv/CODE` on a TV or laptop: the
@@ -59,6 +61,27 @@ npm start       # serves game + relay on http://localhost:3000
 
 Open `http://localhost:3000` on the host's phone/laptop, create a lobby, and
 share the invite link (`/#/join/CODE`). 3–10 players, 4+ recommended.
+
+## Hosting a game night
+
+1. **One laptop runs the game** (`npm start`). Phones on the same Wi-Fi
+   open it at the laptop's network address, for example
+   `http://192.168.1.20:3000`, not `localhost`.
+2. **The teacher (host) creates the class on their phone.** They show the
+   QR (📷 Show QR), which carries that address to everyone else, or share
+   the invite link. 4–8 players is the sweet spot, and bots fill seats.
+3. **A TV or the laptop can be the big screen.** The teacher's QR card shows
+   its link (`/#/tv/CODE`). Click once there for sound. It shows the whole
+   show for the room and never plays.
+4. **The teacher's phone is the game.** A reload, a crash or a locked
+   screen is fine: the class waits a few seconds and carries on. Closing
+   the tab for more than 90 seconds ends the class.
+5. **Trying it alone first?** Home → Practice with bots, then in the
+   lobby pick "Practice as: 🤫 Cheater" to learn the dot.
+
+Playtest tools (event-log downloads) appear with `?playtest` in the URL.
+`npm run game-night` (with the server running) plays a whole evening
+automatically as a smoke test.
 
 For development (client hot reload on :5173, relay on :3000):
 
