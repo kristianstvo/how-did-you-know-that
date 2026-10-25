@@ -3,13 +3,16 @@
 // Run: npm run test:e2e   (builds the client, starts the server if needed)
 import { defineConfig } from "@playwright/test";
 
+// E2E_PORT runs the suite against its own server when 3000 is taken.
+const PORT = Number(process.env.E2E_PORT ?? 3000);
+
 export default defineConfig({
   testDir: "tests",
   timeout: 240_000,
   workers: 1, // perf and sync numbers must not compete for the CPU
   reporter: [["list"], ["json", { outputFile: "test-results/results.json" }]],
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: `http://localhost:${PORT}`,
     channel: "msedge",
     headless: true,
     viewport: { width: 380, height: 800 },
@@ -19,7 +22,8 @@ export default defineConfig({
   },
   webServer: {
     command: "npx tsx server/index.ts",
-    port: 3000,
+    port: PORT,
     reuseExistingServer: true,
+    env: { PORT: String(PORT) },
   },
 });

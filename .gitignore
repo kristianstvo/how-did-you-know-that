@@ -6,3 +6,4 @@ test-results/
 *.log
 .DS_Store
 sim/_review/
+.wt/

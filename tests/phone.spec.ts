@@ -694,7 +694,7 @@ test("an avatar that isn't one of the students never reaches anyone's screen (v0
   await host.page.click('[data-action="create"]');
   const code = (await host.page.locator(".roomcode").innerText({ timeout: 15000 })).replace(/\s/g, "");
   // A hand-rolled client skips the game's own checks and sends markup.
-  const sock = io("http://localhost:3000", { transports: ["websocket"] });
+  const sock = io(new URL(host.page.url()).origin, { transports: ["websocket"] });
   const forged = '<img src=x onerror="window.__pwned=1">';
   await new Promise<void>((resolve, reject) =>
     sock.emit("join", { code, name: "Mallory", avatar: forged }, (res: { ok: boolean }) => (res.ok ? resolve() : reject(new Error("join failed")))),
