@@ -47,6 +47,7 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.21.0 | Meet the class: sixteen cartoon students, Home in two steps (you, then where to) | shipped |
 | v0.22.0 | Clean slate: no dashed borders; Join above Start a class | shipped |
 | v0.23.0 | No way you knew that!: accusations name a suspect, who gets the floor before the vote | shipped |
+| v0.24.0 | One face per desk: no two players share a student; a taken name offers "Join as Bea 2" | shipped |
 | later | A big-screen layout that uses the width (side-by-side reveal) | ideas |
 
 Later versions take the best of what playtests and audits turn up.
@@ -136,3 +137,6 @@ Later versions take the best of what playtests and audits turn up.
 | v0.23.0 | ✅ An accusation names a suspect, and the accuser's ballot goes on them | The north star is one person saying "No way you knew that!" to another; a nameless hand put nobody on the spot, and a named one puts the accuser on record too |
 | v0.23.0 | ✅ The accused gets a 5 s floor before ballots open (2 s for a bot) | A defence used to race a 20 s clock; a closed floor makes the room listen first. Sim: human cells unchanged, bots within a point |
 | v0.23.0 | ✅ The accuser's +1 only when the person they named is caught | Pays for a correct accusation, not for starting a vote that happened to catch someone else |
+| v0.24.0 | ✅ One student per desk, the host decides | The trays, desks and ballot strip tell people apart by face alone; twins made "who picked what" unreadable (likely with eight players keeping the random default) |
+| v0.24.0 | ✅ A bot gives up its student only in homeroom | A human's pick matters more than a bot's, but a face that changes mid-period or on the report card (the unmasked cheater's photo) would confuse the room |
+| v0.24.0 | ❌ Offering "Bea 2" to someone whose seat is held mid-period | That is the seat's owner on another tab: a second name would split them into two players and their stars |

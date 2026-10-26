@@ -255,6 +255,12 @@ export interface JoinedMsg {
 }
 export interface JoinRejectedMsg {
   reason: string;
+  /** v0.24: the name is the trouble (a seat's or the hallway's, or a seat
+   *  held mid-match): fix it on Home's step 1, not the code. */
+  field?: "name";
+  /** v0.24: a free name to join as instead ("Bea 2"), only when someone in
+   *  the room holds yours and there's a desk for a new one. */
+  suggest?: string;
 }
 
 export const ROOM_CODE_LEN = 5;

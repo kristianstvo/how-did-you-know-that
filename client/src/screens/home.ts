@@ -12,12 +12,13 @@
 // student, who pops on every pick. Long names shrink the marker as they are
 // typed (data-size, set live below).
 // Errors shake (hd-shake) — and shake again on every tap that repeats the
-// same error.
+// same error. v0.24: step 1's error sits in the Next dock, above the button,
+// so it's in view on an SE; a taken name offers "Join as Bea 2" under it.
 import { AVATARS } from "../../../shared/protocol";
 import { face, STUDENTS } from "../avatars";
 import { loadRecord } from "../record";
 import { esc } from "./common";
-import type { Screen } from "./types";
+import type { App, Screen } from "./types";
 
 /** Short stable key for ids that must change when their content changes, so
  *  the morph inserts a fresh element (and its entrance animation replays). */
@@ -76,6 +77,12 @@ const notices = (closedReason: string | null, resuming: string | undefined) =>
   }`;
 
 const errorLine = (error: string | null) => (error ? `<div class="err hm-err" id="hm-err-${keyOf(error)}" role="alert">✏️ ${esc(error)}</div>` : "");
+
+/** v0.24: your name was taken. One tap joins as the free one the host offered. */
+const suggestLine = (h: App["home"], error: string | null) =>
+  error && h.suggest
+    ? `<button class="btn ghost hm-suggest" id="hm-suggest" data-action="useSuggest" ${h.busy ? "disabled" : ""}>Join as ${esc(h.suggest)}</button>`
+    : "";
 
 export const home: Screen = {
   render({ app }) {
@@ -154,10 +161,11 @@ export const home: Screen = {
     </div>
 
     <div class="hm-next-dock" id="hm-next-dock">
+      ${errorLine(app.error)}
+      ${suggestLine(h, app.error)}
       <button class="btn hm-next ${h.busy ? "hm-busy" : ""}" id="hm-next" data-action="homeNext" ${h.busy ? "disabled" : ""}><span>${h.busy ? "Joining…" : `${go} <span aria-hidden="true">→</span>`}</span></button>
       ${invited ? `<button class="btn ghost hm-elsewhere" id="hm-elsewhere" data-action="homeElsewhere" ${h.busy ? "disabled" : ""}>or start your own class</button>` : ""}
     </div>
-    ${errorLine(app.error)}
     ${reportCard()}
     <p class="hm-credits" id="hm-credits">Some questions from <a href="https://opentdb.com" target="_blank" rel="noopener">Open Trivia Database</a> (<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>) · Host voice and students drawn with ElevenLabs</p>
     </section>`;

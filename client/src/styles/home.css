@@ -90,6 +90,18 @@
 }
 .btn.hm-next { min-height: 56px; font-size: 1.15rem; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); }
 .btn.hm-elsewhere { margin-top: 2px; min-height: 44px; padding: 8px; font-size: 0.9rem; }
+/* v0.24: step 1's error rides in the dock, above Next: in view on an SE, and
+   Next stays where the thumb is. Opaque under its tint, so the class photo
+   scrolling behind never shows through. */
+.hm-next-dock .hm-err { margin: 0 0 8px; background: linear-gradient(rgba(255, 107, 107, 0.14), rgba(255, 107, 107, 0.14)) var(--bg); }
+/* A taken name: join as the free one the host offered, in one tap. */
+.btn.hm-suggest {
+  min-height: 44px; margin: 0 0 8px; padding: 8px 14px; border: 2px solid rgba(255, 209, 102, 0.55); border-radius: 99px;
+  background: var(--bg); color: var(--accent2); font-size: 1rem; font-weight: 800;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  animation: hd-enter-up var(--t-base) var(--e-enter) 120ms both;
+}
+.btn.hm-suggest + .hm-next { margin-top: 0; }
 
 /* ---- Step 2: you in a nutshell (tap Change to go back), then where to ---- */
 .hm-me {

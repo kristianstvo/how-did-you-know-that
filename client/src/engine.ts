@@ -33,6 +33,7 @@ import {
   type Award,
   type CaseEntry,
   type Intent,
+  type JoinRejectedMsg,
   type MatchEndReason,
   type Phase,
   type PublicPlayer,
@@ -276,9 +277,62 @@ export class HostEngine {
 
   // ---------------- Joining (spec 05) ----------------
 
+  /** v0.24: everyone in the room (the seats and the hallway, connected or
+   *  not) but `selfId`: their faces and names are taken. */
+  private others(selfId = ""): InternalPlayer[] {
+    return [...this.players, ...this.hallway].filter((p) => p.id !== selfId);
+  }
+
+  /** v0.24: a student nobody else has, at random. With 16 students and at
+   *  most 10 in the room, one is always free. */
+  private freeAvatar(selfId = ""): string {
+    const held = new Set(this.others(selfId).map((p) => p.avatar));
+    const free = AVATARS.filter((a) => !held.has(a));
+    return free[Math.floor(Math.random() * free.length)] ?? AVATARS[0];
+  }
+
+  /** v0.24: one face per desk. The student a joiner asked for if nobody else
+   *  has them; a bot's student in homeroom, and the bot moves to a free one
+   *  (never mid-period, nor on the report card, which shows this period's
+   *  faces: the unmasked cheater may be that bot); otherwise (a human's,
+   *  connected or not, a bot's outside homeroom, or not a student) a random
+   *  free one, or `keep`: a rejoining seat keeps the face it has. */
+  private claimAvatar(want: string, selfId = "", keep = ""): string {
+    if (!AVATARS.includes(want)) return keep || this.freeAvatar(selfId);
+    const holder = this.others(selfId).find((p) => p.avatar === want);
+    if (!holder) return want;
+    const homeroom = this.phase === "lobby" && !this.loadingQuestions;
+    if (holder.isBot && homeroom) {
+      holder.avatar = this.freeAvatar(selfId); // everyone sees it: every join broadcasts
+      return want;
+    }
+    return keep || this.freeAvatar(selfId);
+  }
+
+  /** v0.24: a taken name offers the first of "<name> 2" … "<name> 9" that
+   *  nobody uses (ignoring case), cut to fit the 20-character name tag. */
+  private suggestName(name: string): string | undefined {
+    const taken = new Set(this.others().map((p) => p.name.toLowerCase()));
+    const chars = [...name];
+    while (chars.join("").length > 18) chars.pop();
+    const base = chars.join("").trimEnd();
+    for (let n = 2; n <= 9; n++) if (!taken.has(`${base} ${n}`.toLowerCase())) return `${base} ${n}`;
+    return undefined;
+  }
+
+  /** v0.24: a name someone in the room holds (a seat's or the hallway's)
+   *  says which field to fix and offers a free one, so the joiner isn't sent
+   *  off to fix the code. A full room offers none: no new name gets in. */
+  private rejectName(socketId: string, reason: string, name: string): void {
+    const full = this.players.length + this.hallway.length >= MAX_PLAYERS;
+    const msg: JoinRejectedMsg = { reason, field: "name", suggest: full ? undefined : this.suggestName(name) };
+    this.transport.toPlayer(socketId, "joinRejected", msg);
+  }
+
   handleJoinRequest(socketId: string, rawName: string, rawAvatar = "", token = "", watch = false): void {
     // v0.21: an avatar is one of the students, nothing else. It reaches every
-    // phone's screen, so a made-up one (or markup) never gets in.
+    // phone's screen, so a made-up one (or markup) never gets in. v0.24: and
+    // one per desk (claimAvatar), so no two classmates share a face.
     const avatar = AVATARS.includes(rawAvatar) ? rawAvatar : "";
     // v0.16: a big screen watches the show. Not a player, not in the
     // hallway, never the cheater: it only ever gets the public state.
@@ -306,16 +360,20 @@ export class HostEngine {
       // only reclaim an EMPTY seat between matches: mid-match that would hand
       // a stranger the seat's secret.
       if (!owner && (existing.connected || existing.isBot)) {
-        this.transport.toPlayer(socketId, "joinRejected", { reason: `"${existing.name}" is already in this room. Pick another name.` });
+        this.rejectName(socketId, `"${existing.name}" is already in this room. Pick another name.`, name);
         return;
       }
       if (!owner && !between) {
-        this.transport.toPlayer(socketId, "joinRejected", { reason: `"${existing.name}" is mid-match — rejoin from the phone that was playing, or wait for the report card.` });
+        // v0.24: a seat held for its owner, not a taken name: usually her own
+        // phone in a new tab (the token is per tab). Back to the name tag, but
+        // no "Bea 2": at the report card she gets her seat and stars back.
+        const msg: JoinRejectedMsg = { reason: `"${existing.name}" is mid-match — rejoin from the phone that was playing, or wait for the report card.`, field: "name" };
+        this.transport.toPlayer(socketId, "joinRejected", msg);
         return;
       }
       existing.socketId = socketId;
       existing.connected = true;
-      if (avatar) existing.avatar = avatar;
+      existing.avatar = this.claimAvatar(avatar, existing.id, existing.avatar); // v0.24: or keeps its face
       this.transport.toPlayer(socketId, "joined", {
         playerId: existing.id,
         state: this.publicState(),
@@ -333,18 +391,18 @@ export class HostEngine {
     if (midPeriod || waitingByName) {
       const waiting = waitingByName;
       if (waiting && waiting.connected && !(token && token === waiting.token)) {
-        this.transport.toPlayer(socketId, "joinRejected", { reason: `"${waiting.name}" is already in the hallway. Pick another name.` });
+        this.rejectName(socketId, `"${waiting.name}" is already in the hallway. Pick another name.`, name);
         return;
       }
       if (!waiting && this.players.length + this.hallway.length >= MAX_PLAYERS) {
         this.transport.toPlayer(socketId, "joinRejected", { reason: `Room is full (${MAX_PLAYERS} players max).` });
         return;
       }
-      const h = waiting ?? this.newPlayer(name, avatar, socketId, false);
+      const h = waiting ?? this.newPlayer(name, this.claimAvatar(avatar), socketId, false);
       if (waiting) {
         waiting.socketId = socketId;
         waiting.connected = true;
-        if (avatar) waiting.avatar = avatar;
+        waiting.avatar = this.claimAvatar(avatar, waiting.id, waiting.avatar);
       } else this.hallway.push(h);
       this.transport.toPlayer(socketId, "joined", { playerId: h.id, state: this.publicState(), secret: this.paddedSecret(h.id), token: h.token });
       this.broadcast();
@@ -354,7 +412,7 @@ export class HostEngine {
       this.transport.toPlayer(socketId, "joinRejected", { reason: `Room is full (${MAX_PLAYERS} players max).` });
       return;
     }
-    const player = this.newPlayer(name, avatar, socketId, false);
+    const player = this.newPlayer(name, this.claimAvatar(avatar), socketId, false);
     this.players.push(player);
     this.sessionBoard[player.id] = 0;
     this.transport.toPlayer(socketId, "joined", {
@@ -447,9 +505,11 @@ export class HostEngine {
   addBot(): void {
     if ((this.phase !== "lobby" && this.phase !== "matchEnd") || this.loadingQuestions) return;
     if (this.players.length + this.hallway.length >= MAX_PLAYERS) return;
-    const name = HostEngine.BOT_NAMES.find((n) => !this.players.some((p) => p.name === n));
+    const name = HostEngine.BOT_NAMES.find((n) => !this.others().some((p) => p.name.toLowerCase() === n.toLowerCase()));
     if (!name) return;
-    const avatar = AVATARS.find((a) => !this.players.some((p) => p.avatar === a)) ?? "";
+    // v0.24: a face nobody has, the hallway's included (it takes its seats next period).
+    const held = new Set(this.others().map((p) => p.avatar));
+    const avatar = AVATARS.find((a) => !held.has(a)) ?? "";
     const bot = this.newPlayer(name, avatar, "bot", false);
     this.players.push(bot);
     this.sessionBoard[bot.id] = 0;

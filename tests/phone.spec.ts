@@ -816,3 +816,107 @@ test("an avatar that isn't one of the students never reaches anyone's screen (v0
   sock.disconnect();
   await host.ctx.close();
 });
+
+test("one face per desk: a student someone already has goes to someone else, who is told once (v0.24)", async ({ browser }) => {
+  const host = await phone(browser);
+  await host.page.fill("#playerName", "Hana");
+  await host.page.click('[data-av="🎒"]');
+  await host.page.click("#hm-next");
+  await host.page.click('[data-action="create"]');
+  const code = (await host.page.locator(".roomcode").innerText({ timeout: 15000 })).replace(/\s/g, "");
+  // Bea and Cy both pick the Bookworm on Home.
+  const join = async (name: string) => {
+    const p = await phone(browser, `/#/join/${code}`);
+    await p.page.fill("#playerName", name);
+    await p.page.click('[data-av="📚"]');
+    await p.page.click("#hm-next");
+    await p.page.waitForSelector(".screen-lobby");
+    return p;
+  };
+  const bea = await join("Bea");
+  const cy = await join("Cy");
+  // The teacher's attendance list: two different students, Bea first come, first served.
+  const face = (name: string) => host.page.locator(`.lb-row:has(.nm[title="${name}"]) .lb-av img.face`);
+  await expect(face("Cy")).toBeVisible({ timeout: 10000 });
+  await expect(face("Bea")).toHaveAttribute("src", /books\.webp$/);
+  expect(await face("Cy").getAttribute("src")).not.toMatch(/books\.webp$/);
+  // Cy is told who he is today; Bea, who got her pick, isn't told anything.
+  await expect(cy.page.locator(".lb-toast")).toContainText(/^The Bookworm was taken, so you're the [A-Z][\w' -]+ today\.$/);
+  expect(await bea.page.locator(".lb-toast").count()).toBe(0);
+  // His own pick stays saved for next time, and a reload doesn't say it again.
+  expect(await cy.page.evaluate(() => localStorage.getItem("hdykt-avatar"))).toBe("📚");
+  await cy.page.reload();
+  await cy.page.waitForSelector(".screen-lobby", { timeout: 15000 });
+  await cy.page.waitForTimeout(800);
+  expect(await cy.page.locator(".lb-toast").count()).toBe(0);
+  for (const p of [host, bea, cy]) await p.ctx.close();
+});
+
+test("a taken name goes back to the name tag, with a free one to join as in one tap (v0.24)", async ({ browser }) => {
+  const host = await phone(browser);
+  await host.page.fill("#playerName", "Hana");
+  await host.page.click("#hm-next");
+  await host.page.click('[data-action="create"]');
+  const code = (await host.page.locator(".roomcode").innerText({ timeout: 15000 })).replace(/\s/g, "");
+  const bea = await phone(browser, `/#/join/${code}`);
+  await bea.page.fill("#playerName", "Bea");
+  await bea.page.click("#hm-next");
+  await bea.page.waitForSelector(".screen-lobby");
+  // A second Bea types the code on step 2…
+  const twin = await phone(browser);
+  await twin.page.fill("#playerName", "Bea");
+  await twin.page.click("#hm-next");
+  await twin.page.fill("#joinCode", code);
+  await twin.page.click('[data-action="join"]');
+  // …and lands on step 1, where the name is, not on the code: what's wrong
+  // and the fix, both in view on an SE.
+  await expect(twin.page.locator(".hm-err")).toContainText('"Bea" is already in this room');
+  await expect(twin.page.locator("#playerName")).toBeVisible();
+  expect(await twin.page.locator("#joinCode").count()).toBe(0);
+  const fix = twin.page.locator("#hm-suggest");
+  await expect(fix).toHaveText("Join as Bea 2");
+  for (const el of [twin.page.locator(".hm-err"), fix]) {
+    const box = (await el.boundingBox())!;
+    expect(box.y + box.height, "in view on an SE").toBeLessThanOrEqual(SE.height);
+  }
+  expect((await fix.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  expect(await twin.page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)).toBe(false);
+  // One tap: in the class as "Bea 2", and that's the name saved for next time.
+  await fix.click();
+  await twin.page.waitForSelector(".screen-lobby", { timeout: 15000 });
+  await expect(host.page.locator('.lb-row .nm[title="Bea 2"]')).toBeVisible({ timeout: 10000 });
+  expect(await twin.page.evaluate(() => localStorage.getItem("hdykt-name"))).toBe("Bea 2");
+  // From an invite link it's the same: the next free number, ignoring case.
+  const third = await phone(browser, `/#/join/${code}`);
+  await third.page.fill("#playerName", "bea");
+  await third.page.click("#hm-next");
+  await expect(third.page.locator("#hm-suggest")).toHaveText("Join as bea 3");
+  // Rubbing the name out puts the offer away for good: the next error on the
+  // name tag ("write your name") doesn't bring it back.
+  await third.page.fill("#playerName", "");
+  await third.page.click("#hm-next");
+  await expect(third.page.locator(".hm-err")).toContainText("name tag");
+  await expect(third.page.locator("#hm-suggest")).toHaveCount(0);
+  for (const p of [host, bea, twin, third]) await p.ctx.close();
+});
+
+test("back on a new tab mid-match: told to wait for the report card, with no other name to split into (v0.24)", async ({ browser }) => {
+  const { host, players, code, close } = await classroom(browser, ["Bea"], 2);
+  const bea = players[0];
+  await bea.page.waitForSelector("button.opt:not([disabled])", { timeout: 30000 });
+  // The phone threw her tab away; she taps the invite again. The new tab has
+  // her saved name, but not the seat's token (that's per tab).
+  await bea.page.close();
+  await expect(host.page.locator('.qz-desk.off[title^="Bea"]')).toBeAttached({ timeout: 10000 });
+  const again = await bea.ctx.newPage();
+  await again.goto(`/#/join/${code}`);
+  await expect(again.locator("#playerName")).toHaveValue("Bea");
+  await again.click("#hm-next");
+  // Her seat is held for her: back on the name tag with the advice, and no
+  // "Join as Bea 2" that would make her a second classmate.
+  await expect(again.locator(".hm-err")).toContainText("is mid-match");
+  await expect(again.locator("#playerName")).toBeVisible();
+  await expect(again.locator("#hm-suggest")).toHaveCount(0);
+  expect(await again.evaluate(() => localStorage.getItem("hdykt-name"))).toBe("Bea");
+  await close();
+});

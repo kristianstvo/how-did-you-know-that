@@ -15,6 +15,7 @@ import "./styles/sessionEnd.css";
 import "./styles/transitions.css";
 import { REVEAL_TIMING } from "../../shared/choreo";
 import { AVATARS, type Intent, type PublicState, type SecretState } from "../../shared/protocol";
+import { STUDENTS } from "./avatars";
 import { clockStatus, serverNow } from "./clock";
 import { startFixture } from "./fixture";
 import { buzz } from "./haptics";
@@ -25,6 +26,7 @@ import {
   createHostSession,
   hasSeat,
   joinAsPlayer,
+  JoinRejectedError,
   loadHostSave,
   resumeHostSession,
   RoomGoneError,
@@ -477,21 +479,48 @@ async function joinLobby(): Promise<void> {
   app.home.code = code;
   app.home.busy = true;
   app.error = null;
+  app.home.suggest = undefined;
   render();
+  const asked = app.home.avatar; // v0.24: the pick sent, even if the grid is tapped while Joining…
   try {
-    session = await joinAsPlayer(code, name, app.home.avatar, { onState, onSecret, onClosed, onNet, onSelf: (id) => (app.selfId = id) });
+    session = await joinAsPlayer(code, name, asked, { onState, onSecret, onClosed, onNet, onSelf: (id) => (app.selfId = id) });
     keepAwake(true);
     app.isHost = false;
     app.selfId = session.selfId;
     app.screen = "game";
     app.closedReason = null;
     history.replaceState(null, "", `${location.pathname}${location.search}#/join/${code}`); // rejoinable link
+    faceNote(code, asked);
   } catch (e) {
-    homeStep(2); // an invite that went stale: the code can be fixed there
+    if (e instanceof JoinRejectedError && e.field === "name") {
+      // v0.24: a taken name is fixed on the sticker (step 1), not the code,
+      // with a free one to join as in one tap (if the host offered one).
+      toSticker();
+      app.home.suggest = e.suggest;
+    } else homeStep(2); // an invite that went stale: the code can be fixed there
     showError((e as Error).message);
   }
   app.home.busy = false;
   render();
+}
+
+/** v0.24: one face per desk. The student you picked was taken, so the host
+ *  gave you another: say who you are today, once per classroom (a reload or
+ *  a reconnect doesn't say it again). Your saved pick stays. */
+function faceNote(code: string, asked: string): void {
+  const s = app.state;
+  const mine = (s?.players.find((p) => p.id === app.selfId) ?? s?.hallway?.find((h) => h.id === app.selfId))?.avatar ?? "";
+  const want = STUDENTS[asked];
+  const got = STUDENTS[mine];
+  if (!want || !got || mine === asked) return;
+  const key = `hdykt-face:${code}`;
+  try {
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+  } catch {
+    /* storage unavailable: say it anyway */
+  }
+  toast(`${want.title} was taken, so you're ${got.title.replace(/^The /, "the ")} today.`, 4000);
 }
 
 function saveName(name: string): void {
@@ -533,11 +562,15 @@ function homeNext(): void {
 }
 
 function needName(): void {
-  if (app.home.step === 2) {
-    app.home.step = 1; // the sticker to write on is on step 1
-    if (history.state?.hdyktHome === 2) history.replaceState(null, "");
-  }
+  toSticker();
   showError("Write your name on the name tag first.");
+}
+
+/** Back to step 1, where the sticker to write on is (no extra back step). */
+function toSticker(): void {
+  if (app.home.step !== 2) return;
+  app.home.step = 1;
+  if (history.state?.hdyktHome === 2) history.replaceState(null, "");
 }
 
 function showError(msg: string): void {
@@ -551,7 +584,7 @@ toastEl.setAttribute("role", "status");
 toastEl.setAttribute("aria-live", "polite");
 document.body.append(toastEl);
 let toastTimer = 0;
-function toast(msg: string): void {
+function toast(msg: string, ms = 2200): void {
   // The lobby's toast slides out of its dock, which a big screen hides.
   const inLobby = !app.tv && app.screen === "game" && app.state?.phase === "lobby";
   app.ui.toast = inLobby ? msg : null;
@@ -568,7 +601,7 @@ function toast(msg: string): void {
     app.ui.toast = null;
     toastEl.replaceChildren();
     render();
-  }, 2200);
+  }, ms);
 }
 
 async function shareLink(url: string): Promise<void> {
@@ -655,6 +688,11 @@ root.addEventListener("click", (ev) => {
         saveName(app.home.name.trim());
         homeStep(2);
       }
+      break;
+    case "useSuggest": // v0.24: the name was taken; join as the free one the host offered
+      if (!app.home.suggest || app.home.busy) break;
+      saveName(app.home.suggest);
+      void joinLobby();
       break;
     case "addBot":
       host?.engine.addBot();
@@ -799,6 +837,7 @@ root.addEventListener("input", (ev) => {
   if (input.id === "playerName") {
     app.home.name = input.value;
     if (app.error && input.value.trim()) app.error = null; // the sticker has a name now
+    app.home.suggest = undefined; // v0.24: they're writing their own
     render();
   }
   // Keep a half-typed code in state so re-renders never wipe it.

@@ -285,6 +285,18 @@ export function hasSeat(code: string, name: string): boolean {
   }
 }
 
+/** v0.24: the host turned the join down. A taken name says so (`field`) and
+ *  offers a free one (`suggest`), so Home can fix the name, not the code. */
+export class JoinRejectedError extends Error {
+  field?: JoinRejectedMsg["field"];
+  suggest?: string;
+  constructor(msg: JoinRejectedMsg) {
+    super(msg.reason);
+    this.field = msg.field;
+    this.suggest = msg.suggest;
+  }
+}
+
 /** Join a classroom as a player, or (v0.16, `watch`) as a big screen that
  *  only shows the public state: no seat, no token, never in the class. */
 export async function joinAsPlayer(code: string, name: string, avatar: string, events: SessionEvents, opts: { watch?: boolean } = {}): Promise<PlayerSession> {
@@ -310,13 +322,13 @@ export async function joinAsPlayer(code: string, name: string, avatar: string, e
   };
   return new Promise((resolve, reject) => {
     let joined = false;
-    const fail = (msg: string) => {
+    const fail = (err: Error) => {
       socket.disconnect();
-      reject(new Error(msg));
+      reject(err);
     };
     const doJoin = () => {
       socket.emit("join", { code, name, avatar, token: opts.watch ? "" : readToken(), watch: !!opts.watch }, (res: { ok: boolean; error?: string }) => {
-        if (!res.ok && !joined) fail(res.error ?? "Couldn't join.");
+        if (!res.ok && !joined) fail(new Error(res.error ?? "Couldn't join."));
       });
     };
     // Reconnects re-join with the same name, which restores the held seat and
@@ -344,7 +356,7 @@ export async function joinAsPlayer(code: string, name: string, avatar: string, e
       }
     });
     socket.on("joinRejected", (msg: JoinRejectedMsg) => {
-      if (!joined) fail(msg.reason);
+      if (!joined) fail(new JoinRejectedError(msg));
     });
     socket.on("state", ({ state }: { state: PublicState }) => events.onState(state));
     socket.on("secret", ({ secret }: { secret: SecretState }) => events.onSecret(secret));

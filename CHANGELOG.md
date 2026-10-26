@@ -19,6 +19,39 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.24.0 — One face per desk · 2026-10-26 10:11
+
+**Why:** the reveal trays, the locked-in desks and the ballot strip tell
+people apart by face alone. Most newcomers keep the random student they're
+given, so with eight players two of them were likely to share a face, and
+"who picked what" stopped being readable. A taken name also dead-ended: the
+phone went to the code step, where there was nothing to fix.
+
+**Added**
+- **One face per desk.** Nobody in a room shares a student any more:
+  - you get the student you picked if nobody has them;
+  - in homeroom, a bot gives up its student for you and moves to a free one;
+  - otherwise you get a random free student (sixteen students, at most ten
+    seats, so one is always free).
+- **Told once.** If you didn't get your pick, one toast says so, once per
+  classroom: "The Bookworm was taken, so you're the Doodler today." Your
+  saved pick on the phone doesn't change.
+- **A taken name offers a fix.** The phone goes back to the name tag (step 1)
+  with the error and a one-tap **Join as Bea 2**. Numbering skips names taken
+  in any case, and stays within 20 characters.
+- Tests: two students picked twice get two faces, and only the second player
+  sees the toast; a taken name lands on the name tag with "Join as Bea 2",
+  which joins in one tap; a player back on a new tab mid-period is told to
+  rejoin from the phone that was playing, with no "Bea 2" offer. Engine
+  checks cover the bot swap, latecomers, rejoins, Add bot and the hallway.
+
+**Changed**
+- Step 1's errors sit in the Next dock, just above Next, so on an iPhone SE
+  they're on screen instead of under the class photo.
+- Add bot also avoids students held by latecomers in the hallway.
+- A bot keeps its face on the report card: the unmasked cheater's photo never
+  changes mid-show.
+
 ## v0.23.0 — No way you knew that! · 2026-10-26 10:09
 
 **Why:** an accusation named nobody. The vote stage showed who raised a

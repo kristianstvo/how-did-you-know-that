@@ -14,6 +14,8 @@ Built from the specs in `00-overview.md` … `07-ui-screens.md`.
 
 Newest first (details in `CHANGELOG.md`, decisions in `PRODUCT.md`):
 
+- **One face per desk** (v0.24) — no two players share a student, and a
+  taken name offers a free one in one tap.
 - **No way you knew that!** (v0.23) — you accuse a named suspect, they get
   the floor for five seconds, then the class votes.
 - **Clean slate** (v0.22) — no dashed borders: panels, buttons and empty
