@@ -11,7 +11,7 @@ interface TapeState {
   phaseStartedAt: number;
   match: {
     questionIdx: number;
-    reveal?: { lastBell: string[] } | null;
+    reveal?: { lastBell: string[]; callout?: { kind: string } | null } | null;
     voteResult?: { banishedId: string | null; wasCheater: boolean } | null;
   } | null;
 }
@@ -53,6 +53,12 @@ const afterDetentionAt = (name: string) => {
   const next = firstWhere(name, "question after the detention", (x) => x.phase === "question" && (x.match?.questionIdx ?? -1) > vr.match!.questionIdx);
   return Math.round(next.phaseStartedAt - tape(name).t0) - 1_500;
 };
+/** v0.27: the first reveal whose callout is an exhibit (period 1 teaches it). */
+const EXHIBITS = ["lone_correct", "against_crowd", "lightning", "streak", "hard_sweep"];
+const firstExhibitAt = (name: string) => {
+  const s = firstWhere(name, "exhibit", (x) => x.phase === "reveal" && EXHIBITS.includes(x.match?.reveal?.callout?.kind ?? ""));
+  return Math.round(s.phaseStartedAt - tape(name).t0);
+};
 
 const INSTANTS = [
   { fixture: "caught", t: phaseAt("caught", "role") + 1_000, label: "role" },
@@ -64,6 +70,7 @@ const INSTANTS = [
   { fixture: "graduated", t: lastBellAt("graduated") + 8_000, label: "reveal-lastbell" },
   { fixture: "detention", t: lastBellAt("detention") + 8_000, label: "reveal-lastbell-2" },
   { fixture: "graduated", t: afterDetentionAt("graduated"), label: "reveal-after-detention" },
+  { fixture: "caught", t: firstExhibitAt("caught") + 9_000, label: "reveal-teach2" }, // v0.27
   { fixture: "caught", t: phaseAt("caught", "vote") + 2_500, label: "vote" },
   { fixture: "caught", t: phaseAt("caught", "vote") + 7_000, label: "vote-open" }, // v0.23: after the floor
   { fixture: "graduated", t: phaseAt("graduated", "voteResult") + 6_000, label: "voteResult-drop" },

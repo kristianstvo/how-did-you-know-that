@@ -45,7 +45,7 @@ import { lobby } from "./screens/lobby";
 import { matchEnd } from "./screens/matchEnd";
 import { question } from "./screens/question";
 import { reveal } from "./screens/reveal";
-import { role } from "./screens/role";
+import { CHEATER_LINE, INNOCENT_LINE, role } from "./screens/role";
 import { sessionEnd } from "./screens/sessionEnd";
 import type { App, Screen } from "./screens/types";
 import { vote } from "./screens/vote";
@@ -151,6 +151,12 @@ function onBeat(screenKey: string, beatKey: string, prev: string, settled: boole
   beatScreen = screenKey;
   const added = beatKey.split(",").filter((b) => b && !prev.split(",").includes(b));
   if (app.tv) hostCue(app.state, screenKey, added, entered, settled); // v0.19: the big screen's host
+  // v0.27: the bell's note landed live on a screen someone could see: seen.
+  // One that rendered settled (a reload, a late rejoin, an app switch) wasn't.
+  if (app.state && screenKey.startsWith("role-") && added.includes("role") && !settled && document.visibilityState === "visible" && !tutorialPlaying()) {
+    noteMark(app.state, "seen");
+  }
+  if (noteCheck()) render();
   if (settled) return;
   if (screenKey.startsWith("vote-") && added.includes("in")) buzz([60, 40, 60]);
   if (screenKey.startsWith("matchEnd") && added.includes("takeover")) buzz([90, 50, 90]);
@@ -206,7 +212,10 @@ let lastMatchNumber = -1;
 
 function onState(state: PublicState): void {
   const prevPhase = lastPhase;
-  if (app.tv && state.phase !== "lobby" && tutorialPlaying()) closeTutorial(); // the bell: class starts
+  // The bell: class starts. v0.27: How to play closes on every phone, not
+  // just the big screen, or a first-timer watching it misses their note.
+  const bell = state.phase !== "lobby" && tutorialPlaying();
+  if (bell) closeTutorial();
   // A new match: forget last match's secret until this match's arrives, so a
   // stale "you were the cheater" can never render (it's re-sent at the bell).
   if (state.matchNumber !== lastMatchNumber) {
@@ -252,6 +261,15 @@ function onState(state: PublicState): void {
     }
     if (state.phase === "lobby" || state.phase === "matchEnd") app.ui.boardOpen = false;
   }
+  // v0.27: your note, any time (see noteCheck). The day's report card or New
+  // day's homeroom ends the day's notes (New day counts periods from 1 again).
+  if (state.matchNumber === 0 || state.phase === "sessionEnd") noteForget(state.roomCode);
+  if (state.phase !== prevPhase) peek(false);
+  if (bell && !app.tv) {
+    buzz(30);
+    toast("🔔 The bell rang!");
+  }
+  noteCheck(); // after the bell's toast: a note already missed says more
   render();
 }
 
@@ -304,6 +322,112 @@ function banner(): void {
   netEl.classList.toggle("on", !!copy);
   netEl.dataset.status = status;
 }
+
+// ---------------- Your note, any time (v0.27; outside #app, never morphed) ----------------
+
+/** This period's bell note on this phone: "seen" once its role beat played
+ *  live on a visible screen, "read" after a hold in the ⭐ sheet. Per tab
+ *  (sessionStorage), so a reload remembers it; in memory too, for a browser
+ *  that blocks storage. Nothing here depends on the role, only on the bell. */
+const notes = new Map<string, string>();
+const noteKey = (s: PublicState) => `hdykt-note-${s.roomCode}#${s.matchNumber}`;
+function noteGet(s: PublicState): string | null {
+  try {
+    return sessionStorage.getItem(noteKey(s)) ?? notes.get(noteKey(s)) ?? null;
+  } catch {
+    return notes.get(noteKey(s)) ?? null;
+  }
+}
+function noteMark(s: PublicState, v: "seen" | "read"): void {
+  notes.set(noteKey(s), v);
+  try {
+    sessionStorage.setItem(noteKey(s), v);
+  } catch {
+    /* storage blocked: this page remembers it */
+  }
+}
+/** A new day numbers its periods from 1 again: forget the old day's notes
+ *  (or day 2's period 1 would find day 1's "seen"). */
+function noteForget(code: string): void {
+  const mine = (k: string | null) => !!k?.startsWith(`hdykt-note-${code}#`);
+  for (const k of [...notes.keys()]) if (mine(k)) notes.delete(k);
+  try {
+    for (let i = sessionStorage.length - 1; i >= 0; i--) if (mine(sessionStorage.key(i))) sessionStorage.removeItem(sessionStorage.key(i)!);
+  } catch {
+    /* storage blocked */
+  }
+  noteToldFor = "";
+}
+
+const NOTE_PHASES = new Set<string>(["question", "reveal", "vote", "voteResult"]);
+/** Where the ⭐ tab and its 📝 row are (a vote hides the tab). */
+const PEEK_PHASES = new Set<string>(["question", "reveal"]);
+let noteToldFor = ""; // the period whose "missed the bell" toast has shown
+/** A seated phone that missed this period's note (and hasn't held 📝 since)
+ *  wears a dot on its ⭐ tab, and hears about it once: when the toast can be
+ *  seen and done (not from another app, not in a vote with no ⭐ to tap).
+ *  True when the dot changed. */
+function noteCheck(): boolean {
+  const s = app.state;
+  const due = !!s && !app.tv && !app.fixture && NOTE_PHASES.has(s.phase) && s.players.some((p) => p.id === app.selfId) && !noteGet(s);
+  const changed = due !== !!app.ui.noteDue;
+  app.ui.noteDue = due;
+  if (due && noteToldFor !== noteKey(s) && PEEK_PHASES.has(s.phase) && document.visibilityState === "visible") {
+    noteToldFor = noteKey(s);
+    toast("📝 You missed the bell. Tap ⭐, then hold 📝 to read your note.", 4000);
+  }
+  return changed;
+}
+// Back from another app with the note still due: the toast plays now.
+document.addEventListener("visibilitychange", () => noteCheck() && render());
+
+const peekEl = document.createElement("div");
+peekEl.id = "note-peek";
+peekEl.setAttribute("role", "status");
+peekEl.setAttribute("aria-live", "polite");
+document.body.append(peekEl);
+let peekTimer = 0;
+/** Hold 📝 in the ⭐ sheet: the bell's note, only while held, only on this
+ *  phone. The role screen's own line, so it's as long for the cheater. */
+function peek(on: boolean): void {
+  clearTimeout(peekTimer);
+  const s = app.state;
+  const show = on && !!s && !app.tv && PEEK_PHASES.has(s.phase) && s.players.some((p) => p.id === app.selfId);
+  if (!show) {
+    if (peekEl.classList.contains("on")) {
+      peekEl.classList.remove("on");
+      peekEl.replaceChildren();
+    }
+    return;
+  }
+  const tag = document.createElement("span");
+  tag.className = "np-tag";
+  tag.textContent = "📝 Psst… your note";
+  const line = document.createElement("span");
+  line.className = "np-line";
+  line.textContent = (app.secret.isCheater ? CHEATER_LINE : INNOCENT_LINE).replace(". ", ".\n");
+  peekEl.replaceChildren(tag, line);
+  peekEl.classList.add("on");
+  // Held long enough to read it: the dot goes.
+  peekTimer = window.setTimeout(() => {
+    if (!app.state || !peekEl.classList.contains("on")) return;
+    noteMark(app.state, "read");
+    noteCheck();
+    render();
+  }, 700);
+}
+const onPeek = (ev: Event) => !!(ev.target as Element | null)?.closest?.("[data-peek]");
+document.addEventListener("pointerdown", (ev) => onPeek(ev) && peek(true));
+document.addEventListener("pointerup", () => peek(false));
+document.addEventListener("pointercancel", () => peek(false));
+// pointerleave and blur don't bubble: catch them on their way down.
+for (const type of ["pointerleave", "blur"]) {
+  document.addEventListener(type, (ev) => (ev.target as Element | null)?.matches?.("[data-peek]") && peek(false), true);
+}
+document.addEventListener("keydown", (ev) => (ev.key === "Enter" || ev.key === " ") && !ev.repeat && onPeek(ev) && peek(true));
+document.addEventListener("keyup", (ev) => (ev.key === "Enter" || ev.key === " ") && peek(false));
+document.addEventListener("contextmenu", (ev) => onPeek(ev) && ev.preventDefault()); // a long press is a hold, not a menu
+window.addEventListener("blur", () => peek(false));
 
 function act(intent: Intent): void {
   if (!session) return;

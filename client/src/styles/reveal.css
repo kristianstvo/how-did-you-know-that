@@ -489,3 +489,13 @@
   .screen-reveal .ev-teach { transform: none; }
   .screen-reveal.b-grade .ev-teach { transition: opacity var(--t-base) var(--e-standard) 250ms; }
 }
+
+/* Teacher's notes for Act II (v0.27): period 1's first exhibit, near-the-line
+   and CLEARED callouts turn the footer into a two-line note. Its box is
+   reserved from frame 0 (the note is known at the reveal's start) and it
+   fades in with the footer at the evidence beat: opacity only. */
+.screen-reveal .ev-foot.ev-teach2 {
+  height: 34px; margin-top: 4px; padding: 0 2px; line-height: 17px; text-align: left;
+  font-family: inherit; font-size: 0.78rem; font-weight: 700; color: var(--accent2);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
+}

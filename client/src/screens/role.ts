@@ -4,7 +4,8 @@
 //   line1 350   "Class is in session." rises
 //   line2 1000  "Someone in this class is cheating…" rises
 //   role  1700  a folded note slides up with YOUR line; the bell dings once more
-//   (2400 "pencils ready" hint; the engine moves on to the question at 3200)
+//   (2400 "pencils ready" hint; the engine moves on to the question at 3200,
+//   at 5200 in a day's first period: v0.27)
 //
 // PARITY: identical look, timing and motion for everyone. Both role lines have
 // the same length, weight and colour, sit in the same reserved box, and are

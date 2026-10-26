@@ -20,6 +20,9 @@ export interface UiFlags {
   /** Ballot handed in (sent to the host). No take-backs after this. */
   myVote: string | null;
   boardOpen: boolean;
+  /** v0.27: this seat missed the bell's note this period and hasn't read it
+   *  since: the ⭐ tab wears a dot (hold 📝 in its sheet to read). */
+  noteDue?: boolean;
   /** Lobby: the big "scan to join" QR card is up. */
   qrOpen: boolean;
   /** Reveal: the "point at a suspect" sheet is up (v0.5). */

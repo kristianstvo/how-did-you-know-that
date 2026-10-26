@@ -17,6 +17,8 @@
 //   · a big screen (#/tv/CODE) shows the show without joining the class (v0.16)
 //   · Home is you first (name, student), then where to; back returns (v0.21)
 //   · an avatar that isn't one of the students never reaches a screen (v0.21)
+//   · nobody misses the bell: it closes How to play, and a note missed in
+//     another app waits behind ⭐, read by holding 📝 (v0.27)
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { io } from "socket.io-client";
@@ -1271,5 +1273,229 @@ test("fresh questions: the teacher's phone says how many it remembers, and Forge
   expect(await page.evaluate(() => localStorage.getItem("hdykt-seen"))).toBeNull();
   // The rules card explains the curve.
   await expect(page.locator(".how-card").first()).toContainText("starts medium");
+  await ctx.close();
+});
+
+// ---- v0.27: nobody misses the bell ----
+
+/** Host "Hana" (with any ?query) and these players in homeroom, not started. */
+async function homeroom(browser: Browser, names: string[], query = "") {
+  const host = await phone(browser, `/${query}`);
+  await host.page.fill("#playerName", "Hana");
+  await host.page.click("#hm-next");
+  await host.page.click('[data-action="create"]');
+  const code = (await host.page.locator(".roomcode").innerText({ timeout: 15000 })).replace(/\s/g, "");
+  const players: Awaited<ReturnType<typeof phone>>[] = [];
+  for (const name of names) {
+    const p = await phone(browser, `/#/join/${code}`);
+    await p.page.fill("#playerName", name);
+    await p.page.click("#hm-next");
+    await p.page.waitForSelector(".screen-lobby");
+    players.push(p);
+  }
+  return { host, players, close: async () => Promise.all([host, ...players].map((p) => p.ctx.close())) };
+}
+const words = (s: string) => s.replace(/\s+/g, " ").trim();
+
+test("the bell closes How to play on every phone, and holds a first period's note longer (v0.27)", async ({ browser }) => {
+  const { host, players, close } = await homeroom(browser, ["Bea"]);
+  const bea = players[0].page;
+  await host.page.click("#lb-addbot");
+  // A first-timer watches How to play in homeroom…
+  await bea.click("#lb-howto");
+  await expect(bea.locator("#tut")).toBeVisible();
+  // …the teacher rings the bell: the video gets out of the way of her note.
+  await host.page.click("#lb-start");
+  await host.page.waitForSelector(".screen-role", { timeout: 20000 });
+  await expect(bea.locator("#tut")).toHaveCount(0, { timeout: 1500 });
+  await expect(bea.locator(".toast")).toContainText("The bell rang", { timeout: 1500 });
+  await expect(bea.locator(".screen-role, .screen-question").first()).toBeVisible();
+  // Period 1's bell holds 5.2 s on phones (3.2 s from period 2 on).
+  await bea.waitForSelector(".screen-question", { timeout: 15000 });
+  const beats = await beatsOf(bea);
+  const bell = beats.find((b) => b.key.startsWith("role-1-0|"))!.server;
+  const q1 = beats.find((b) => b.key.startsWith("question-1-0|"))!.server;
+  expect(q1 - bell).toBeGreaterThan(4700);
+  expect(q1 - bell).toBeLessThan(5800);
+  // She read it as it landed: no dot on ⭐, no "you missed the bell".
+  await expect(bea.locator(".sess-tab")).toBeVisible();
+  await bea.waitForTimeout(600);
+  expect(await bea.locator(".sess-tab.note-due").count()).toBe(0);
+  expect(await bea.locator(".toast", { hasText: "missed the bell" }).count()).toBe(0);
+  await close();
+});
+
+test("a phone that missed the bell can still read its note: hold 📝 in the ⭐ sheet (v0.27)", async ({ browser }) => {
+  // Bea is the cheater (local test hook).
+  const { host, players, close } = await homeroom(browser, ["Bea", "Cy"], "?debugCheater=Bea");
+  const [bea, cy] = players.map((p) => p.page);
+  const away = (hidden: boolean) =>
+    bea.evaluate((h) => {
+      Object.defineProperty(document, "visibilityState", { configurable: true, get: () => (h ? "hidden" : "visible") });
+      document.dispatchEvent(new Event("visibilitychange"));
+    }, hidden);
+  // Bea is in another app as the bell rings (her page is hidden)…
+  await away(true);
+  await host.page.click("#lb-start");
+  await bea.waitForSelector(".screen-question", { timeout: 30000 });
+  // …and still there at question one: the dot waits for her, the toast
+  // doesn't play to an empty screen…
+  await expect(bea.locator(".sess-tab.note-due")).toBeVisible({ timeout: 5000 });
+  expect(await bea.locator(".toast", { hasText: "missed the bell" }).count()).toBe(0);
+  // …until she's back.
+  await away(false);
+  await expect(bea.locator(".toast")).toContainText("missed the bell");
+  // A reload during Q1 doesn't count as having seen it.
+  await bea.reload();
+  await bea.waitForSelector(".screen-question", { timeout: 20000 });
+  await expect(bea.locator(".sess-tab.note-due")).toBeVisible({ timeout: 5000 });
+  await expect(bea.locator(".toast")).toContainText("missed the bell");
+  // ⭐ opens the sheet; its first row is the note, thumb-sized.
+  await bea.click(".sess-tab");
+  const row = bea.locator("#sheet-note");
+  await expect(row).toBeVisible();
+  expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(48);
+  // Holding it shows her note; letting go hides it.
+  const peekEl = bea.locator("#note-peek");
+  await row.dispatchEvent("pointerdown");
+  await expect(peekEl).toBeVisible();
+  expect(words(await peekEl.locator(".np-line").innerText())).toBe("It's you. Find the dot. 🤫");
+  await row.dispatchEvent("pointerup");
+  await expect(peekEl).toBeHidden();
+  expect(await peekEl.textContent()).toBe(""); // nothing secret left behind
+  expect(await bea.locator(".sess-tab.note-due").count(), "a glance isn't a read").toBe(1);
+  // A real hold (800 ms) counts as read: the dot goes, the sheet stays.
+  await row.dispatchEvent("pointerdown");
+  await bea.waitForTimeout(800);
+  await row.dispatchEvent("pointerup");
+  await expect(bea.locator(".sess-tab.note-due")).toHaveCount(0);
+  await expect(row).toBeVisible();
+  // Cy saw the bell: no dot. The same row, with his own note behind it.
+  expect(await cy.locator(".sess-tab.note-due").count()).toBe(0);
+  await cy.click(".sess-tab");
+  const cyRow = cy.locator("#sheet-note");
+  await expect(cyRow).toBeVisible();
+  expect(await cyRow.evaluate((el) => el.outerHTML)).toBe(await row.evaluate((el) => el.outerHTML));
+  await cyRow.dispatchEvent("pointerdown");
+  await expect(cy.locator("#note-peek")).toBeVisible();
+  expect(words(await cy.locator("#note-peek .np-line").innerText())).toBe("Not you. Watch closely. 🤫");
+  await cyRow.dispatchEvent("pointerup");
+  // The teacher rang it, so the teacher saw it.
+  expect(await host.page.locator(".sess-tab.note-due").count()).toBe(0);
+  await close();
+});
+
+test("back after the bell with How to play still open: the video closes, and the toast that stays is the missed note (v0.27)", async ({ browser }) => {
+  const { host, players, close } = await homeroom(browser, ["Bea"]);
+  const bea = players[0];
+  for (let i = 0; i < 2; i++) {
+    await host.page.click("#lb-addbot");
+    await host.page.waitForTimeout(120);
+  }
+  // A first-timer watches How to play, and her phone drops off the Wi-Fi…
+  await bea.page.click("#lb-howto");
+  await expect(bea.page.locator("#tut")).toBeVisible();
+  await bea.ctx.setOffline(true);
+  await bea.page.evaluate(() => (window.__hdykt as unknown as { dropSocket(): void }).dropSocket());
+  // …through the bell, and is back during question one.
+  await host.page.click("#lb-start");
+  await host.page.waitForSelector(".screen-question", { timeout: 30000 });
+  await bea.ctx.setOffline(false);
+  await bea.page.waitForSelector(".screen-question", { timeout: 30000 });
+  await expect(bea.page.locator("#tut")).toHaveCount(0);
+  // "The bell rang" is old news: the toast she can act on is the one left up.
+  await expect(bea.page.locator(".toast")).toContainText("missed the bell");
+  await expect(bea.page.locator(".sess-tab.note-due")).toBeVisible();
+  await close();
+});
+
+interface CalloutTape {
+  t0: number;
+  frames: { state: { phase: string; phaseStartedAt: number; match: { questionIdx: number; reveal: { callout: { q: number; kind: string; detail: Record<string, number> } | null } | null; caseFile: { q: number; kind: string; detail: Record<string, number> }[] } | null } }[];
+}
+const EXHIBIT_KINDS = ["lone_correct", "against_crowd", "lightning", "streak", "hard_sweep"];
+const groupOf = (e: { kind: string; detail: Record<string, number> }) =>
+  EXHIBIT_KINDS.includes(e.kind) ? "exhibit" : e.kind === "near_line" ? "near_line" : e.kind === "cleared" && !e.detail.absent && !e.detail.vote ? "cleared" : "";
+/** Each reveal of a recorded match with its callout's group, and whether
+ *  it is the first of its group in the case file (the one that teaches). */
+function calloutReveals(name: string) {
+  const tape = JSON.parse(readFileSync(`client/public/fixtures/${name}.json`, "utf8")) as CalloutTape;
+  const out: { t: number; q: number; group: string; first: boolean }[] = [];
+  for (const f of tape.frames) {
+    const m = f.state.match;
+    const c = m?.reveal?.callout;
+    if (f.state.phase !== "reveal" || !c || out.some((r) => r.q === c.q)) continue;
+    const group = groupOf(c);
+    const first = m!.caseFile.find((e) => groupOf(e) === group);
+    out.push({ t: Math.round(f.state.phaseStartedAt - tape.t0), q: c.q, group, first: !!group && first?.q === c.q && first.kind === c.kind });
+  }
+  return out;
+}
+
+test("the first period teaches Act II's clues once each: exhibits, the 🎓 line, CLEARED (v0.27)", async ({ browser }) => {
+  // The caught tape's first exhibit teaches; its next one is back to the usual footer.
+  const exhibits = calloutReveals("caught").filter((r) => r.group === "exhibit");
+  expect(exhibits.length).toBeGreaterThanOrEqual(2);
+  const { ctx, page } = await phone(browser, `/#/fixture/caught?as=innocent&t=${exhibits[0].t + 9000}&paused=1&ui=0`);
+  await page.waitForFunction(() => !!window.__fixture);
+  const note = page.locator("#ev-foot.ev-teach2");
+  await expect(note).toContainText("Exhibits pin an icon to a name");
+  // Two lines in its own box, nothing cut off or sideways; ACCUSE still on an SE's screen.
+  const fit = await note.evaluate((el) => ({ clipped: el.scrollHeight > el.clientHeight + 1, h: el.clientHeight }));
+  expect(fit.clipped, "the note fits its two lines").toBe(false);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)).toBe(false);
+  const dock = (await page.locator("#rv-accuse").boundingBox())!;
+  expect(dock.y + dock.height, "ACCUSE on screen").toBeLessThanOrEqual(SE.height);
+  // Screen readers hear it with the exhibit.
+  await expect(page.locator('#app p.sr-only[role="status"]')).toContainText("Teacher's note: Exhibits pin");
+  await page.evaluate((t) => window.__fixture!.seek(t), exhibits[1].t + 9000);
+  await page.waitForTimeout(600);
+  expect(await page.locator(".ev-teach2").count(), "each note once").toBe(0);
+  await expect(page.locator("#ev-foot")).toHaveText("Evidence, not proof.");
+  // Before the evidence beat the box is already there (reserved), and invisible.
+  await page.evaluate((t) => window.__fixture!.seek(t), exhibits[0].t + 600);
+  await page.waitForTimeout(500);
+  expect(await note.evaluate((el) => getComputedStyle(el).opacity)).toBe("0");
+  expect(await note.evaluate((el) => el.clientHeight), "the same box from frame 0").toBe(fit.h);
+  await ctx.close();
+
+  // The first exhibit, near-the-line and earned CLEARED, wherever a tape has
+  // one: the copy, in two lines, on an SE and at 320px.
+  const COPY: Record<string, RegExp> = {
+    exhibit: /Exhibits pin an icon to a name in the grade book\. One is luck; a pile is a pattern\./,
+    near_line: /If it's them and they reach 🎓\d+, the cheater wins\. Accuse now, or trust them\./,
+    cleared: /Over the line with no siren: can't be the cheater\. Cross them off\./,
+  };
+  for (const group of ["exhibit", "near_line", "cleared"]) {
+    const found = ["caught", "graduated", "topscore", "detention", "struckout", "fullclass"]
+      .map((name) => ({ name, r: calloutReveals(name).find((x) => x.group === group && x.first) }))
+      .find((x) => x.r);
+    if (!found) throw new Error(`no tape has a first ${group} callout any more: this note goes unchecked`);
+    for (const viewport of [SE, { width: 320, height: 568 }]) {
+      const p = await phone(browser, `/#/fixture/${found.name}?as=innocent&t=${found.r!.t + 9000}&paused=1&ui=0`, viewport);
+      await p.page.waitForFunction(() => !!window.__fixture);
+      const n = p.page.locator("#ev-foot.ev-teach2");
+      await expect(n, `${group} in ${found.name}`).toContainText(COPY[group]);
+      expect(await n.evaluate((el) => el.scrollHeight > el.clientHeight + 1), `${group} fits at ${viewport.width}px`).toBe(false);
+      expect(await p.page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1)).toBe(false);
+      await p.ctx.close();
+    }
+  }
+});
+
+test("the ⭐ sheet on an SE with a full class: the 📝 row first, every name and Close within reach (v0.27)", async ({ browser }) => {
+  const { ctx, page } = await phone(browser, `/#/fixture/fullclass?as=innocent&t=${phaseAt("fullclass", "question", 2) + 4000}&paused=1&ui=0`);
+  await page.waitForFunction(() => !!window.__fixture);
+  await page.click(".sess-tab");
+  const sheet = page.locator(".overlay .sheet");
+  await expect(sheet.locator(".player-li")).toHaveCount(10);
+  expect(await sheet.evaluate((el) => el.querySelector("h2 + *")?.id), "the note comes first").toBe("sheet-note");
+  // Ten names and the row are taller than an SE: the sheet stays on screen and scrolls.
+  const box = (await sheet.boundingBox())!;
+  expect(box.y + box.height).toBeLessThanOrEqual(SE.height + 1);
+  await sheet.locator(".player-li").last().scrollIntoViewIfNeeded();
+  await expect(sheet.locator(".player-li").last()).toBeInViewport();
+  await sheet.locator('[data-action="toggleBoard"]').click();
+  await expect(sheet).toHaveCount(0);
   await ctx.close();
 });

@@ -50,6 +50,7 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.24.0 | One face per desk: no two players share a student; a taken name offers "Join as Bea 2" | shipped |
 | v0.25.0 | Tomatoes!: pelt the unmasked cheater or applaud them, from every phone | shipped |
 | v0.26.0 | Grading on a curve: the class sets the difficulty; 285 more questions; fresh questions across nights | shipped |
+| v0.27.0 | Nobody misses the bell: the bell closes How to play, a longer first bell, your note any time, Teacher's notes for Act II | shipped |
 | later | A big-screen layout that uses the width (side-by-side reveal) | ideas |
 
 Later versions take the best of what playtests and audits turn up.
@@ -153,3 +154,8 @@ Later versions take the best of what playtests and audits turn up.
 | v0.26.0 | ✅ Every new question fact-checked by a second, independent reviewer | A wrong answer key is worse here than in any quiz: being right is what gets you accused |
 | v0.26.0 | ✅ The teacher's phone remembers the questions it has hosted (800) | A repeated question makes whoever remembers it look exactly like the cheater; kept on that phone only, with Forget |
 | v0.26.0 | ❌ Mythology from living religions | A party game's "mythology" shouldn't quiz people on gods others pray to today |
+| v0.27.0 | ✅ The bell closes How to play on every phone, not just the big screen | A first-timer watching the video in homeroom would otherwise watch straight through their note |
+| v0.27.0 | ✅ A day's first period holds the bell 5.2 s; later periods 3.2 s | The note lands at 1.7 s: 1.5 s isn't enough to read it the first time. From period 2 everyone knows the drill, and a long bell every period would drag |
+| v0.27.0 | ✅ Re-read your note by holding 📝 in the ⭐ sheet, on every seat | The row is the same for everyone and the note shows only while held, so reading it again is no tell, and a glance over a shoulder catches it only for as long as you hold |
+| v0.27.0 | ✅ A missed bell earns a dot and one toast, cleared by a real hold (0.7 s) | A phone in another app at the bell would otherwise play a whole period not knowing its role; a brush of the thumb isn't reading it |
+| v0.27.0 | ✅ Act II's clues taught once each, in period 1, in the footer's own box | The Teacher's notes stopped before exhibits, the 🎓 line and CLEARED ever appeared; the footer's reserved box keeps ACCUSE on an SE's screen |

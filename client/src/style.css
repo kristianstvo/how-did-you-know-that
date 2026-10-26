@@ -153,6 +153,11 @@ input:focus { border-color: var(--accent2); }
   border: 2px solid var(--edge);
   display: grid; place-items: center; font-size: 1.2rem; box-shadow: 0 2px 12px rgba(0,0,0,0.4);
 }
+/* v0.27: missed the bell's note: a red dot on the tab's corner until it's read. */
+.sess-tab.note-due::after {
+  content: ""; position: absolute; top: -2px; right: -2px; width: 13px; height: 13px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 0 2px var(--bg);
+}
 .overlay { position: fixed; inset: 0; z-index: 60; background: rgba(10, 20, 14, 0.93); display: flex; flex-direction: column; padding: 60px 18px 20px; animation: hd-fade-in var(--t-base) var(--e-standard); }
 .overlay .card { max-width: 480px; width: 100%; margin: 0 auto; animation: hd-enter-down var(--t-scene) var(--e-enter); }
 
@@ -238,4 +243,43 @@ html.tv #app { max-width: 600px; }
   position: fixed; z-index: 90; right: 16px; bottom: 16px; padding: 8px 14px; border-radius: 999px;
   background: var(--card2); color: var(--ink); font-weight: 700; font-size: 0.9rem; pointer-events: none;
   border: 1px solid var(--edge-2);
+}
+
+/* Your note, any time (v0.27): the ⭐ sheet's first row. Held, it shows the
+   bell's note (#note-peek); the same row on every seat. touch-action: none,
+   so a slight wobble of the thumb can't turn the hold into a scroll. */
+.sheet-note {
+  display: flex; align-items: center; gap: 6px; width: 100%; min-height: 48px; margin-bottom: 8px; padding: 8px 12px;
+  border-radius: 12px; background: #fbf7ea; color: #1f2a37; box-shadow: var(--raise);
+  font-weight: 800; font-size: 0.95rem; text-align: left; touch-action: none;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+.sheet-note b { font-family: var(--hand); color: #8a5a00; }
+/* A full class already outgrew an iPhone SE's screen, and the row adds 56px:
+   the sheet scrolls inside the screen, so the last names and Close stay
+   reachable. */
+.overlay .card.sheet { max-height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+/* The note itself: the bell's own paper note (its box, hand and centred
+   lines, so it reads as the note you missed), outside #app (never morphed),
+   centred over the sheet and never in the way of the thumb. */
+#note-peek {
+  position: fixed; z-index: 95; left: 0; right: 0; top: 50%; margin: 0 auto; width: min(320px, calc(100% - 28px));
+  display: flex; flex-direction: column; justify-content: center; gap: 3px; min-height: 104px; padding: 10px 16px 8px;
+  border-radius: 6px; color: #1f2a37; pointer-events: none; text-align: center; font-family: var(--hand);
+  background:
+    linear-gradient(to right, transparent 26px, rgba(226, 92, 92, 0.55) 26px, rgba(226, 92, 92, 0.55) 28px, transparent 28px),
+    repeating-linear-gradient(to bottom, transparent 0 25px, rgba(70, 120, 200, 0.18) 25px 26px),
+    #fbf7ea;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  visibility: hidden; opacity: 0; transform: translateY(-50%) rotate(-1.5deg) scale(0.94);
+}
+/* In quickly; out at once, the moment the thumb lets go. */
+#note-peek.on {
+  visibility: visible; opacity: 1; transform: translateY(-50%) rotate(-1.5deg);
+  transition: opacity var(--t-quick) var(--e-standard), transform var(--t-quick) var(--e-enter);
+}
+#note-peek .np-tag { font-size: 0.66rem; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: #6e4f22; }
+#note-peek .np-line { display: block; font-size: 1.28rem; font-weight: 900; line-height: 1.28; white-space: pre-line; }
+@media (prefers-reduced-motion: reduce) {
+  #note-peek, #note-peek.on { transform: translateY(-50%) rotate(-1.5deg); }
 }

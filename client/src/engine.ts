@@ -11,6 +11,7 @@ import {
   matchEndTimeline,
   revealStakes,
   revealTimeline,
+  ROLE_SCREEN_FIRST_MS,
   ROLE_SCREEN_MS,
   ROLE_SCREEN_TV_MS,
   TALK_HOLD_MS,
@@ -760,10 +761,12 @@ export class HostEngine {
       this.caseFile.push({ q: -1, tier: "easy", kind: "cleared", subjectIds: absent, detail: { absent: 1 } });
     }
 
+    // v0.27: a day's first period (New day's too) gives the note longer. Set
+    // before the bell's broadcast: that's the host save a crash restores from.
+    this.roleMs = this.watchers.size ? ROLE_SCREEN_TV_MS : this.matchNumber === 1 ? ROLE_SCREEN_FIRST_MS : ROLE_SCREEN_MS;
     this.setPhase("role");
     this.broadcast();
     this.sendSecrets();
-    this.roleMs = this.watchers.size ? ROLE_SCREEN_TV_MS : ROLE_SCREEN_MS;
     this.after(this.roleMs, () => this.startQuestion(0));
   }
 
@@ -1116,7 +1119,9 @@ export class HostEngine {
       const active = this.players.filter((p) => !p.banished).map((p) => p.id);
       const fresh = this.evidence.clearAtOrAbove(this.threshold, scores, active);
       if (fresh.length) {
-        this.caseFile.push({ q: this.qIdx, tier: this.questions[this.qIdx].tier, kind: "cleared", subjectIds: fresh, detail: { threshold: this.threshold } });
+        // vote: 1 marks it as no reveal's callout (v0.27: the Teacher's note
+        // for CLEARED waits for the first one a reveal announces).
+        this.caseFile.push({ q: this.qIdx, tier: this.questions[this.qIdx].tier, kind: "cleared", subjectIds: fresh, detail: { threshold: this.threshold, vote: 1 } });
       }
       const suspects = active.filter((id) => !this.evidence.cleared.has(id));
       const last = this.qIdx >= QUESTIONS_PER_MATCH - 1;

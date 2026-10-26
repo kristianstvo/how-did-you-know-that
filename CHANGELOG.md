@@ -19,6 +19,59 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.27.0 — Nobody misses the bell · 2026-10-26 11:37
+
+**Why:** the worst first night is a cheater who never learns they're the
+cheater. Homeroom opens How to play by itself for first-timers, but only
+the big screen closed it at the bell, so a newcomer could watch the video
+straight through their note. Without the video, the note was readable for
+about 1.5 s before question one. And exhibits, the 🎓 line and CLEARED
+only turn up in Act II, after the Teacher's notes have stopped, so
+newcomers met the game's three key clues cold.
+
+**Added**
+- **The bell closes How to play on every phone**, with a buzz and
+  "🔔 The bell rang!".
+- **A day's first period holds the bell 2 s longer** (question one at
+  5.2 s, was 3.2 s). The note still lands at 1.7 s; it just stays up long
+  enough to read. Later periods keep 3.2 s, and a New day's first period
+  is long again. Rooms with a big screen are unchanged: their bell already
+  waits for the host's intro.
+- **Your note, any time.** The ⭐ sheet's first row is "📝 Your note ·
+  hold to read". Holding it shows the bell's note on your phone, only
+  while held. The row is identical on every seat, and the note behind it
+  is the same paper in the same place for the cheater and everyone else.
+- **Missed the bell?** A phone that wasn't looking when the note landed
+  (in another app, offline, reloading) gets a red dot on its ⭐ tab and one
+  toast: "📝 You missed the bell. Tap ⭐, then hold 📝 to read your note."
+  The dot goes after a real hold; a glance doesn't count. The toast waits
+  until the screen is visible and never plays during a vote.
+- **Teacher's notes for Act II.** In the first period, the first exhibit,
+  the first near-the-line callout and the first CLEARED each turn the
+  reveal's "Evidence, not proof." footer into a two-line note, once each:
+  - "Exhibits pin an icon to a name in the grade book. One is luck; a pile
+    is a pattern."
+  - "If it's them and they reach 🎓2000, the cheater wins. Accuse now, or
+    trust them."
+  - "Over the line with no siren: can't be the cheater. Cross them off."
+
+  Screen readers hear it with the exhibit.
+- Tests: the bell closing the video, and its length (live; and in the
+  yearbook check for period 1, period 2 and a New day, and through a host
+  crash); a missed bell (another app, a reload, offline through the bell)
+  and reading the note; Act II's notes once each, on an SE and at 320px; a
+  full class's ⭐ sheet on an SE; parity of the 📝 row and the held note
+  (cheater vs masked cheater: 0 differences).
+
+**Changed**
+- The ⭐ sheet scrolls inside the screen. With eight or more players its
+  last names and Close already ran off an iPhone SE.
+
+**Fixed**
+- A teacher's page that crashed during the bell came back with the wrong
+  bell length: the save written as the bell went out was made before its
+  length was set, so a big-screen room's long bell came back short.
+
 ## v0.26.0 — Grading on a curve · 2026-10-26 11:12
 
 **Why:** you asked for it: more questions, tiered by difficulty, and a quiz

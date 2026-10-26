@@ -205,14 +205,23 @@ export function soundToggle(extra = ""): string {
 export function sessionTab(app: App, s: PublicState): string {
   if (s.matchNumber === 0 || s.phase === "vote" || s.phase === "voteResult") return "";
   const open = app.ui.boardOpen;
+  // v0.27: your note, any time. Every seat gets the same row, missed bell or
+  // not; only holding it (main.ts) shows the line, and only to the holder.
+  // noop: letting go mustn't close the sheet.
+  const seated = !app.tv && s.players.some((p) => p.id === app.selfId);
+  const note =
+    s.match && seated && (s.phase === "question" || s.phase === "reveal")
+      ? `<button class="sheet-note" id="sheet-note" data-action="noop" data-peek="note">📝 Your note · <b>hold to read</b></button>`
+      : "";
   const overlay = open
     ? `<div class="overlay" data-action="toggleBoard" role="dialog" aria-modal="true" aria-label="Today's gold stars">
-        <div class="card sheet"><h2>⭐ Today's gold stars ${soundToggle("in-sheet")}</h2>${sessionRows(s)}
+        <div class="card sheet"><h2>⭐ Today's gold stars ${soundToggle("in-sheet")}</h2>${note}${sessionRows(s)}
           <button class="btn secondary" data-action="toggleBoard" autofocus>Close</button>
         </div>
       </div>`
     : "";
-  return `<button class="sess-tab" data-action="toggleBoard" aria-label="Today's gold stars" aria-expanded="${open}">⭐</button>${overlay}`;
+  const due = !!app.ui.noteDue;
+  return `<button class="sess-tab${due ? " note-due" : ""}" data-action="toggleBoard" aria-label="Today's gold stars${due ? ". Your note is waiting" : ""}" aria-expanded="${open}">⭐</button>${overlay}`;
 }
 
 /** Players ordered by answer speed (fastest first, no-answers last) — the

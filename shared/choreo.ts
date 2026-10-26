@@ -121,6 +121,9 @@ export function matchEndTimeline(reason: "cheater_banished" | "cheater_threshold
 export type RoleBeat = "bell" | "line1" | "line2" | "role";
 export const ROLE_TIMELINE: Timeline<RoleBeat> = { beats: { bell: 0, line1: 350, line2: 1000, role: 1700 }, end: 1700 };
 export const ROLE_SCREEN_MS = 3200;
+/** v0.27: a day's first period holds the bell 2 s longer, so a first-timer
+ *  reads their note (it lands at 1.7 s) before question one. Beats unchanged. */
+export const ROLE_SCREEN_FIRST_MS = 5200;
 /** v0.19: with a big screen in the room, the bell holds until its host has
  *  opened the period (both intros end by 6s), so "Question one!" lands on
  *  question one instead of under her intro. */

@@ -73,6 +73,28 @@ const decoStep = (n: number) => (n <= 1 ? 0 : Math.min(50, 200 / (n - 1)));
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 const share = (x: number) => clamp01(x).toFixed(4);
 
+/** v0.27: Teacher's notes for Act II. Exhibits, the 🎓 line and CLEARED
+ *  first turn up after Act I's notes have stopped, so in period 1 the first
+ *  callout of each group teaches its clue once, in the footer's box. The
+ *  absent-at-the-bell CLEARED teaches nothing (nobody earned it), and one a
+ *  vote added was never a reveal's callout. */
+type Clue = { q: number; kind: string; detail: Record<string, number> }; // a CaseEntry
+const EXHIBIT_KINDS = new Set(["lone_correct", "against_crowd", "lightning", "streak", "hard_sweep"]);
+const teachGroup = (e: Clue) =>
+  EXHIBIT_KINDS.has(e.kind) ? "exhibit" : e.kind === "near_line" ? "near_line" : e.kind === "cleared" && !e.detail.absent && !e.detail.vote ? "cleared" : "";
+const TEACH_AGAIN: Record<string, string> = {
+  exhibit: "🍎 Exhibits pin an icon to a name in the grade book. One is luck; a pile is a pattern.",
+  near_line: "🍎 If it's them and they reach 🎓{line}, the cheater wins. Accuse now, or trust them.",
+  cleared: "🍎 Over the line with no siren: can't be the cheater. Cross them off.",
+};
+/** The note this reveal's callout teaches, or "". The case file only grows,
+ *  so the answer is fixed from the reveal's first frame (its box too). */
+function teachAgain(callout: Clue, caseFile: Clue[], line: number): string {
+  const g = teachGroup(callout);
+  const first = g ? caseFile.find((e) => teachGroup(e) === g) : undefined;
+  return first && first.q === callout.q && first.kind === callout.kind ? TEACH_AGAIN[g].replace("{line}", String(line)) : "";
+}
+
 export const reveal: Screen = {
   beatKey: (ctx) => distinctReached(timeline(ctx), revealElapsed(ctx)).join(","),
   render(ctx) {
@@ -159,6 +181,7 @@ export const reveal: Screen = {
       `<b>🙋 ACCUSE</b> spends your one accusation on a class vote. ${strikeRule}`,
     ];
     const teach = !callout && s.matchNumber === 1 ? TEACHER_NOTES[m.questionIdx] : undefined;
+    const teach2 = r.callout && s.matchNumber === 1 ? teachAgain(r.callout, m.caseFile, m.threshold) : ""; // v0.27
     const evidence = callout
       ? `<div class="ev-slot has-card" id="ev-slot">
           <span class="ev-ph" aria-hidden="true">📁 case file</span>
@@ -172,7 +195,7 @@ export const reveal: Screen = {
             </div>
           </div>
         </div>
-        <p class="ev-foot" id="ev-foot">Evidence, not proof.</p>`
+        <p class="ev-foot${teach2 ? " ev-teach2" : ""}" id="ev-foot">${teach2 || "Evidence, not proof."}</p>`
       : `<div class="ev-slot has-note${teach ? " has-teach" : ""}" id="ev-slot"><p class="ev-note" id="ev-note" aria-hidden="${b.has("grade") ? "false" : "true"}">📝 ${classNote}</p>${
           teach ? `<p class="ev-teach" id="ev-teach-${m.questionIdx}" aria-hidden="${b.has("grade") ? "false" : "true"}"><span class="ev-teach-h">🍎 Teacher's note</span><span class="ev-teach-t">${teach}</span></p>` : ""
         }</div>`;
@@ -264,6 +287,7 @@ export const reveal: Screen = {
     const said: string[] = ["Pencils down."];
     if (b.has("answer")) said.push(`Answer: ${LETTERS[r.correctIdx]}, ${esc(q.options[r.correctIdx])}. ${correct.length} of ${rows.length} got it.`);
     if (callout && b.has("evidence")) said.push(`Exhibit: ${esc(callout.title)}. ${callout.line} ${esc(callout.ask)}`);
+    if (teach2 && b.has("evidence")) said.push(`Teacher's note: ${teach2.replace(/^🍎 /, "")}`);
     if (!callout && b.has("grade")) said.push(classNote.replace(/<[^>]+>/g, ""));
     if (teach && b.has("grade")) said.push(`Teacher's note: ${teach.replace(/<[^>]+>/g, "")}`);
     if (armed && canAccuse) said.push("Accusations are open.");

@@ -14,6 +14,10 @@ Built from the specs in `00-overview.md` … `07-ui-screens.md`.
 
 Newest first (details in `CHANGELOG.md`, decisions in `PRODUCT.md`):
 
+- **Nobody misses the bell** (v0.27) — the bell closes How to play, the
+  first period's note stays up longer, you can re-read your note any time
+  (hold 📝 in the ⭐ sheet), and period 1 explains exhibits, the 🎓 line
+  and CLEARED the first time each one appears.
 - **Grading on a curve** (v0.26) — the class sets the difficulty (everyone
   right → harder, nobody right → easier), 285 more fact-checked
   questions, and the teacher's phone avoids repeats across nights.
