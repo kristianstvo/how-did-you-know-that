@@ -13,6 +13,7 @@ code ||= run(["tsx", "sim/hallway-check.ts"]);
 code ||= run(["tsx", "sim/yearbook-check.ts"]);
 code ||= run(["tsx", "sim/accuse-check.ts"]);
 code ||= run(["tsx", "sim/curve-check.ts"]);
+code ||= run(["tsx", "sim/source-check.ts"]);
 code ||= run(["tsx", "sim/pack-check.ts"]);
 code ||= run(["tsx", "sim/practice-check.ts"]);
 code ||= run(["tsx", "sim/resume-check.ts"]);

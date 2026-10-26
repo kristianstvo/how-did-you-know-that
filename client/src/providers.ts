@@ -1,9 +1,9 @@
 // Content pipeline (spec 06, school edition). v0.26: questions are drawn one
 // at a time, at the tier the class has earned (protocol.ts nextTier), in a
-// subject the period hasn't had yet. The curated local pack answers at once;
-// OpenTDB (host only, session token, ≥5s spacing) keeps a few questions of
-// each tier ready in the background and is used when it has one. Game logic
-// only sees Question.
+// subject the period hasn't had yet. The curated local pack answers at once
+// and, since v0.29, comes first; OpenTDB (host only, session token, ≥5s
+// spacing) keeps a few questions of each tier ready in the background for
+// when the pack has nothing new. Game logic only sees Question.
 import type { Question, Tier } from "../../shared/protocol";
 import { SUBJECTS } from "../../shared/protocol";
 import { LOCAL_PACK, type RawQuestion } from "./localPack";
@@ -55,23 +55,30 @@ function buildQuestion(
 // earlier night; then any subject; finally a repeat of the tier.
 const usedLocal = new Set<RawQuestion>();
 
-function drawLocal(tier: Tier, taken: Set<string>): Question {
+function localPools(tier: Tier, taken: Set<string>): RawQuestion[][] {
   const ofTier = LOCAL_PACK.filter((q) => q.tier === tier);
   const fresh = ofTier.filter((q) => !usedLocal.has(q));
   const unseen = fresh.filter((q) => !isSeen(q.text));
-  const pools = [
-    unseen.filter((q) => !taken.has(q.subject)),
-    fresh.filter((q) => !taken.has(q.subject)),
-    unseen,
-    fresh,
-    ofTier,
-  ];
-  const pool = pools.find((p) => p.length)!;
+  return [unseen.filter((q) => !taken.has(q.subject)), fresh.filter((q) => !taken.has(q.subject)), unseen, fresh, ofTier];
+}
+
+function takeLocal(pool: RawQuestion[], taken: Set<string>): Question {
   const pick = pool[Math.floor(Math.random() * pool.length)];
   usedLocal.add(pick);
   taken.add(pick.subject);
   const own = SUBJECTS.find((s) => s.label === pick.subject);
   return buildQuestion(pick, pick.tier, pick.subject, own?.emoji ?? "🏫", "local");
+}
+
+function drawLocal(tier: Tier, taken: Set<string>): Question {
+  return takeLocal(localPools(tier, taken).find((p) => p.length)!, taken);
+}
+
+/** v0.29: only the first choice (never hosted on this phone, a subject the
+ *  period hasn't had), or null. */
+function drawFreshLocal(tier: Tier, taken: Set<string>): Question | null {
+  const [best] = localPools(tier, taken);
+  return best.length ? takeLocal(best, taken) : null;
 }
 
 // ---------- OpenTDB provider ----------
@@ -183,8 +190,8 @@ async function fill(): Promise<void> {
 }
 
 /** The seam the engine pulls questions through, one at a time (v0.26). The
- *  live game uses OpenTDB with the local pack behind it; the simulator and
- *  replay fixtures plug in their own. */
+ *  live game uses the local pack with OpenTDB behind it (v0.29); the
+ *  simulator and replay fixtures plug in their own. */
 export interface QuestionSource {
   /** Get the next period's questions ready in the background. */
   prefetch(): void;
@@ -207,8 +214,13 @@ export const openTdbSource: QuestionSource = {
     taken = new Set(asked.map((q) => q.subject));
   },
   next(tier) {
-    const i = ready[tier].findIndex((q) => !taken.has(q.subject));
-    const q = i >= 0 ? ready[tier].splice(i, 1)[0] : drawLocal(tier, taken);
+    // v0.29: the curated pack first (written for an international, mostly
+    // European class, and fact-checked twice); OpenTDB leans American. An
+    // online question only when the pack has none this phone hasn't hosted
+    // in a subject the period hasn't had: still better than a repeat.
+    const own = drawFreshLocal(tier, taken);
+    const i = own ? -1 : ready[tier].findIndex((q) => !taken.has(q.subject));
+    const q = own ?? (i >= 0 ? ready[tier].splice(i, 1)[0] : drawLocal(tier, taken));
     taken.add(q.subject);
     markSeen(q.text);
     void fill(); // top the shelf back up while the class plays

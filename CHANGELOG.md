@@ -19,6 +19,52 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.29.0 — Study abroad · 2026-10-26 13:56
+
+**Why:** you asked for more questions, more global and more European, for
+your playtests. The curated pack was already international, but a live game
+barely used it: whenever the teacher's phone was online, Open Trivia
+Database questions came first, and those lean American (US politics,
+Hollywood, US sport). A European class mostly met those.
+
+**Added**
+- **224 new questions** in eight subjects (History, Geography, Art, Music,
+  Literature, Film Studies, Computer Class and P.E., 28 each), written for a
+  mostly European class. About 70% are about Europe: its history, capitals,
+  rivers, painters, composers, writers, films, footballers and inventors.
+  The rest come from around the world. Metric units, no US-only knowledge,
+  no politics. A few nods to Croatia, tiered for a mixed crowd: Diocletian's
+  Palace, Plitvice, the Sea Organ in Zadar, Dubrovnik as King's Landing, the
+  Winnetou films, Modrić and Ivanišević.
+- As in v0.26, a second, independent reviewer fact-checked every file with
+  web searches: 16 questions were reworded or given a safer wrong option, 3
+  were re-tiered, and 5 that gave away another question were replaced. The
+  pack is now 698 (172 easy, 311 medium, 215 hard).
+- Tests: a source check. While online questions are ready, a whole period
+  still comes from the pack; online ones come before any repeat; the pack
+  never stalls. It fails on the old order.
+
+**Changed**
+- **The curated pack comes first.** Online questions from Open Trivia
+  Database are used only when the pack has no question this phone hasn't
+  hosted in a subject the period hasn't had: before a repeat, never instead
+  of a fresh pack question.
+- Three US-only Civics questions (the US flag's stars, the US presidential
+  term, "We the People") were replaced in place by European ones: the
+  European Commission's city, how often European Parliament elections are
+  held, and where the European Central Bank is.
+
+**Coming next:** Math, Science, Mythology and Civics questions in the same
+style are still being written and fact-checked.
+
+**Evidence**
+- The full suite passes on the code change: 64 tests and every engine
+  check, including the new source check.
+- With the new questions, the pack check passes: 698 questions, at least 4
+  of every tier in every subject, and no repeat across 5 offline periods or
+  8 medium-only ones. So do the curve and source checks and the other engine
+  checks.
+
 ## v0.28.0 — Hear the verdict · 2026-10-26 12:28
 
 **Why:** the loudest moments of a period played almost in silence. The

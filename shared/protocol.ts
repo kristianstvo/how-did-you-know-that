@@ -142,7 +142,7 @@ export interface PublicState {
   /** v0.8: the day's yearbook, at session end only. */
   dayAwards?: Award[];
   matchNumber: number; // 1-based, 0 = none played yet
-  offlineQuestions: boolean; // fallback pack active this match (spec 06)
+  offlineQuestions: boolean; // a local-pack question was asked this match (spec 06; since v0.29 the pack comes first)
   loadingQuestions: boolean; // host is fetching questions at match start
   /** v0.7 the hallway: arrived mid-period, watching, seated at the next one. */
   hallway?: { id: string; name: string; avatar: string }[];

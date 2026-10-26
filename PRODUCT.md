@@ -52,6 +52,7 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.26.0 | Grading on a curve: the class sets the difficulty; 285 more questions; fresh questions across nights | shipped |
 | v0.27.0 | Nobody misses the bell: the bell closes How to play, a longer first bell, your note any time, Teacher's notes for Act II | shipped |
 | v0.28.0 | Hear the verdict: the count, the verdict and the unmask get their sounds; your own answer dings and is stamped | shipped |
+| v0.29.0 | Study abroad: 224 more questions, global and Europe-centric; the curated pack comes first | shipped |
 | later | A big-screen layout that uses the width (side-by-side reveal) | ideas |
 
 Later versions take the best of what playtests and audits turn up.
@@ -163,3 +164,7 @@ Later versions take the best of what playtests and audits turn up.
 | v0.28.0 | ✅ Your own answer dings or bonks, and is stamped on the reveal ("YOU ✓ +200") | It is read from your own row of the public board, on the beat when every phone already shows every ✓/✗: an outcome sound, not a role sound, so v0.6's rule holds. A cheater's phone dings exactly when the board shows them right, and the parity test finds no difference from the same seat masked |
 | v0.28.0 | ✅ The bonk is softer and shorter than the ding | Getting one wrong is part of the game, not a punishment; across a room, the right answers should carry |
 | v0.28.0 | ✅ Ballot flicks climb in pitch as a pile-on grows | The room hears a landslide coming before the stamp; it reads only the ballots every phone flips |
+| v0.29.0 | ✅ The curated pack first; Open Trivia Database only when the pack has nothing new | Online questions lean American and weren't checked for this class; the pack was. An online question still beats a repeat |
+| v0.29.0 | ✅ About 70% European, the rest global; metric units; no US-only knowledge | The playtests are in Europe (hosted in Croatia): questions should be fair to that room without becoming parochial |
+| v0.29.0 | ✅ At most two Croatia or Balkans questions per subject, tiered for a mixed crowd | A home question is instant for locals and a coin toss for guests: a few are fun, many would tilt who looks like the cheater |
+| v0.29.0 | ✅ US-only questions replaced in place | Host saves remember used questions by their position in the pack, so a swap in place keeps a reloaded game's "already asked" list right |
