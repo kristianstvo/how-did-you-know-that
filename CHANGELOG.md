@@ -19,6 +19,39 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.25.0 — Tomatoes! · 2026-10-26 10:14
+
+**Why:** the unmask is the loudest moment of the night, and the only thing
+the room could do with it was shout. Guests sat on "Waiting for the
+teacher…" at the bottom of a long page. Pelting a busted cheater with
+tomatoes, or grudgingly applauding one who got away, is physical comedy
+aimed at one person, and nobody can resist the button.
+
+**Added**
+- **🍅 and 👏 on the report card.** From the unmask on, every phone (seated or
+  watching from the hallway) gets a tomato and an applause button on the
+  right edge, with the room's running count above them. The markup is the
+  same on every phone, the cheater's included.
+- **Hits land on the cheater's yearbook photo.** Every phone and the big
+  screen throw the room's tomatoes from the edges of the screen; each one
+  leaves a splat on the photo (up to twelve, the oldest fade first), and
+  applause leaves a 👏 pop. Your own tap flies at once; everyone else's
+  follow the host's count.
+- **Sound stays polite.** A phone clicks only for its own taps. The big
+  screen plays a splat or a clap as each hit lands, ducked under the host.
+- **Fair limits.** At most one cheer every 250 ms and 30 per phone per
+  period; a phone that has used its 30 shows it. Scores are unchanged.
+- With reduced motion the hits fade in where they land, with no flight.
+- Tests: a live room with a big screen (counts agree on every phone and the
+  TV, the cheater's buttons match everyone's, phones stay quiet); the rail
+  never covers scores or the teacher's buttons at SE and 320px sizes; rapid
+  tapping, the spent state and a reload; engine checks for the limits, the
+  hallway, the TV and a host reload.
+
+**Changed**
+- The report card's trophy column is 6px wider so the rail clears the
+  scores.
+
 ## v0.24.0 — One face per desk · 2026-10-26 10:11
 
 **Why:** the reveal trays, the locked-in desks and the ballot strip tell

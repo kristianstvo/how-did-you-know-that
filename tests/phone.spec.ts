@@ -920,3 +920,251 @@ test("back on a new tab mid-match: told to wait for the report card, with no oth
   expect(await again.evaluate(() => localStorage.getItem("hdykt-name"))).toBe("Bea");
   await close();
 });
+
+// ---- v0.25 Tomatoes! ----
+
+test("phone: tomatoes and applause after the unmask reach every phone and the big screen (v0.25)", async ({ browser }) => {
+  // Bea is the cheater (local test hook) and graduates at Q2 on a 200 line,
+  // so no accusation is needed to reach the report card.
+  const host = await phone(browser, "/?debugCheater=Bea");
+  await host.page.fill("#playerName", "Hana");
+  await host.page.click("#hm-next");
+  await host.page.click('[data-action="create"]');
+  const code = (await host.page.locator(".roomcode").innerText({ timeout: 15000 })).replace(/\s/g, "");
+  await host.page.click("#lb-adv summary");
+  await host.page.fill("#set-line", "200");
+  await host.page.locator("#set-line").blur();
+  await expect(host.page.locator(".lb-adv-sum")).toContainText("line 200");
+  const tvCtx = await browser.newContext({ viewport: { width: 1280, height: 720 }, isMobile: false, hasTouch: false });
+  const tv = await tvCtx.newPage();
+  await tv.goto(`/#/tv/${code}`);
+  await expect(tv.locator("#lb-tvjoin")).toBeVisible({ timeout: 15000 });
+  const join = async (name: string) => {
+    const p = await phone(browser, `/#/join/${code}`);
+    await p.page.fill("#playerName", name);
+    await p.page.click("#hm-next");
+    await p.page.waitForSelector(".screen-lobby");
+    return p;
+  };
+  const bea = await join("Bea");
+  const cy = await join("Cy");
+  const pages = [host.page, bea.page, cy.page, tv];
+  const errors: string[] = [];
+  for (const p of pages) p.on("pageerror", (e) => errors.push(e.message));
+  await host.page.click("#lb-start");
+  // Watch every screen for the cluster showing up before the unmask.
+  for (const p of pages) {
+    await p.evaluate(() => {
+      const w = window as unknown as { __early: { masked: number; cheer: number } };
+      w.__early = { masked: 0, cheer: 0 };
+      const look = () => {
+        const sec = document.querySelector(".screen-matchEnd");
+        if (sec && !sec.classList.contains("b-unmask")) {
+          w.__early.masked++;
+          if (sec.querySelector(".me-cheer")) w.__early.cheer++;
+        }
+        requestAnimationFrame(look);
+      };
+      look();
+    });
+  }
+  const cheat = () => bea.page.locator("button.opt.cheat-mark:not([disabled])").click({ timeout: 30000 });
+  await cheat();
+  await answer(host.page);
+  await answer(cy.page);
+  await host.page.click("#rv-host", { timeout: 40000 }); // skip the show…
+  await host.page.locator('#rv-host[data-action="advance"]:not([disabled])').click({ timeout: 20000 }); // …and on to Q2
+  await cheat();
+  await answer(host.page);
+  await answer(cy.page);
+  for (const p of pages) await p.waitForSelector(".screen-matchEnd.v-graduated", { timeout: 30000 });
+
+  // From the unmask: the buttons on every phone (the cheater's too), only the count on the TV.
+  await expect(cy.page.locator("#me-tomato")).toBeVisible({ timeout: 5000 });
+  for (const p of [host.page, bea.page]) await expect(p.locator("#me-tomato")).toBeVisible();
+  await expect(tv.locator("#me-cheer-count")).toBeVisible();
+  expect(await tv.locator(".me-cheer-btn").count(), "the big screen never throws").toBe(0);
+  for (const p of pages) {
+    const early = await p.evaluate(() => (window as unknown as { __early: { masked: number; cheer: number } }).__early);
+    expect(early.masked, "the report card was seen before the unmask").toBeGreaterThan(0);
+    expect(early.cheer, "no tomatoes before the unmask").toBe(0);
+  }
+  expect((await cy.page.locator("#me-tomato").boundingBox())!.width).toBeGreaterThanOrEqual(52);
+
+  const sounds = (p: Page) => p.evaluate(() => (window.__hdykt as unknown as { sounds?: string[] }).sounds ?? []);
+  const clicks = async (p: Page) => (await sounds(p)).filter((x) => x === "click").length;
+  const cyClicks = await clicks(cy.page);
+  for (let i = 0; i < 3; i++) {
+    await cy.page.click("#me-tomato");
+    await cy.page.waitForTimeout(300);
+  }
+  await host.page.click("#me-clap");
+  for (const p of pages) await expect(p.locator("#me-cheer-count"), "every screen counts the same").toHaveText("🍅 3 · 👏 1", { timeout: 1500 });
+  // The hits land: on the big screen (with a thump) and on the cheater's own phone.
+  await expect.poll(() => tv.locator("#cheers .ch-fly, #cheers .ch-pop, #cheers-pin .ch-splat, #cheers-pin .ch-pop").count(), { timeout: 3000 }).toBeGreaterThan(0);
+  await expect.poll(() => tv.locator("#cheers-pin .ch-splat").count(), { timeout: 3000 }).toBeGreaterThan(0);
+  await expect.poll(() => bea.page.locator("#cheers-pin .ch-splat").count(), { timeout: 3000 }).toBeGreaterThan(0);
+  await expect.poll(async () => (await sounds(tv)).includes("splat"), { timeout: 3000 }).toBe(true);
+  // A phone hears its own throws only, one click each: other people's hits land in silence.
+  expect(await clicks(cy.page), "one click per throw").toBe(cyClicks + 3);
+  for (const p of [host.page, bea.page, cy.page]) {
+    const heard = await sounds(p);
+    expect(heard.filter((x) => x === "splat" || x === "clap"), "no hit sounds on phones").toEqual([]);
+  }
+  // Cy's own three splat once each: their echo in the count throws nothing more.
+  await cy.page.waitForTimeout(1500);
+  expect(await cy.page.locator("#cheers-pin .ch-splat").count(), "a phone's own tomatoes aren't thrown twice").toBe(3);
+  // The same markup for the cheater as for anyone else.
+  expect(await bea.page.locator("#me-cheer").innerHTML()).toBe(await cy.page.locator("#me-cheer").innerHTML());
+  // The big screen's count stays clear of its "click for sound" hint.
+  expect(await tv.locator("#tv-sound").count(), "nobody has clicked the big screen").toBe(1);
+  const chipClear = await tv.evaluate(() => {
+    const a = document.getElementById("me-cheer-count")!.getBoundingClientRect();
+    const b = document.getElementById("tv-sound")!.getBoundingClientRect();
+    return a.width > 0 && (a.bottom <= b.top || b.bottom <= a.top || a.right <= b.left || b.right <= a.left);
+  });
+  expect(chipClear, "the big screen's count isn't under the sound hint").toBe(true);
+
+  // The big screen rolls down the long report on its own… until a tomato
+  // brings it back to the photo, where it holds while the room throws.
+  const faceTop = () => tv.evaluate(() => document.getElementById("me-face-real")?.getBoundingClientRect().top ?? 0);
+  await expect.poll(faceTop, { timeout: 40000, intervals: [500] }).toBeLessThan(0);
+  const tvSplats = await tv.locator("#cheers-pin .ch-splat").count();
+  await cy.page.click("#me-tomato");
+  await expect.poll(() => tv.evaluate(() => scrollY), { timeout: 2000 }).toBe(0);
+  await expect.poll(() => tv.locator("#cheers-pin .ch-splat").count(), { timeout: 3000 }).toBe(tvSplats + 1);
+  await tv.waitForTimeout(3000);
+  expect(await tv.evaluate(() => scrollY), "…and holds on the photo while the room throws").toBe(0);
+
+  // Back to homeroom: every screen's tomatoes are swept up.
+  await host.page.click("#me-advance");
+  for (const p of pages) {
+    await p.waitForSelector(".screen-lobby", { timeout: 15000 });
+    expect(await p.locator("#cheers > :not(.ch-probe), #cheers-pin .ch-pin > *").count(), "nothing left in homeroom").toBe(0);
+  }
+  expect(errors).toEqual([]);
+  await tvCtx.close();
+  for (const p of [host, bea, cy]) await p.ctx.close();
+});
+
+test("phone: the cheer rail clears the scores and the teacher's dock; reduced motion lands without a flight (v0.25)", async ({ browser }) => {
+  const end = (name: string) => phaseAt(name, "matchEnd");
+  // Before the unmask (caught: 2.5s in) there is nothing to throw.
+  {
+    const { ctx, page } = await phone(browser, `/#/fixture/caught?as=cheater&t=${end("caught") + 1200}&paused=1&ui=0`);
+    await page.waitForFunction(() => !!window.__fixture);
+    await page.waitForTimeout(600);
+    expect(await page.locator(".me-cheer").count()).toBe(0);
+    await ctx.close();
+  }
+  // At rest (no scrolling), every ending on an SE, guest and teacher, and a
+  // short 320px phone: the rail's chip and buttons hide nothing to read.
+  const rest: [string, { width: number; height: number }][] = [];
+  for (const fx of ["caught", "graduated", "fullclass", "struckout", "detention", "topscore"])
+    for (const host of ["", "&host=1"]) rest.push([`/#/fixture/${fx}?as=innocent&t=${end(fx) + 7500}&paused=1&ui=0${host}`, SE]);
+  rest.push([`/#/fixture/caught?as=innocent&t=${end("caught") + 7500}&paused=1&ui=0&host=1`, { width: 320, height: 460 }]);
+  rest.push([`/#/fixture/detention?as=innocent&t=${end("detention") + 7500}&paused=1&ui=0`, { width: 320, height: 460 }]);
+  for (const [url, size] of rest) {
+    const { ctx, page } = await phone(browser, url, size);
+    await page.waitForFunction(() => !!window.__fixture);
+    await page.waitForTimeout(1200);
+    const r = await page.evaluate(() => {
+      const box = (el: Element) => el.getBoundingClientRect();
+      const hits = (a: DOMRect, b: DOMRect) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+      const rail = box(document.querySelector("#me-cheer")!);
+      const parts = [...document.querySelectorAll("#me-cheer-count, .me-cheer-btn")].map(box);
+      const read = ".me-score, .me-trophy, .me-aside, .me-nm, #me-hero .me-fx, #me-name, #me-sub, #me-advance, #me-endday";
+      const covered = [...document.querySelectorAll(read)]
+        .filter((el) => box(el).height > 0 && parts.some((p) => hits(p, box(el))))
+        .map((el) => `${el.id || el.className} "${(el.textContent ?? "").trim().slice(0, 24)}"`);
+      return { covered, inView: rail.bottom <= innerHeight && rail.right <= innerWidth, overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1 };
+    });
+    expect(r.covered, `${url} at ${size.width}px: the rail covers these`).toEqual([]);
+    expect(r.inView && !r.overflow, `${url} at ${size.width}px: on screen, nothing sideways`).toBe(true);
+    await ctx.close();
+  }
+  // A tap throws one at once (in a replay too, where nothing is sent): it
+  // flies (a transform), then splats on the photo…
+  {
+    const { ctx, page } = await phone(browser, `/#/fixture/caught?as=innocent&t=${end("caught") + 4500}&paused=1&ui=0`);
+    await page.waitForFunction(() => !!window.__fixture);
+    await page.waitForTimeout(800);
+    await page.click("#me-tomato");
+    await expect(page.locator("#cheers .ch-fly")).toHaveCount(1);
+    await expect(page.locator("#cheers-pin .ch-splat")).toHaveCount(1, { timeout: 2000 });
+    await expect(page.locator("#cheers .ch-fly")).toHaveCount(0);
+    // …sitting on the cheater's photo.
+    const [splat, face] = await Promise.all([page.locator("#cheers-pin .ch-splat").boundingBox(), page.locator("#me-face-real").boundingBox()]);
+    const [cx, cy] = [splat!.x + splat!.width / 2, splat!.y + splat!.height / 2];
+    expect(cx > face!.x && cx < face!.x + face!.width && cy > face!.y && cy < face!.y + face!.height, "the splat lands on the photo").toBe(true);
+    await ctx.close();
+  }
+  // …and with reduced motion it just appears there: no flight, nothing moves.
+  {
+    const ctx = await browser.newContext({ viewport: SE, isMobile: true, hasTouch: true, reducedMotion: "reduce" });
+    const page = await ctx.newPage();
+    await page.goto(`/#/fixture/caught?as=innocent&t=${end("caught") + 4500}&paused=1&ui=0`);
+    await page.waitForFunction(() => !!window.__fixture);
+    await page.waitForTimeout(800);
+    await page.click("#me-tomato");
+    await page.waitForTimeout(400); // past the tap gap
+    await page.click("#me-clap");
+    expect(await page.locator("#cheers .ch-fly").count()).toBe(0);
+    await expect(page.locator("#cheers-pin .ch-splat")).toHaveCount(1);
+    const moving = await page.evaluate(() =>
+      document
+        .getAnimations()
+        .filter((a) => ((a.effect as KeyframeEffect | null)?.target as Element | null)?.closest?.("#cheers, #cheers-pin, #me-cheer"))
+        .flatMap((a) => (a.effect as KeyframeEffect).getKeyframes())
+        .filter((k) => ["transform", "translate", "scale", "rotate"].some((p) => (k as Record<string, unknown>)[p] !== undefined)).length,
+    );
+    expect(moving, "reduced motion: opacity only").toBe(0);
+    await ctx.close();
+  }
+});
+
+test("phone: a mash of tomatoes streams at the host's pace, and after this period's last both buttons dim, across a reload (v0.25)", async ({ browser }) => {
+  // A replay sends nothing, but the phone's own pacing and cap run the same.
+  const url = `/#/fixture/caught?as=innocent&t=${phaseAt("caught", "matchEnd") + 4500}&paused=1&ui=0`;
+  const { ctx, page } = await phone(browser, url);
+  await page.waitForFunction(() => !!window.__fixture);
+  await page.waitForTimeout(800);
+  // Count every throw that leaves this phone.
+  await page.evaluate(() => {
+    const w = window as unknown as { __thrown: number };
+    w.__thrown = 0;
+    new MutationObserver((list) => list.forEach((m) => m.addedNodes.forEach((n) => (n as Element).classList?.contains("ch-fly") && w.__thrown++))).observe(document.body, { childList: true, subtree: true });
+  });
+  const thrown = () => page.evaluate(() => (window as unknown as { __thrown: number }).__thrown);
+  const tap = (id: string) => page.evaluate((sel) => document.querySelector<HTMLButtonElement>(sel)?.click(), id);
+  // Twelve taps ~100ms apart: the ones that come too soon wait for the gap
+  // instead of vanishing (it used to throw 4 of these).
+  for (let i = 0; i < 12; i++) {
+    await tap("#me-tomato");
+    await page.waitForTimeout(100);
+  }
+  await page.waitForTimeout(1200);
+  const mash = await thrown();
+  expect(mash, "a mash keeps throwing at about 3 a second").toBeGreaterThanOrEqual(5);
+  expect(mash).toBeLessThanOrEqual(8);
+  // On to this period's last (30, tomatoes and applause together).
+  for (let i = 0; i < 120 && !(await page.locator("#me-tomato").isDisabled()); i++) {
+    await tap(i % 3 ? "#me-tomato" : "#me-clap");
+    await page.waitForTimeout(120);
+  }
+  await expect(page.locator("#me-tomato")).toBeDisabled();
+  await expect(page.locator("#me-clap"), "the cap covers applause too, and says so").toBeDisabled();
+  await expect(page.locator(".toast")).toContainText("All thrown");
+  await page.waitForTimeout(1000); // the last queued throws leave
+  expect(await thrown(), "exactly this period's 30 flew").toBe(30);
+  await page.locator("#me-clap").click({ force: true });
+  await page.waitForTimeout(500);
+  expect(await thrown(), "a spent button throws nothing").toBe(30);
+  // A reload remembers: the host still counts this phone's 30.
+  await page.reload();
+  await page.waitForFunction(() => !!window.__fixture);
+  await page.waitForTimeout(800);
+  await expect(page.locator("#me-tomato")).toBeDisabled();
+  await expect(page.locator("#me-clap")).toBeDisabled();
+  await ctx.close();
+});

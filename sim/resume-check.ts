@@ -102,4 +102,28 @@ for (const at of AT) {
   await clock.runUntil(() => done, 500_000);
   check(sent === before && e.publicState().phase === "question", "a stopped host sends nothing and its timers don't move the game");
 }
+// v0.25: the report card's tomatoes and applause survive a host reload.
+{
+  clock.reset();
+  resetLocalDeck();
+  Math.random = mulberry32(2525);
+  const e = new HostEngine("CHEER", "Hana", "🎒", quiet, localOnlySource);
+  for (let i = 0; i < 5; i++) e.addBot();
+  void e.startMatch();
+  await clock.runUntil(() => e.publicState().phase === "question", 500_000);
+  (e as unknown as { endMatch(r: string): void }).endMatch("top_score");
+  let past = false;
+  setTimeout(() => (past = true), 3000); // after the unmask (2.5s)
+  await clock.runUntil(() => past, 500_000);
+  e.localIntent({ kind: "cheer", what: "tomato" });
+  let gap = false;
+  setTimeout(() => (gap = true), 300);
+  await clock.runUntil(() => gap, 500_000);
+  e.localIntent({ kind: "cheer", what: "clap" });
+  const json = JSON.stringify(e.snapshot());
+  e.stop();
+  const back = HostEngine.restore(JSON.parse(json), quiet, localOnlySource);
+  const c = back.publicState().match?.end?.cheers;
+  check(c?.tomato === 1 && c?.clap === 1, `matchEnd: the cheers survive a host reload (🍅 ${c?.tomato} · 👏 ${c?.clap})`);
+}
 process.exit(failures ? 1 : 0);

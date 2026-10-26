@@ -14,6 +14,8 @@ Built from the specs in `00-overview.md` … `07-ui-screens.md`.
 
 Newest first (details in `CHANGELOG.md`, decisions in `PRODUCT.md`):
 
+- **Tomatoes!** (v0.25) — after the unmask, pelt the cheater with tomatoes
+  or applaud them; every phone and the big screen sees the hits.
 - **One face per desk** (v0.24) — no two players share a student, and a
   taken name offers a free one in one tap.
 - **No way you knew that!** (v0.23) — you accuse a named suspect, they get

@@ -10,6 +10,7 @@
   --me-cf-head: 28px; /* case-file group header */
   --me-cf-row: 30px; /* case-file exhibit line */
   --me-sem-row: 40px; /* semester row (SEM_ROW in matchEnd.ts) */
+  --me-lane: 36px; /* v0.25: kept clear on the right for the cheer rail (.me-cheer) */
   position: relative;
   /* Stamps start at 2.2× scale; clip the transient overhang so a phone never
      widens its layout viewport (clip, unlike hidden, keeps sticky working). */
@@ -72,6 +73,11 @@
   animation: hd-enter-up var(--t-scene) var(--e-enter) 140ms both;
 }
 .v-graduated .me-hero { border-color: rgba(255, 107, 107, 0.7); }
+/* v0.25: where the cheer rail rests over the hero (the teacher's phone, its
+   rail above the dock; any short screen), the hero keeps the lane clear too,
+   from frame 0. */
+.screen-matchEnd:has(.me-dock.host) .me-hero { padding-right: calc(14px + var(--me-lane)); }
+@media (max-height: 540px) { .me-hero { padding-right: calc(14px + var(--me-lane)); } }
 /* The unmask lands with a 3px shake (high-stakes impact). */
 .b-unmask .me-hero { animation: hd-shake var(--t-stamp) var(--e-standard) 200ms; }
 .me-hk {
@@ -145,6 +151,9 @@
   animation: hd-enter-up var(--t-base) var(--e-enter) both; animation-delay: calc(var(--i) * var(--stagger-info));
 }
 .me-blow-in .me-fx { flex: none; }
+/* A line too long for its slot gives way at its tail (v0.25: it used to run
+   past the card on a 320px phone, and now must keep out of the rail's lane). */
+.me-blow-in > .me-fx:only-child, .me-blow-in > .me-dimtxt { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .me-opt { min-width: 2em; overflow: hidden; text-overflow: ellipsis; font-weight: 800; }
 .me-blow-in b { font-weight: 900; }
 .me-ok { color: var(--good); }
@@ -157,8 +166,10 @@
 
 /* ---- Sections: shells reserved from frame 0 as a faint, blank report
    card; each comes up to full ink on its beat. ---- */
+/* v0.25: every section keeps the cheer rail's lane clear on its right, so the
+   rail hides nothing at rest, and scrolling slides only the lane under it. */
 .me-sec {
-  padding: 12px 12px 10px; margin-bottom: 12px; opacity: 0.38;
+  padding: 12px calc(12px + var(--me-lane)) 10px 12px; margin-bottom: 12px; opacity: 0.38;
   transition: opacity var(--t-scene) var(--e-standard);
   animation: hd-fade-in var(--t-scene) var(--e-standard) 260ms backwards;
 }
@@ -175,7 +186,7 @@
   background: repeating-linear-gradient(180deg, transparent 0 calc(var(--me-rc-row) - 1px), rgba(244, 241, 232, 0.07) calc(var(--me-rc-row) - 1px) var(--me-rc-row));
 }
 .me-rc-row {
-  display: grid; grid-template-columns: 18px 30px minmax(0, 1fr) 46px 22px; column-gap: 6px; align-items: center;
+  display: grid; grid-template-columns: 18px 30px minmax(0, 1fr) 46px; column-gap: 6px; align-items: center;
   height: var(--me-rc-row); padding: 0 2px; border-radius: 8px;
   animation: hd-enter-up var(--t-base) var(--e-enter) both; animation-delay: calc(var(--i) * var(--stagger-info));
 }
@@ -199,8 +210,13 @@
 @keyframes me-grow { from { transform: scaleX(0); } }
 .me-score { font-weight: 900; font-size: 1rem; text-align: right; font-variant-numeric: tabular-nums; }
 .me-rc-row.is-cheater .me-score { color: var(--accent); }
-.me-trophy { width: 22px; text-align: center; }
-.me-trophy > span { display: inline-block; animation: hd-pop var(--t-base) var(--e-impact) both; animation-delay: calc(var(--i) * var(--stagger-info) + 200ms); }
+/* v0.25: the 🏆 is pinned to the winner's photo (it used to take a column on
+   the right, where the cheer rail now runs), taking no room from the name. */
+.me-rc-av { position: relative; width: 30px; height: 30px; }
+.me-trophy {
+  position: absolute; right: -5px; bottom: -6px; font-size: 0.8rem; line-height: 1; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.55));
+  animation: hd-pop var(--t-base) var(--e-impact) both; animation-delay: calc(var(--i) * var(--stagger-info) + 200ms);
+}
 
 /* Case file (caseFile beat): the ✓ group pointed at the cheater, the ✗
    group at innocents (each headed by its glyph: readable without colour). */
@@ -291,3 +307,74 @@
 .me-tell-ic { flex: none; width: 22px; text-align: center; }
 .me-tell-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .me-tell b { color: var(--ink); }
+
+/* ---- Tomatoes! (v0.25): from the unmask, a tomato and a round of applause
+   for the cheater, fixed bottom-right in thumb reach (on the teacher's phone,
+   above the sticky dock). A one-button-wide rail on the right edge, the count
+   on top, over the lane the sections keep clear (--me-lane). The big screen
+   has no buttons, so no lane: its count is one line in the corner. ---- */
+.me-cheer {
+  position: fixed; z-index: 30; right: max(6px, env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom));
+  width: 52px; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none;
+  animation: hd-enter-up var(--t-base) var(--e-enter) 200ms both;
+}
+.me-cheer.host { bottom: calc(132px + env(safe-area-inset-bottom)); }
+.me-cheer.watch { width: auto; right: max(12px, env(safe-area-inset-right)); }
+html.tv:has(#tv-sound) .me-cheer.watch { bottom: 64px; } /* above "🔊 Click for sound" until someone does */
+html.tv .screen-matchEnd { --me-lane: 0px; }
+.me-cheer-count {
+  width: 100%; display: flex; flex-direction: column; align-items: center; padding: 3px 0; border-radius: 12px;
+  background: var(--card2); border: 1px solid var(--edge-2); box-shadow: var(--raise);
+  font-size: 0.75rem; font-weight: 800; line-height: 1.35; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.me-cheer-sep { display: none; }
+.watch .me-cheer-count { flex-direction: row; padding: 4px 12px; border-radius: 999px; font-size: 1.05rem; } /* read across a room */
+.watch .me-cheer-sep { display: inline; white-space: pre; }
+.me-cheer-btns { display: flex; flex-direction: column; gap: 8px; pointer-events: auto; }
+.me-cheer-btn {
+  width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font-size: 1.55rem; line-height: 1;
+  background: var(--card2); border: 2px solid var(--edge-2); box-shadow: var(--raise), 0 6px 16px rgba(0, 0, 0, 0.35);
+  transition: transform var(--t-tap) var(--e-standard);
+}
+.me-cheer-btn:active { transform: scale(0.9); }
+/* All thrown (this phone's CHEER_MAX a period): dimmed like any disabled
+   button, and a press no longer gives. */
+.me-cheer-btn:disabled:active { transform: none; opacity: 0.45; }
+
+/* The hits (cheers.ts), outside #app: #cheers is over the screen (sprites in
+   flight, hits off the photo); #cheers-pin sits on the photo in page
+   coordinates, so its splats scroll with it. Transform and opacity only. */
+#cheers { position: fixed; inset: 0; z-index: 45; overflow: hidden; pointer-events: none; }
+#cheers-pin { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 44; pointer-events: none; }
+.ch-probe { position: absolute; left: 0; top: 0; width: 100px; height: 100px; visibility: hidden; }
+.ch-pin { position: absolute; left: 0; top: 0; }
+.ch-fly, .ch-pop {
+  position: absolute; left: 0; top: 0; width: 40px; height: 40px; margin: -20px 0 0 -20px;
+  display: grid; place-items: center; font-size: 30px; font-style: normal; line-height: 1;
+}
+.ch-fly { will-change: transform; filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.4)); }
+.ch-pop { font-size: 26px; animation: ch-pop 900ms var(--e-standard) both; }
+@keyframes ch-pop {
+  0% { opacity: 0; transform: scale(0.4); }
+  25% { opacity: 1; transform: scale(1.25); }
+  100% { opacity: 0; transform: translateY(-26px); }
+}
+/* A splat: a squashed tomato with a few drops around it. */
+.ch-splat {
+  position: absolute; width: 30px; height: 26px; margin: -13px 0 0 -15px;
+  border-radius: 46% 54% 42% 58% / 58% 44% 56% 42%;
+  background: radial-gradient(circle at 36% 34%, #ff9b8a 0 10%, #e8402f 12% 58%, #c22a1d 62%);
+  box-shadow: 11px -7px 0 -7px #e8402f, -12px 6px 0 -8px #d93424, 3px 14px 0 -9px #c22a1d, -6px -12px 0 -9px #e8402f;
+  transform: rotate(var(--r, 0deg)) scale(var(--s, 1));
+  opacity: 0.94; transition: opacity 600ms var(--e-standard);
+  animation: ch-splat 220ms var(--e-impact) both;
+}
+.ch-splat.gone { opacity: 0; }
+@keyframes ch-splat { from { opacity: 0; transform: rotate(var(--r, 0deg)) scale(0.2); } }
+@media (prefers-reduced-motion: reduce) {
+  .me-cheer-btn { transition: opacity var(--t-quick) var(--e-standard); }
+  .me-cheer-btn:active { transform: none; opacity: 0.8; }
+  /* No flight (cheers.ts): the hit fades in where it lands. */
+  @keyframes ch-pop { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
+  @keyframes ch-splat { from { opacity: 0; } }
+}

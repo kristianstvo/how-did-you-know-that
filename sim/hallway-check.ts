@@ -12,6 +12,7 @@
 //     bot skips the hallway's faces; a taken name is rejected on the name,
 //     with a free one to join as (not for a seat held mid-match, nor in a
 //     full room)
+//   · after the unmask the room cheers, the hallway too, within the caps (v0.25)
 import { HostEngine, type Transport } from "../client/src/engine";
 import { localOnlySource, resetLocalDeck } from "../client/src/providers";
 import { AVATARS, MAX_PLAYERS, MAX_SCREENS } from "../shared/protocol";
@@ -243,4 +244,57 @@ check(
   lateBots.length === 3 && faceOf(late, "Lu") === firstFree && lateBots[2].avatar !== firstFree && facesUnique(late),
   "at the report card, Add bot picks a face nobody has, the hallway's included",
 );
+// v0.25 Tomatoes!: after the unmask, everyone in the room (the hallway too)
+// may pelt or applaud the cheater, within the rate caps; a big screen can't.
+{
+  const wait = async (ms: number) => {
+    let done = false;
+    setTimeout(() => (done = true), ms);
+    await clock.runUntil(() => done);
+  };
+  let states = 0;
+  const room = new HostEngine("CHEER", "Hana", "🎒", { toAll: (ev) => ev === "state" && states++, toPlayer: () => {}, local: () => {} }, localOnlySource, { beatLeadMs: 0 });
+  for (const [sid, name] of [["c1", "Bea"], ["c2", "Cy"], ["c3", "Dee"]]) room.handleJoinRequest(sid, name, "📚");
+  void room.startMatch();
+  await clock.runUntil(() => room.publicState().phase === "question");
+  room.handleJoinRequest("hall", "Eve", "🎨"); // arrives mid-period: the hallway
+  room.handleJoinRequest("tvc", "Big screen", "📺", "", true);
+  const inner = room as unknown as { answers: Record<string, unknown>[]; hallway: { id: string; pointingAt: string | null }[]; endMatch(r: string): void };
+  const eveId = inner.hallway[0].id;
+  const beaId = room.publicState().players.find((p) => p.name === "Bea")!.id;
+  room.handleIntent("hall", { kind: "answer", questionIdx: 0, optionIdx: 0, clientElapsedMs: 900 });
+  room.handleIntent("hall", { kind: "point", targetPlayerId: beaId });
+  check(!inner.answers[0][eveId] && inner.hallway[0].pointingAt === null && !room.publicState().players.some((p) => p.pointingAt), "the hallway's answers and points are still ignored");
+  const cheers = () => room.publicState().match?.end?.cheers ?? { tomato: 0, clap: 0 };
+  room.handleIntent("c1", { kind: "cheer", what: "tomato" });
+  check(cheers().tomato === 0, "no tomatoes mid-period");
+  inner.endMatch("cheater_banished"); // caught: the unmask lands 2.5s in
+  room.handleIntent("c1", { kind: "cheer", what: "tomato" });
+  room.localIntent({ kind: "cheer", what: "clap" });
+  await wait(1200);
+  room.handleIntent("c1", { kind: "cheer", what: "tomato" });
+  check(cheers().tomato === 0 && cheers().clap === 0, "a cheer before the unmask is ignored");
+  await wait(1400);
+  room.handleIntent("c1", { kind: "cheer", what: "tomato" });
+  room.handleIntent("c1", { kind: "cheer", what: "clap" });
+  check(cheers().tomato === 1 && cheers().clap === 0, "two cheers within 250ms count once");
+  await wait(260);
+  const sentBefore = states;
+  room.handleIntent("c1", { kind: "cheer", what: "clap" });
+  check(cheers().clap === 1, "…and 250ms later the next one counts");
+  room.handleIntent("hall", { kind: "cheer", what: "clap" });
+  check(cheers().clap === 2, "a hallway phone's cheer counts");
+  await wait(400);
+  check(states - sentBefore === 1, "a flurry of cheers shares one broadcast (like pointers)");
+  room.handleIntent("tvc", { kind: "cheer", what: "tomato" });
+  room.handleIntent("c3", { kind: "cheer", what: "brick" as "tomato" });
+  check(cheers().tomato === 1 && cheers().clap === 2, "a big screen's cheer, and a made-up one, are ignored");
+  for (let i = 0; i < 31; i++) {
+    room.handleIntent("c2", { kind: "cheer", what: "tomato" });
+    await wait(260);
+  }
+  check(cheers().tomato === 31, "the 31st cheer from one phone is ignored (30 a period)");
+  room.localIntent({ kind: "cheer", what: "tomato" });
+  check(cheers().tomato === 32, "…while everyone else's still count");
+}
 process.exit(failures ? 1 : 0);

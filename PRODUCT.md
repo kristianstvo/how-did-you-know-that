@@ -48,6 +48,7 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.22.0 | Clean slate: no dashed borders; Join above Start a class | shipped |
 | v0.23.0 | No way you knew that!: accusations name a suspect, who gets the floor before the vote | shipped |
 | v0.24.0 | One face per desk: no two players share a student; a taken name offers "Join as Bea 2" | shipped |
+| v0.25.0 | Tomatoes!: pelt the unmasked cheater or applaud them, from every phone | shipped |
 | later | A big-screen layout that uses the width (side-by-side reveal) | ideas |
 
 Later versions take the best of what playtests and audits turn up.
@@ -140,3 +141,6 @@ Later versions take the best of what playtests and audits turn up.
 | v0.24.0 | ✅ One student per desk, the host decides | The trays, desks and ballot strip tell people apart by face alone; twins made "who picked what" unreadable (likely with eight players keeping the random default) |
 | v0.24.0 | ✅ A bot gives up its student only in homeroom | A human's pick matters more than a bot's, but a face that changes mid-period or on the report card (the unmasked cheater's photo) would confuse the room |
 | v0.24.0 | ❌ Offering "Bea 2" to someone whose seat is held mid-period | That is the seat's owner on another tab: a second name would split them into two players and their stars |
+| v0.25.0 | ✅ Tomatoes and applause after the unmask | v0.17 turned down reactions because they would crowd ACCUSE on the reveal. After the unmask there is no ACCUSE and nothing left to deduce, just one target and a loud room |
+| v0.25.0 | ✅ Phones click only for their own taps; the big screen plays every hit | Sounds wait for beats, not packets (v0.11): ten phones splatting out of step would sound broken, and one speaker for the room is enough |
+| v0.25.0 | ✅ 30 cheers a phone a period, one every 250 ms | Enough to mash, not enough to flood the relay or the host |

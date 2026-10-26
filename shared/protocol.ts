@@ -204,6 +204,9 @@ export interface PublicState {
       cheaterId: string;
       winnerIds: string[];
       sessionDelta: Record<string, number>; // playerId -> points earned this match
+      /** v0.25: tomatoes thrown at the unmasked cheater, and rounds of
+       *  applause, this period (absent until the first one). */
+      cheers?: { tomato: number; clap: number };
     };
   };
 }
@@ -224,6 +227,8 @@ export type Intent =
   | { kind: "burnToken"; targetPlayerId: string } // v0.23: an accusation names a suspect
   | { kind: "castVote"; targetPlayerId: string }
   | { kind: "point"; targetPlayerId: string | null }
+  // v0.25: after the unmask, a tomato or a round of applause for the cheater.
+  | { kind: "cheer"; what: "tomato" | "clap" }
   | { kind: "requestFullState" };
 
 // ---- Relay wire events (the only things the server understands) ----
@@ -268,6 +273,10 @@ export const MIN_PLAYERS = 3;
 export const MAX_PLAYERS = 10;
 /** v0.16: big screens per classroom. */
 export const MAX_SCREENS = 3;
+/** v0.25: cheers per phone (tomatoes and applause together): at least this
+ *  far apart, and at most this many a period. */
+export const CHEER_GAP_MS = 250;
+export const CHEER_MAX = 30;
 export const QUESTIONS_PER_MATCH = 10;
 export const TIER_PLAN: Tier[] = [
   "easy", "easy", "easy",

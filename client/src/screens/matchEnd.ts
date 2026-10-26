@@ -4,6 +4,7 @@
 //   caught / top of class:          banner (+confetti on caught) → drumroll →
 //                                   unmask
 //   then all: report card → case-file recap → semester deltas → host dock.
+//   From the unmask: tomatoes and applause for the cheater (v0.25).
 // Every phone (the cheater's included) renders the same beats and layout. The
 // cheater's identity never reaches the DOM before the unmask beat: the hero
 // shows a redacted yearbook photo, and every section that would imply who it
@@ -15,6 +16,7 @@ import type { CaseEntry, PublicPlayer, PublicState } from "../../../shared/proto
 import { calloutCopy, esc, fmtTime, playerBadges, PLAYTEST } from "./common";
 import type { RenderCtx, Screen } from "./types";
 import { face } from "../avatars";
+import { cheersSpent } from "../cheers";
 
 type Variant = "caught" | "graduated" | "top";
 type MatchState = NonNullable<PublicState["match"]>;
@@ -194,7 +196,8 @@ function hero(ctx: RenderCtx, v: Variant, b: Set<MatchEndBeat>, drum: { at: numb
 
 /** Report card: final match scores, a grade-book bar against the line,
  *  🏆 for the winners and the CHEATER badge — built at the scores beat,
- *  which is always after the unmask. */
+ *  which is always after the unmask. v0.25: the 🏆 is pinned to the winner's
+ *  photo, so the rows' right edge is free for the cheer rail's lane. */
 function reportCard(ctx: RenderCtx, b: Set<MatchEndBeat>): string {
   const { s, app } = ctx;
   const m = s.match!;
@@ -215,13 +218,12 @@ function reportCard(ctx: RenderCtx, b: Set<MatchEndBeat>): string {
           const share = (Math.max(0, p.score) / top).toFixed(4);
           return `<div class="me-rc-row${win ? " win" : ""}${isCheater ? " is-cheater" : ""}${p.id === app.selfId ? " self" : ""}" id="me-rc-${p.id}" role="listitem" style="--i:${i}">
             <span class="me-rank">${rk[i]}</span>
-            <span class="av" aria-hidden="true">${face(p.avatar)}</span>
+            <span class="me-rc-av"><span class="av" aria-hidden="true">${face(p.avatar)}</span>${win ? `<span class="me-trophy" role="img" aria-label="winner">🏆</span>` : ""}</span>
             <span class="me-rc-main">
               <span class="me-rc-top"><span class="me-nm" title="${esc(p.name)}">${esc(p.name)}</span>${isCheater ? `<span class="badge me-badge-cheater">CHEATER</span>` : ""}${playerBadges(p, s)}</span>
               <span class="me-bar" aria-hidden="true"><span class="me-bar-fill" style="--share:${share}"></span><span class="me-bar-line"></span></span>
             </span>
             <span class="me-score">${p.score}</span>
-            <span class="me-trophy">${win ? `<span role="img" aria-label="winner">🏆</span>` : ""}</span>
           </div>`;
         })
         .join("")
@@ -378,6 +380,32 @@ function semester(ctx: RenderCtx, b: Set<MatchEndBeat>): string {
   </section>`;
 }
 
+/** v0.25 Tomatoes!: from the unmask, a tomato and a round of applause for the
+ *  cheater, for everyone in the room (the hallway too); the big screen shows
+ *  the count, and the hits land on every screen (cheers.ts). The same markup
+ *  on every seat, the cheater's included: by now it carries no secret. */
+function cheerCluster(ctx: RenderCtx, b: Set<MatchEndBeat>): string {
+  const { s, app } = ctx;
+  if (!b.has("unmask")) return "";
+  const e = s.match!.end!;
+  const c = e.cheers ?? { tomato: 0, clap: 0 };
+  const who = esc(s.players.find((p) => p.id === e.cheaterId)?.name ?? "the cheater");
+  const here = s.players.some((p) => p.id === app.selfId) || !!s.hallway?.some((h) => h.id === app.selfId);
+  // All thrown: this phone's own taps, never its role, so any seat can get here.
+  const off = cheersSpent() ? " disabled" : "";
+  const buttons =
+    here && !app.tv
+      ? `<div class="me-cheer-btns">
+          <button class="me-cheer-btn" id="me-tomato" data-action="cheer" data-what="tomato" aria-label="Throw a tomato at ${who}"${off}>🍅</button>
+          <button class="me-cheer-btn" id="me-clap" data-action="cheer" data-what="clap" aria-label="Applaud ${who}"${off}>👏</button>
+        </div>`
+      : "";
+  return `<div class="me-cheer${app.isHost ? " host" : ""}${buttons ? "" : " watch"}" id="me-cheer">
+    <span class="me-cheer-count" id="me-cheer-count" role="status"><span>🍅 ${c.tomato}</span><span class="me-cheer-sep" aria-hidden="true"> · </span><span>👏 ${c.clap}</span></span>
+    ${buttons}
+  </div>`;
+}
+
 function dock(ctx: RenderCtx, b: Set<MatchEndBeat>): string {
   const { app } = ctx;
   const inner = !b.has("done")
@@ -414,6 +442,7 @@ export const matchEnd: Screen = {
       ${superlatives(ctx, b)}
       ${semester(ctx, b)}
       ${dock(ctx, b)}
+      ${cheerCluster(ctx, b)}
     </section>`;
   },
 };

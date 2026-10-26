@@ -23,6 +23,8 @@ import { DEFAULT_EVIDENCE, EvidenceTracker, type CalloutKind, type EvidenceSave 
 import { DEFAULT_HUMAN, normal, sampleAnswer } from "../../shared/humanModel";
 import {
   AVATARS,
+  CHEER_GAP_MS,
+  CHEER_MAX,
   DEFAULT_SETTINGS,
   MAX_PLAYERS,
   MAX_SCREENS,
@@ -205,6 +207,9 @@ export class HostEngine {
   private watchers = new Set<string>();
   private pointBroadcastAt = 0; // pointer changes share broadcasts (v0.11)
   private pointBroadcastPending = false;
+  /** v0.25: each phone's last cheer and its count this period (the rate caps).
+   *  Not saved: a reload only forgives a few tomatoes. */
+  private cheerLog: Record<string, { at: number; n: number }> = {};
   private stopped = false; // v0.18: this page no longer hosts (see stop())
   private usedFallback = false;
   private questionDeadline = 0;
@@ -453,8 +458,16 @@ export class HostEngine {
   // ---------------- Intents ----------------
 
   handleIntent(socketId: string, intent: Intent): void {
+    if (this.watchers.has(socketId)) return; // a big screen never plays
     const player = this.players.find((p) => p.socketId === socketId);
-    if (!player) return;
+    if (!player) {
+      // v0.25: the hallway watched the period too, so it may cheer the unmask.
+      // Nothing else: its answers, points and votes stay out of the match.
+      if (intent.kind !== "cheer") return;
+      const waiting = this.hallway.find((h) => h.socketId === socketId);
+      if (waiting) this.onCheer(waiting, intent.what);
+      return;
+    }
     this.dispatch(player, intent);
   }
 
@@ -476,6 +489,9 @@ export class HostEngine {
         break;
       case "point":
         this.onPoint(player, intent.targetPlayerId);
+        break;
+      case "cheer":
+        this.onCheer(player, intent.what);
         break;
       case "requestFullState":
         this.sendSnapshotTo(player);
@@ -720,6 +736,7 @@ export class HostEngine {
     this.voteResult = null;
     this.end = null;
     this.matchDelta = {};
+    this.cheerLog = {};
     this.evidence = new EvidenceTracker(DEFAULT_EVIDENCE);
     this.caseFile = [];
     this.voteLog = [];
@@ -893,14 +910,19 @@ export class HostEngine {
    *  spends an accusation. Anyone in the match may point, detention included. */
   private onPoint(player: InternalPlayer, targetId: string | null): void {
     if (!POINT_PHASES.has(this.phase)) return;
-    const now = this.now();
     const target = targetId ? this.players.find((p) => p.id === targetId) : null;
     if (targetId && (!target || target.id === player.id || target.banished)) return;
     const next = target ? target.id : null;
     if (player.pointingAt === next) return;
     this.setPointer(player, next);
-    // Every change counts (the latest wins); a flurry of them shares one
-    // broadcast per POINT_GUARD_MS instead of flooding every phone.
+    // Every change counts (the latest wins), in a shared broadcast.
+    this.broadcastSoon();
+  }
+
+  /** A flurry of small changes (pointers, v0.25 cheers) shares one broadcast
+   *  per POINT_GUARD_MS instead of flooding every phone. */
+  private broadcastSoon(): void {
+    const now = this.now();
     if (now - this.pointBroadcastAt >= POINT_GUARD_MS) {
       this.pointBroadcastAt = now;
       this.broadcast();
@@ -1273,6 +1295,25 @@ export class HostEngine {
   private addSessionPoints(playerId: string, pts: number): void {
     this.sessionBoard[playerId] = (this.sessionBoard[playerId] ?? 0) + pts;
     this.matchDelta[playerId] = (this.matchDelta[playerId] ?? 0) + pts;
+  }
+
+  // ---------------- Tomatoes and applause (v0.25) ----------------
+
+  /** After the unmask, anyone in the room (the hallway too) may pelt the
+   *  cheater with a tomato or applaud them. There is nothing left to deduce
+   *  and one fixed target, so it carries no signal; it changes no score. */
+  private onCheer(player: InternalPlayer, what: string): void {
+    if (this.phase !== "matchEnd" || !this.end) return;
+    if (what !== "tomato" && what !== "clap") return; // a hand-made client
+    const now = this.now();
+    if (now < this.phaseStartedAt + matchEndTimeline(this.end.reason).beats.unmask) return;
+    const log = (this.cheerLog[player.id] ??= { at: -Infinity, n: 0 });
+    if (now - log.at < CHEER_GAP_MS || log.n >= CHEER_MAX) return;
+    log.at = now;
+    log.n++;
+    const cheers = (this.end.cheers ??= { tomato: 0, clap: 0 });
+    cheers[what]++;
+    this.broadcastSoon();
   }
 
   // ---------------- State & transport ----------------

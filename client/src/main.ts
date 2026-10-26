@@ -51,6 +51,7 @@ import { vote } from "./screens/vote";
 import { voteResult } from "./screens/voteResult";
 import { awake, keepAwake } from "./wakelock";
 import { countPeriod } from "./record";
+import { cheeredAt, cheersSpent, cheerTap, syncCheers } from "./cheers";
 
 const root = document.getElementById("app")!;
 const params = new URLSearchParams(location.search);
@@ -224,6 +225,7 @@ function onState(state: PublicState): void {
   banner();
   // Your report card (v0.12): count each finished period once, on this phone.
   if (state.phase === "matchEnd" && state.match?.end && session) countPeriod(state, app.selfId, `${state.roomCode}#${state.phaseStartedAt}`);
+  syncCheers(state, !!app.tv); // v0.25: the room's tomatoes land on every screen
   if (state.phase === "question" && state.match?.question) {
     const qk = `${state.matchNumber}:${state.match.questionIdx}`;
     if (qk !== lastQuestionKey) {
@@ -262,6 +264,7 @@ function onClosed(reason: string): void {
   session = null;
   keepAwake(false);
   onNet("online");
+  syncCheers(null);
   app.screen = "home";
   app.state = null;
   app.closedReason = reason;
@@ -400,6 +403,7 @@ function tvTutorial(): void {
 function tvRoll(): void {
   const ROLL = new Set(["lobby", "matchEnd", "sessionEnd"]);
   const SPEED = 30; // px per second
+  const CHEER_HOLD_MS = 5000; // v0.25: after the room's latest tomato
   let key = "";
   let pos = 0;
   let startAt = 0;
@@ -417,6 +421,16 @@ function tvRoll(): void {
       holdUntil = 0;
     }
     const max = document.documentElement.scrollHeight - innerHeight;
+    // v0.25: the room is pelting the cheater: hold the roll on their photo
+    // (back at the top if it had rolled away) until it has been quiet a while.
+    if (s?.phase === "matchEnd" && now - cheeredAt() < CHEER_HOLD_MS) {
+      if (pos > 0 && (document.getElementById("me-face-real")?.getBoundingClientRect().top ?? 0) < 0) {
+        pos = 0;
+        window.scrollTo(0, 0);
+      }
+      startAt = Math.max(startAt, now);
+      holdUntil = 0;
+    }
     if (s && ROLL.has(s.phase) && max > 4 && now > startAt) {
       if (pos < max) {
         pos = Math.min(max, pos + SPEED * dt);
@@ -822,6 +836,20 @@ root.addEventListener("click", (ev) => {
       render();
       focusSoon(app.ui.boardOpen ? ".overlay .sheet button" : ".sess-tab");
       break;
+    case "cheer": {
+      // v0.25: a tomato or a round of applause for the unmasked cheater. A
+      // mash waits for the host's gap (cheers.ts), so each throw clicks as it
+      // leaves; only your own throws sound on a phone, the room's land in silence.
+      const what = btn.dataset.what === "clap" ? "clap" : "tomato";
+      const had = !cheersSpent();
+      cheerTap(what, () => {
+        sfx.click();
+        act({ kind: "cheer", what });
+      });
+      // That was the last of this period's: the rail dims, and says why once.
+      if (had && cheersSpent()) toast("🍅👏 All thrown for this period!");
+      break;
+    }
     case "home":
       clearHostSave(); // leaving on purpose: a reload must not take the room back
       location.hash = "";

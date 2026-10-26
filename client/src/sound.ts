@@ -172,6 +172,15 @@ export const sfx = {
   click(): void {
     tone(1250, 0, 0.035, { wave: "square", gain: 0.06 });
   },
+  /** v0.25: a tomato lands on the cheater (the big screen only). */
+  splat(): void {
+    tone(90, 0, 0.25, { gain: 0.5, to: 55 });
+    hiss(0, 0.25, { type: "lowpass", freq: 650, gain: 0.3 });
+  },
+  /** v0.25: a round of applause lands (the big screen only). */
+  clap(): void {
+    for (const at of [0, 0.07, 0.15]) hiss(at, 0.02, { freq: 1500, q: 0.7, gain: 0.3 });
+  },
 };
 
 // Test hook: the last sounds fired (names only), next to the beat telemetry.
