@@ -3,13 +3,21 @@
 ## Match structure
 One match = 10 questions, one secret cheater, ends by one of three conditions (see 04).
 
-| Questions | Difficulty | Points |
-|---|---|---|
-| Q1–Q3 | easy | 100 |
-| Q4–Q7 | medium | 200 |
-| Q8–Q10 | hard | 400 |
+| Difficulty | Points |
+|---|---|
+| easy | 100 |
+| medium | 200 |
+| hard | 400 |
 
-Max possible quiz score: **2300**. All values are lobby-configurable; these are defaults.
+**v0.26 — grading on a curve.** The class sets the difficulty. Q1 is medium.
+When everyone gets a question right, the next is one tier harder; when
+nobody does, one tier easier; otherwise it stays (it stops at easy and hard).
+A phone away at the bell without an answer doesn't count. Until v0.25 the
+ramp was fixed: Q1–Q3 easy, Q4–Q7 medium, Q8–Q10 hard (max 2300).
+
+A period on medium is worth 2000 to someone who never misses, so the default
+graduation line is **2000** (was 2100; sim/tune-line.ts). All values are
+lobby-configurable; these are defaults.
 
 ## State machine (host-authoritative)
 

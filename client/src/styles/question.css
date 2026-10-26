@@ -31,6 +31,17 @@ hd-qsheet.qz { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 
 /* ---- Subject flashcard: an index card that flips in (hd-spin-in, 0–450ms) */
 .qz-cardwrap { perspective: 700px; margin: 4px 4px 12px; transform: rotate(-1.2deg); }
+/* v0.26 the curve: the class moved the difficulty. A marker stamp over the
+   card's top edge, left of the points; it rests at the stamp's own angle, so
+   dropping the entrance (.is-entered) never moves a pixel. */
+.qz-shift {
+  position: absolute; top: -9px; right: 62px; z-index: 2; padding: 1px 8px; border-radius: 6px;
+  font-family: var(--hand); font-weight: 900; font-size: 0.78rem; letter-spacing: 1px; white-space: nowrap;
+  background: var(--bg); transform: rotate(-4deg);
+  animation: hd-stamp var(--t-stamp) var(--e-impact) 450ms both;
+}
+.qz-shift.up { color: var(--accent); border: 2px solid var(--accent); }
+.qz-shift.down { color: var(--accent2); border: 2px solid var(--accent2); }
 .qz-card {
   display: flex; align-items: center; gap: 12px; height: 66px; padding: 4px 12px 0;
   border-radius: 6px; color: #1f2a37;
@@ -176,7 +187,8 @@ hd-qsheet.qz { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .screen-question.is-entered .qz-timer,
 .screen-question.is-entered .qz-text,
 .screen-question.is-entered .opt,
-.screen-question.is-entered .qz-lockin { animation: none; }
+.screen-question.is-entered .qz-lockin,
+.screen-question.is-entered .qz-shift { animation: none; }
 
 /* ---- The shell's .settle zeroes every animation for two frames; the timer
    must keep its real timing (it is information, not an entrance). */

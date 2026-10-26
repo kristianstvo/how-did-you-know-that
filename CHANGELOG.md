@@ -19,6 +19,68 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.26.0 — Grading on a curve · 2026-10-26 11:12
+
+**Why:** you asked for it: more questions, tiered by difficulty, and a quiz
+that adapts to the class. Every period used to climb the same fixed ramp
+(three easy, four medium, three hard), whoever was playing. Now the class
+sets the difficulty as it goes.
+
+**Added**
+- **The curve.** Every period starts on a medium question. When everyone
+  gets a question right, the next one is a tier harder (easy → medium →
+  hard); when nobody does, a tier easier; otherwise it stays. It stops at
+  easy and at hard. A phone that was away at the bell without an answer
+  doesn't hold the class back; a class that leaves a question blank got it
+  wrong.
+- **You can see it move.** The next question's subject card is stamped
+  **▲ HARDER** or **▼ EASIER**, and when there's no evidence card, the
+  reveal's note says "📈 Next one's harder." or "📉 Next one's easier." On
+  the big screen the host announces it ("Everybody got that one? Then here
+  comes a harder one!") instead of the question number.
+- **285 more questions** in the curated pack (now 474: 130 easy, 200
+  medium, 144 hard), written for the curve: medium is the heart of
+  the game, so it got the most. Every one was fact-checked a second time
+  by an independent reviewer, and doubtful ones were fixed or dropped.
+- **Fresh questions across nights.** The teacher's phone remembers the
+  questions it has hosted (the last 800, on that phone only) and draws ones
+  the group hasn't seen first. A repeat is worse than boring in this game:
+  whoever remembers the answer looks exactly like the cheater. The
+  teacher's Advanced settings say how many it remembers, with **Forget**.
+- Tests: an engine check of the curve (every move, both ends, a phone away
+  at the bell, a blank class, the last question, a host reload); the stamp
+  and the note on a recorded period; the fresh-questions note and Forget;
+  the pack check now draws whole periods on a curve, and eight periods all
+  on medium, without a repeat.
+
+**Changed**
+- **The default graduation line is 2000** (was 2100). Scoring is unchanged
+  (100 · 200 · 400), but on the curve the class mostly plays medium
+  questions, so a period is worth about 2000 to someone who never misses.
+  At 2100 a hiding cheater won 26–45% of the time at six players; at 2000
+  they win 34–51%, back where v0.4 tuned the game. Teachers can still set
+  any line in Advanced.
+- Questions are drawn one at a time as the period goes, so the bell rings
+  without a "Printing the quiz…" wait. Online questions (Open Trivia
+  Database) still come when a few of each tier are ready; the curated pack
+  covers the rest.
+- The host's question calls no longer promise a ramp: question one, four
+  and eight were re-recorded ("Question one! Let's see what you know.").
+- How to play: "It starts medium: all right → harder, nobody right →
+  easier." The how-to-play video's grade book shows the 2000 line.
+
+**Fixed**
+- **A phone whose clock ran ahead skipped the bell's show** when the
+  teacher started within about two seconds of it joining. Its unsynced time
+  stuck as the "never go backwards" floor until real time caught up. The
+  floor now starts with the first real clock sync (before which nothing
+  timed is on screen). The old few-second "Printing the quiz…" wait used to
+  hide it.
+
+**Evidence:** `sim/tune-line.ts 2` on the curve, hiding cheater at 6
+players by line: 1800 → 45–62%, 2000 → 34–51%, 2100 → 26–45%, 2300 →
+20–41%; bot rooms at 2000: 25/33/39% (4/6/8 players).
+
 ## v0.25.0 — Tomatoes! · 2026-10-26 10:14
 
 **Why:** the unmask is the loudest moment of the night, and the only thing

@@ -9,6 +9,7 @@
 //   · the copy toast (app.ui.toast) slides up out of the dock
 // Desk numbers = seat order (players[] order), the order the vote grid uses.
 import { renderSVG } from "uqr";
+import { seenCount } from "../seen";
 import { MAX_PLAYERS, MIN_PLAYERS, type Settings } from "../../../shared/protocol";
 import { loadRecord } from "../record";
 import { av, esc, playerBadges, sessionTab, soundToggle } from "./common";
@@ -70,7 +71,7 @@ function howCards(st: Settings): string {
   const strikeRule = k > 0 ? `${k === 1 ? "One wrong detention" : `${k === 2 ? "Two" : k} wrong detentions`} and they graduate.` : "A wrong detention lowers their line.";
   const t = st.tierPoints;
   const cards = [
-    { icon: "✏️", title: "10 questions", text: `Everyone answers the same quiz. Easy → hard: ${t.easy} · ${t.medium} · ${t.hard} points.` },
+    { icon: "✏️", title: "10 questions", text: `Everyone answers the same quiz. It starts medium: all right → harder, nobody right → easier. ${t.easy} · ${t.medium} · ${t.hard} points.` },
     { icon: "🤫", title: "One cheater", text: `Sees a faint dot on the right answer. Graduates at 🎓 ${st.threshold} points.` },
     { icon: "👀", title: "Watch the board", text: "Who's right <i>and</i> fast on the hard ones? Point 👉 at a suspect: free and public." },
     { icon: "🙋", title: "Accuse", text: `One accusation each: name a suspect, they get the floor, then the class votes. Catch the cheater: the class wins. ${strikeRule}` },
@@ -78,6 +79,14 @@ function howCards(st: Settings): string {
   return cards
     .map((c, i) => `<div class="how-card" style="--i:${i}"><span class="how-ic" aria-hidden="true">${c.icon}</span><b>${c.title}</b><span>${c.text}</span></div>`)
     .join("");
+}
+
+/** v0.26: the questions this (host) phone remembers hosting, and skips. */
+function freshNote(): string {
+  const n = seenCount();
+  return n
+    ? `<div class="lb-fresh" id="lb-fresh"><span>🆕 This phone remembers the <b>${n}</b> question${n === 1 ? "" : "s"} it has hosted, and skips them on later nights.</span><button class="btn secondary lb-forget" id="lb-forget" data-action="forgetSeen">Forget</button></div>`
+    : "";
 }
 
 const FINE_PRINT = [
@@ -213,12 +222,13 @@ export const lobby: Screen = {
               <label for="set-timer">Question timer<small>seconds per question (5–60)</small></label>
               <input id="set-timer" data-setting="questionTimerMs" type="number" inputmode="numeric" min="5" max="60" value="${s.settings.questionTimerMs / 1000}" />
               <label for="set-line">Graduation line<small>the cheater wins on reaching it</small></label>
-              <input id="set-line" data-setting="threshold" type="number" inputmode="numeric" min="200" max="2300" step="100" value="${s.settings.threshold}" />
+              <input id="set-line" data-setting="threshold" type="number" inputmode="numeric" min="200" max="4000" step="100" value="${s.settings.threshold}" />
               <label for="set-drop">Drop per wrong detention<small>the line falls when an innocent is sent</small></label>
               <input id="set-drop" data-setting="thresholdDrop" type="number" inputmode="numeric" min="0" max="800" step="50" value="${s.settings.thresholdDrop}" />
               <label for="set-strikes">Strikes<small>wrong detentions before the cheater graduates (0 = off)</small></label>
               <input id="set-strikes" data-setting="strikes" type="number" inputmode="numeric" min="0" max="3" value="${s.settings.strikes}" />
             </div>
+            ${freshNote()}
             </details>
           </div>
           ${between ? `<button class="btn ghost lb-end" id="lb-end" data-action="endSession">🏁 End the school day · final report cards</button>` : ""}`

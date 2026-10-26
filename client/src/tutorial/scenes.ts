@@ -293,7 +293,7 @@ const LATE = [900, 1300, 1100, 2300, 800];
 const SCALE = 2400; // the bar's full width in points
 const TRACK_X = 380;
 const TRACK_W = 440;
-const LINE_X = TRACK_X + (TRACK_W * 2100) / SCALE;
+const LINE_X = TRACK_X + (TRACK_W * 2000) / SCALE; // v0.26: the default line is 2000
 
 const line: SceneDef = {
   clip: "n4",
@@ -301,7 +301,7 @@ const line: SceneDef = {
   tail: 700,
   sfx: (c) => [[c.at("graduation"), "pop"], [c.at("graduate…"), "siren"]],
   build(c) {
-    const panel = E("tut-panel", `<div class="tut-gb-head"><span>📒 Grade book</span><b>🎓 line 2100</b></div>`, 60, 260, 960, 900);
+    const panel = E("tut-panel", `<div class="tut-gb-head"><span>📒 Grade book</span><b>🎓 line 2000</b></div>`, 60, 260, 960, 900);
     const rows = CLASS.map((_, i) => {
       const y = 400 + i * 150;
       const r = E("tut-gb-row", `<span class="tut-gb-name">${CLASS[i][1]}</span><span class="tut-gb-track"><i></i></span><b class="tut-gb-score">0</b>`, 60, y, 960, 110);
@@ -512,7 +512,7 @@ const outcomes: SceneDef = {
     const innocent = E("tut-chalk orange tut-innocent", "Innocent! ✗", 0, 470, 1080);
     const linePanel = E(
       "tut-panel tut-line",
-      `<div class="tut-line-h">🎓 Graduation line</div><div class="tut-line-n"><s>2100</s><em> −200 → 1900</em></div><div class="tut-line-track"></div>`,
+      `<div class="tut-line-h">🎓 Graduation line</div><div class="tut-line-n"><s>2000</s><em> −200 → 1800</em></div><div class="tut-line-track"></div>`,
       90,
       620,
       900,
@@ -522,7 +522,7 @@ const outcomes: SceneDef = {
     const SC = [700, 1300, 1000, 1600, 400];
     const minis = [0, 1, 2, PRIYA, 4].map((who, k) => av(who, 160 + (760 * SC[k]) / 2400, k % 2 ? 840 : 905, 64, false));
     const ex = linePanel.querySelector<HTMLElement>("em")!;
-    const strike2100 = linePanel.querySelector<HTMLElement>("s")!;
+    const struckLine = linePanel.querySelector<HTMLElement>("s")!;
     // C: two wrong detentions.
     const strikes = E("tut-strikes", `<span>Strikes</span><i class="x1"></i><i class="x2"></i>`, 190, 380, 700, 140);
     const x1 = strikes.querySelector<HTMLElement>(".x1")!;
@@ -547,9 +547,9 @@ const outcomes: SceneDef = {
         pose(linePanel, kf(t, c.at("innocent") + 200, 420, RISE), b);
         minis.forEach((m, k) => pose(m, kf(t, c.at("innocent") + 300 + k * 60, 300, POP), b));
         const drop = p(t, c.at("drops."), 650, inOut);
-        marker.style.left = `${lerp(xFor(2100), xFor(1900), drop).toFixed(1)}px`;
+        marker.style.left = `${lerp(xFor(2000), xFor(1800), drop).toFixed(1)}px`;
         pose(marker, kf(t, c.at("innocent") + 300, 300, RISE), b);
-        strike2100.classList.toggle("on", t >= c.at("drops."));
+        struckLine.classList.toggle("on", t >= c.at("drops."));
         pose(ex, { o: p(t, c.at("drops."), 300) });
         pose(strikes, kf(t, c.at("Two") - 60, 380, RISE));
         pose(x1, kf(t, c.at("Two") + 60, 300, STAMP));

@@ -49,6 +49,7 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.23.0 | No way you knew that!: accusations name a suspect, who gets the floor before the vote | shipped |
 | v0.24.0 | One face per desk: no two players share a student; a taken name offers "Join as Bea 2" | shipped |
 | v0.25.0 | Tomatoes!: pelt the unmasked cheater or applaud them, from every phone | shipped |
+| v0.26.0 | Grading on a curve: the class sets the difficulty; 285 more questions; fresh questions across nights | shipped |
 | later | A big-screen layout that uses the width (side-by-side reveal) | ideas |
 
 Later versions take the best of what playtests and audits turn up.
@@ -144,3 +145,11 @@ Later versions take the best of what playtests and audits turn up.
 | v0.25.0 | ✅ Tomatoes and applause after the unmask | v0.17 turned down reactions because they would crowd ACCUSE on the reveal. After the unmask there is no ACCUSE and nothing left to deduce, just one target and a loud room |
 | v0.25.0 | ✅ Phones click only for their own taps; the big screen plays every hit | Sounds wait for beats, not packets (v0.11): ten phones splatting out of step would sound broken, and one speaker for the room is enough |
 | v0.25.0 | ✅ 30 cheers a phone a period, one every 250 ms | Enough to mash, not enough to flood the relay or the host |
+| v0.26.0 | ✅ The class sets the difficulty: start medium, everyone right → harder, nobody right → easier | Your call. It also keeps questions where the class splits, which is where deduction lives: a question everyone gets right shows nothing |
+| v0.26.0 | ✅ One tier at a time, stopping at easy and hard | A hard question nobody gets drops to medium, not straight to easy: the curve should feel like a teacher adjusting, not a cliff |
+| v0.26.0 | ✅ A phone away at the bell without an answer doesn't count | One dropped phone would otherwise keep the whole class from ever going harder |
+| v0.26.0 | ✅ Default line 2000 (was 2100), scoring unchanged | On the curve most questions are medium (a period is worth about 2000 to someone who never misses); the sim puts a hiding cheater at 34–51% at 2000 vs 26–45% at 2100 |
+| v0.26.0 | ✅ Questions drawn one at a time, the curated pack first | The next question's tier is only known after the last one's answers; the pack answers instantly, and online questions are used when a few of each tier are ready |
+| v0.26.0 | ✅ Every new question fact-checked by a second, independent reviewer | A wrong answer key is worse here than in any quiz: being right is what gets you accused |
+| v0.26.0 | ✅ The teacher's phone remembers the questions it has hosted (800) | A repeated question makes whoever remembers it look exactly like the cheater; kept on that phone only, with Forget |
+| v0.26.0 | ❌ Mythology from living religions | A party game's "mythology" shouldn't quiz people on gods others pray to today |

@@ -20,6 +20,13 @@ import type { RenderCtx, Screen } from "./types";
 import { face } from "../avatars";
 
 const URGENT_MS = 5000;
+
+/** v0.26: the class moved the difficulty (everyone got the last one, or
+ *  nobody did). Stamped on the subject card as the sheet lands. */
+const shiftStamp = (shift: "up" | "down" | undefined, qk: string) =>
+  shift
+    ? `<span class="qz-shift ${shift}" id="qz-shift-${qk}" role="note" aria-label="${shift === "up" ? "Harder: everyone got the last one" : "Easier: nobody got the last one"}">${shift === "up" ? "▲ HARDER" : "▼ EASIER"}</span>`
+    : "";
 /** After this long into the question, the entrance has finished: later
  *  renders (and late joins) show the settled sheet with no entrance motion. */
 const ENTRANCE_DONE_MS = 900;
@@ -159,6 +166,7 @@ export const question: Screen = {
           <span class="qz-card-subject"><span class="qz-card-sub">Subject</span><span class="qz-card-name" title="${attr(q.subject)}">${esc(q.subject)}</span></span>
           <span class="qz-card-pts">${q.points}<small>pts</small></span>
         </div>
+        ${shiftStamp(q.shift, qk)}
       </div>
 
       <div class="qz-timer" role="timer" aria-label="Seconds left">

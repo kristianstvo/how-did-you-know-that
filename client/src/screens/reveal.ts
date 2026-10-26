@@ -15,7 +15,7 @@
 // bell swing) are keyframes gated by "fx-<beat>" classes that only exist for a
 // short window after their beat — a pure function of the shared clock.
 import { REVEAL_TIMING, reached, revealTimeline, slapAt, type RevealBeat, type Timeline } from "../../../shared/choreo";
-import { TIER_PLAN, type PublicPlayer, type RevealRow } from "../../../shared/protocol";
+import { TIERS, type PublicPlayer, type RevealRow } from "../../../shared/protocol";
 import { actOf, calloutCopy, CALLOUT_ICON, esc, exhibitBadges, fmtTime, lastBellLine, LETTERS, myPointer, nameOf, pointerChip, pointSheet, sessionTab, speedOrder, tierTicks } from "./common";
 import type { RenderCtx, Screen } from "./types";
 import { face } from "../avatars";
@@ -55,14 +55,15 @@ const FX_WINDOW: Partial<Record<RevealBeat, number>> = { pencils: 900, answer: 8
  *  rank/verdict badges never collide. */
 const traySpacing = (n: number) => (n <= 6 ? 3 : n <= 8 ? -3 : -7);
 
-/** Fixed grade-book scale for the whole match: every point the match can
- *  award. The graduation line therefore only moves when the line itself
- *  moves (a wrong detention), never because someone's score grew. */
+/** Fixed grade-book scale for the whole match: the starting line plus 10%
+ *  headroom (v0.26: the class sets each question's difficulty, so the
+ *  period's total isn't known ahead). The graduation line therefore only
+ *  moves when the line itself moves (a wrong detention), or in the rare
+ *  period where someone scores past the headroom. */
 function scaleMax(ctx: RenderCtx): number {
   const { s } = ctx;
   const m = s.match!;
-  const possible = TIER_PLAN.slice(0, m.questionCount).reduce((sum, t) => sum + (s.settings.tierPoints[t] ?? 0), 0);
-  return Math.max(possible, s.settings.threshold, m.threshold, ...s.players.map((p) => p.score), 1);
+  return Math.max(s.settings.threshold * 1.1, m.threshold, ...s.players.map((p) => p.score), 1);
 }
 
 /** Decorative cascade step: --stagger-deco (50ms) but never more than 200ms
@@ -142,7 +143,11 @@ export const reveal: Screen = {
       const total = rows.length;
       const head = correct.length === total ? "Everyone got it." : correct.length === 0 ? "Nobody got it." : `${correct.length} of ${total} got it.`;
       const fast = fastestCorrect ? ` <span class="ev-fast">⚡ Fastest: ${nameOf(s, fastestCorrect)} ${fmtTime(rowOf.get(fastestCorrect)!.timeMs)}</span>` : "";
-      classNote = `${head}${fast}`;
+      // v0.26 the curve: when the class moved the difficulty, that's the news
+      // (the grade book still marks the fastest with ⚡).
+      const up = r.next && r.next !== q.tier ? TIERS.indexOf(r.next) > TIERS.indexOf(q.tier) : null;
+      const curve = up === null ? "" : ` <span class="ev-curve ${up ? "up" : "down"}">${up ? "📈 Next one's harder." : "📉 Next one's easier."}</span>`;
+      classNote = `${head}${curve || fast}`;
     }
     // First period only, Q1–Q3 (Act I: easy questions rarely carry evidence).
     // Public data only, so every phone shows the same note at the same beat.

@@ -1,17 +1,17 @@
-// Content pipeline (spec 06, school edition). Each match's 10 questions get
-// 10 distinct school subjects. OpenTDB is fetched one slot at a time (host
-// only, session token, ≥5s spacing) in the background; the tagged local pack
-// fills any slot that isn't ready or errors. Game logic only sees Question.
+// Content pipeline (spec 06, school edition). v0.26: questions are drawn one
+// at a time, at the tier the class has earned (protocol.ts nextTier), in a
+// subject the period hasn't had yet. The curated local pack answers at once;
+// OpenTDB (host only, session token, ≥5s spacing) keeps a few questions of
+// each tier ready in the background and is used when it has one. Game logic
+// only sees Question.
 import type { Question, Tier } from "../../shared/protocol";
-import { SUBJECTS, TIER_PLAN } from "../../shared/protocol";
+import { SUBJECTS } from "../../shared/protocol";
 import { LOCAL_PACK, type RawQuestion } from "./localPack";
+import { isSeen, markSeen } from "./seen";
 
 type SubjectDef = (typeof SUBJECTS)[number];
 
 const REQUEST_SPACING_MS = 5200; // OpenTDB: ~1 request / 5s per IP
-// v0.9: the curated pack (189 questions) is a good fallback now, so "Printing
-// the quiz…" waits at most 3s for online slots instead of 8s.
-const MATCH_START_WAIT_MS = 3000; // max wait at match start before local-filling
 
 function shuffle<T>(arr: readonly T[]): T[] {
   const a = arr.slice();
@@ -49,18 +49,20 @@ function buildQuestion(
 }
 
 // ---------- Local pack provider ----------
-// The tier is never compromised — it sets the points ramp (spec 01). Order:
-// fresh question in the requested subject; fresh question of the same tier
-// from a subject this match isn't using; any fresh question of the tier;
-// finally a repeat of the tier. A session-wide used-set avoids repeats.
+// The tier is never compromised: the class earned it, and it sets the points.
+// Order: a question this session hasn't used, that this phone has never
+// hosted (seen.ts), in a subject the period hasn't had; then one hosted on an
+// earlier night; then any subject; finally a repeat of the tier.
 const usedLocal = new Set<RawQuestion>();
 
-function drawLocal(subject: SubjectDef, tier: Tier, taken: Set<string>): Question {
+function drawLocal(tier: Tier, taken: Set<string>): Question {
   const ofTier = LOCAL_PACK.filter((q) => q.tier === tier);
   const fresh = ofTier.filter((q) => !usedLocal.has(q));
+  const unseen = fresh.filter((q) => !isSeen(q.text));
   const pools = [
-    fresh.filter((q) => q.subject === subject.label),
+    unseen.filter((q) => !taken.has(q.subject)),
     fresh.filter((q) => !taken.has(q.subject)),
+    unseen,
     fresh,
     ofTier,
   ];
@@ -68,9 +70,7 @@ function drawLocal(subject: SubjectDef, tier: Tier, taken: Set<string>): Questio
   const pick = pool[Math.floor(Math.random() * pool.length)];
   usedLocal.add(pick);
   taken.add(pick.subject);
-  // Display the question's OWN subject so the header never lies when the
-  // fallback had to reach outside the requested subject.
-  const own = SUBJECTS.find((s) => s.label === pick!.subject);
+  const own = SUBJECTS.find((s) => s.label === pick.subject);
   return buildQuestion(pick, pick.tier, pick.subject, own?.emoji ?? "🏫", "local");
 }
 
@@ -147,82 +147,85 @@ async function fetchOne(subject: SubjectDef, tier: Tier): Promise<Question> {
   );
 }
 
-// ---------- Match batch assembly with progressive prefetch ----------
-export interface MatchQuestions {
-  questions: Question[]; // exactly 10, ordered per TIER_PLAN
-  usedFallback: boolean; // any slot filled from the local pack (offline badge)
-}
+// ---------- Online questions, ready ahead of time ----------
+// v0.26: a few questions of each tier wait in the background (medium most:
+// every period starts there, and the curve mostly stays near it). A question
+// this phone has already hosted is dropped; three misses in a row stop the
+// filling until the next period.
+const READY: Record<Tier, number> = { medium: 3, hard: 2, easy: 1 };
+const ready: Record<Tier, Question[]> = { easy: [], medium: [], hard: [] };
+let filling = false;
+let misses = 0;
 
-interface Prefetch {
-  plan: { subject: SubjectDef; tier: Tier }[];
-  slots: (Question | null)[]; // filled progressively as fetches complete
-  promise: Promise<void>;
-  /** The match started without waiting for the rest: stop fetching (v0.9). */
-  done: boolean;
-}
+const wanted = (): Tier | null => (["medium", "hard", "easy"] as const).find((t) => ready[t].length < READY[t]) ?? null;
 
-let prefetched: Prefetch | null = null;
-
-function startPrefetch(): Prefetch {
-  // 10 distinct subjects per match, mapped onto the fixed difficulty ramp.
-  const plan = shuffle(SUBJECTS)
-    .slice(0, TIER_PLAN.length)
-    .map((subject, i) => ({ subject, tier: TIER_PLAN[i] }));
-  const slots: (Question | null)[] = plan.map(() => null);
-  const p: Prefetch = { plan, slots, promise: Promise.resolve(), done: false };
-  p.promise = (async () => {
-    for (let i = 0; i < plan.length; i++) {
-      if (p.done) return; // its match already started with the local pack
+async function fill(): Promise<void> {
+  if (filling) return;
+  filling = true;
+  try {
+    for (let t = wanted(); t && misses < 3; t = wanted()) {
+      const have = new Set(ready[t].map((q) => q.subject));
+      const subject = shuffle(SUBJECTS).find((sub) => !have.has(sub.label)) ?? SUBJECTS[0];
       try {
-        slots[i] = await fetchOne(plan[i].subject, plan[i].tier);
+        const q = await fetchOne(subject, t);
+        if (isSeen(q.text)) misses++;
+        else {
+          misses = 0;
+          ready[t].push(q);
+        }
       } catch {
-        slots[i] = null; // local pack fills this slot at match start
+        misses++;
       }
     }
-  })();
-  return p;
+  } finally {
+    filling = false;
+  }
 }
 
-/** Kick off fetching the next match's questions in the background
- *  (preferred strategy per spec 06 — zero perceived wait at match start). */
-export function prefetchNextMatch(): void {
-  if (!prefetched) prefetched = startPrefetch();
-}
-
-/** Get questions for a match: consume the prefetch, waiting briefly if it's
- *  still in flight; the local pack fills whatever isn't ready. Never throws. */
-export async function getMatchQuestions(): Promise<MatchQuestions> {
-  const p = prefetched ?? startPrefetch();
-  prefetched = null;
-  await Promise.race([p.promise, new Promise((r) => setTimeout(r, MATCH_START_WAIT_MS))]);
-  p.done = true; // whatever isn't here now comes from the pack: stop fetching
-  let usedFallback = false;
-  const taken = new Set(p.plan.map((s) => s.subject.label));
-  const questions = p.plan.map(({ subject, tier }, i) => {
-    if (p.slots[i]) return p.slots[i]!;
-    usedFallback = true;
-    return drawLocal(subject, tier, taken);
-  });
-  return { questions, usedFallback };
-}
-
-/** The seam the engine pulls questions through. The live game uses OpenTDB
- *  with local fallback; the simulator and replay fixtures plug in their own. */
+/** The seam the engine pulls questions through, one at a time (v0.26). The
+ *  live game uses OpenTDB with the local pack behind it; the simulator and
+ *  replay fixtures plug in their own. */
 export interface QuestionSource {
+  /** Get the next period's questions ready in the background. */
   prefetch(): void;
-  get(): Promise<MatchQuestions>;
+  /** A new period (or, after a host reload, the one in progress with the
+   *  questions it has asked): subjects start over. */
+  start(asked?: Question[]): void;
+  /** The next question, of this tier, in a subject the period hasn't had
+   *  while one is left. Never waits, never throws. */
+  next(tier: Tier): Question;
 }
 
-export const openTdbSource: QuestionSource = { prefetch: prefetchNextMatch, get: getMatchQuestions };
+let taken = new Set<string>();
+
+export const openTdbSource: QuestionSource = {
+  prefetch() {
+    misses = 0;
+    void fill();
+  },
+  start(asked = []) {
+    taken = new Set(asked.map((q) => q.subject));
+  },
+  next(tier) {
+    const i = ready[tier].findIndex((q) => !taken.has(q.subject));
+    const q = i >= 0 ? ready[tier].splice(i, 1)[0] : drawLocal(tier, taken);
+    taken.add(q.subject);
+    markSeen(q.text);
+    void fill(); // top the shelf back up while the class plays
+    return q;
+  },
+};
 
 /** Offline-only source: exactly the fallback path the live game takes when
- *  OpenTDB isn't ready, without touching the network. */
+ *  no online question is ready, without touching the network. */
+let localTaken = new Set<string>();
 export const localOnlySource: QuestionSource = {
   prefetch() {},
-  async get() {
-    const plan = shuffle(SUBJECTS).slice(0, TIER_PLAN.length);
-    const taken = new Set<string>(plan.map((s) => s.label));
-    return { questions: plan.map((subject, i) => drawLocal(subject, TIER_PLAN[i], taken)), usedFallback: true };
+  start(asked = []) {
+    localTaken = new Set(asked.map((q) => q.subject));
+  },
+  next(tier) {
+    return drawLocal(tier, localTaken);
   },
 };
 

@@ -1,13 +1,14 @@
 # 06 — Content Pipeline (Open Trivia DB)
 
 ## Source
-Open Trivia DB (opentdb.com) — free, no key required, native 4-option multiple choice, difficulty tiers `easy | medium | hard` that map 1:1 onto the match ramp (01).
+Open Trivia DB (opentdb.com) — free, no key required, native 4-option multiple choice, difficulty tiers `easy | medium | hard` that map 1:1 onto the game's tiers (01).
 
 ## Who fetches
 The **host client** fetches all questions (host-authority, 05). Players never contact OpenTDB.
 
 ## Fetch strategy
-- At match start, fetch the full match in tier batches: 3 easy + 4 medium + 3 hard.
+- v0.26: questions are drawn one at a time, at the tier the class earned (01). The host keeps a few OpenTDB questions of each tier ready in the background (3 medium, 2 hard, 1 easy) and draws from the curated local pack whenever none is ready. (Until v0.25: the full match at start, 3 easy + 4 medium + 3 hard.)
+- v0.26: the host's phone remembers the questions it has hosted (the last 800, on the phone only) and draws ones it hasn't first, so a group's second night doesn't repeat the first.
 - API shape: `https://opentdb.com/api.php?amount=N&difficulty=easy&type=multiple[&token=...]`
 - **Session token**: request one per session (`api_token.php?command=request`) and pass it on every fetch — prevents repeated questions across matches in the same session. On token-exhausted response code, reset the token.
 - **Rate limit**: OpenTDB allows roughly one request per ~5s per IP. Space the three tier requests ≥5s apart, or prefetch the *next* match's questions in the background during the current match (preferred — zero perceived wait).

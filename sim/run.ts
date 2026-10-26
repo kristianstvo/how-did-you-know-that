@@ -1,8 +1,6 @@
 // Runs the simulation suites, writes per-scenario event logs (JSONL) and a
 // combined report. Usage: npx tsx sim/run.ts [suite ...]   (default: all)
 import { mkdirSync, writeFileSync } from "node:fs";
-import { localOnlySource, resetLocalDeck } from "../client/src/providers";
-import { TIER_PLAN } from "../shared/protocol";
 import { analyze, type Report } from "./analyze";
 import { hashSeed, mulberry32, runScenario, VirtualClock, type Accuracy, type Policy, type Scenario, type Strategy } from "./harness";
 
@@ -30,60 +28,9 @@ const SUITES: Record<string, () => Scenario[]> = {
     [1600, 1800, 2000].flatMap((t) => (["score", "scoreAware", "evidence"] as Policy[]).flatMap((p) => STRATEGIES.map((s) => cell(6, "mid", s, p, "clients", t)))),
 };
 
-/** The live game's offline fallback, exercised exactly as shipped: does every
- *  slot keep the tier (and therefore the points) the ramp promises? */
-interface FallbackStat {
-  sessions: number;
-  shareOfMatchesAffected: number; // matches in which ≥1 slot has the wrong tier
-  wrongSlotsPerMatch: number;
-  pointsShiftPerMatch: number; // |Σ actual − Σ promised| points per match
-  duplicateSubjectsPerMatch: number; // the "10 different subjects" promise
-  bySessionMatch: number[]; // share affected for match #1, #2, … of a session
-}
-
-async function fallbackTierIntegrity(): Promise<Record<number, FallbackStat>> {
-  const points: Record<string, number> = { easy: 100, medium: 200, hard: 400 };
-  const out: Record<number, FallbackStat> = {};
-  for (const sessionLen of [1, 3, 5, 8]) {
-    let matches = 0;
-    let affected = 0;
-    let wrongSlots = 0;
-    let shift = 0;
-    let dupSubjects = 0;
-    const byIdx = Array.from({ length: sessionLen }, () => 0);
-    const sessions = 300;
-    for (let s = 0; s < sessions; s++) {
-      Math.random = mulberry32(hashSeed("fallback", sessionLen, s));
-      resetLocalDeck();
-      for (let m = 0; m < sessionLen; m++) {
-        const { questions } = await localOnlySource.get();
-        matches++;
-        let bad = 0;
-        let delta = 0;
-        questions.forEach((q, i) => {
-          if (q.tier !== TIER_PLAN[i]) bad++;
-          delta += points[q.tier] - points[TIER_PLAN[i]];
-        });
-        dupSubjects += questions.length - new Set(questions.map((q) => q.subject)).size;
-        if (bad) {
-          affected++;
-          byIdx[m]++;
-        }
-        wrongSlots += bad;
-        shift += Math.abs(delta);
-      }
-    }
-    out[sessionLen] = {
-      sessions,
-      shareOfMatchesAffected: affected / matches,
-      wrongSlotsPerMatch: wrongSlots / matches,
-      pointsShiftPerMatch: shift / matches,
-      duplicateSubjectsPerMatch: dupSubjects / matches,
-      bySessionMatch: byIdx.map((v) => v / sessions),
-    };
-  }
-  return out;
-}
+// v0.26: the offline fallback's "every slot keeps its ramp tier" study is
+// gone with the ramp: questions are drawn one at a time at the tier the class
+// earned, and sim/pack-check.ts proves every draw keeps it.
 
 const requested = process.argv.slice(2);
 const suites = requested.length ? requested : Object.keys(SUITES);
@@ -104,7 +51,5 @@ for (const suite of suites) {
     );
   }
 }
-const fallback = await fallbackTierIntegrity();
-console.log("offline-fallback tier integrity:", JSON.stringify(fallback));
-writeFileSync(new URL("report.json", OUT), JSON.stringify({ reports, fallback }, null, 1));
+writeFileSync(new URL("report.json", OUT), JSON.stringify({ reports }, null, 1));
 console.log(`done in ${((performance.now() - t0) / 1000).toFixed(1)}s → sim/out/report.json`);

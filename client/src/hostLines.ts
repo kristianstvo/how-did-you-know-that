@@ -22,17 +22,21 @@ export const HOST_LINES = {
   // big screen the bell holds for ROLE_SCREEN_TV_MS: both must end by 6s.
   period_first: "[dramatically] Pop quiz! One of you can see the answers. [mischievously] Find the cheater before they graduate!",
   period_next: "[excited] Back to class! New period, new cheater. [mischievously] Or is it the same one?",
-  // Each question as it lands (TIER_PLAN: 4 is the first medium, 8 the first hard).
-  q1: "[excited] Question one! An easy one, to warm you up.",
+  // Each question as it lands. v0.26: the class sets the difficulty, so the
+  // calls no longer promise a ramp (q1, q4 and q8 re-recorded).
+  q1: "[excited] Question one! Let's see what you know.",
   q2: "Question two!",
   q3: "Question three!",
-  q4: "Question four! [mischievously] It's getting harder.",
+  q4: "Question four!",
   q5: "Question five!",
   q6: "Question six!",
   q7: "Question seven!",
-  q8: "[dramatically] Question eight! Now the hard ones begin.",
+  q8: "[dramatically] Question eight!",
   q9: "Question nine!",
   q10: "[dramatically] The final question!",
+  // v0.26 the curve: instead of the number, when the class moved the difficulty.
+  harder: "[excited] Everybody got that one? Then here comes a harder one!",
+  easier: "[mischievously] Nobody got that one! Let's try an easier one.",
   // The clock (two takes each, alternated).
   five_a: "Five seconds!",
   five_b: "[excited] Five seconds left!",

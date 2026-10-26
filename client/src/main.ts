@@ -38,6 +38,7 @@ import {
 import { createRenderer, reducedMotion, type Router, type TransitionKind } from "./render";
 import { startHostVoice, toggleHostVoice } from "./voice";
 import { closeTutorial, mountTutorialRender, playTutorial, tutorialPlaying } from "./tutorial/player";
+import { forgetSeen } from "./seen";
 import { myPointer } from "./screens/common";
 import { home } from "./screens/home";
 import { lobby } from "./screens/lobby";
@@ -690,6 +691,10 @@ root.addEventListener("click", (ev) => {
       render();
       break;
     }
+    case "forgetSeen": // v0.26: the host's phone forgets which questions it has hosted
+      forgetSeen();
+      toast("Forgotten: old questions can come up again.");
+      break;
     case "homeNext": // v0.21: step 1 → where to
       homeNext();
       break;

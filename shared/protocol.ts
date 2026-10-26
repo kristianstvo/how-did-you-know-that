@@ -37,7 +37,7 @@ export interface Settings {
   questionTimerMs: number; // default 15000
   revealMinMs: number; // default 8000
   voteWindowMs: number; // default 20000
-  threshold: number; // default 2100 (v0.4; was 1400)
+  threshold: number; // default 2000 (v0.26; 2100 from v0.4, 1400 before)
   thresholdDrop: number; // default 200
   /** The cheater graduates on this many wrong detentions, whatever their
    *  score (v0.4). 0 = off. Stops "send everyone in turn" from being free. */
@@ -54,9 +54,11 @@ export const DEFAULT_SETTINGS: Settings = {
   questionTimerMs: 15000,
   revealMinMs: 8000,
   voteWindowMs: 20000,
-  // v0.4: 2100 with two strikes puts a cheater who hides at 35–55% wins
-  // (sim/tune-line.ts); 1400 let them win 81–97%.
-  threshold: 2100,
+  // v0.4: 2100 with two strikes put a cheater who hides at 35–55% wins
+  // (sim/tune-line.ts); 1400 let them win 81–97%. v0.26: on the curve the
+  // class mostly plays medium questions, and 2100 dropped a hiding cheater
+  // to 26–45%; 2000 puts them back at 34–51% (6 players).
+  threshold: 2000,
   thresholdDrop: 200,
   strikes: 2,
   practiceRole: "random",
@@ -160,6 +162,8 @@ export interface PublicState {
       subjectEmoji: string;
       points: number;
       deadline: number; // host-issued epoch ms
+      /** v0.26: the class moved the difficulty since the last question. */
+      shift?: "up" | "down";
     };
     reveal: null | {
       correctIdx: number;
@@ -170,6 +174,9 @@ export interface PublicState {
       lastBell: string[]; // could graduate on the next question if they're the cheater
       accuseAt: number; // shared-clock ms when ACCUSE arms
       minNextAt: number; // shared-clock ms; host Next enabled after this
+      /** v0.26: the next question's tier, set by this one's answers (absent
+       *  after the last question, and in tapes from before v0.26). */
+      next?: Tier;
     };
     caseFile: CaseEntry[]; // every announced callout this match, in order
     cleared: string[]; // proven innocent: at/above the line with no siren
@@ -278,8 +285,26 @@ export const MAX_SCREENS = 3;
 export const CHEER_GAP_MS = 250;
 export const CHEER_MAX = 30;
 export const QUESTIONS_PER_MATCH = 10;
-export const TIER_PLAN: Tier[] = [
-  "easy", "easy", "easy",
-  "medium", "medium", "medium", "medium",
-  "hard", "hard", "hard",
-];
+
+// v0.26 grading on a curve: the class sets the difficulty. Every period
+// starts on medium. When everyone gets a question right, the next one is a
+// tier harder; when nobody does, a tier easier; otherwise it stays.
+export const TIERS: readonly Tier[] = ["easy", "medium", "hard"];
+export const FIRST_TIER: Tier = "medium";
+
+/** One desk's result for the curve. `counted` is false for a phone that was
+ *  away at the bell without answering: it can't hold the class back. */
+export interface CurveResult {
+  correct: boolean;
+  counted: boolean;
+}
+
+/** The tier of the question after one with these results. */
+export function nextTier(tier: Tier, results: CurveResult[]): Tier {
+  const counted = results.filter((r) => r.counted);
+  if (!counted.length) return tier;
+  const i = TIERS.indexOf(tier);
+  if (counted.every((r) => r.correct)) return TIERS[Math.min(TIERS.length - 1, i + 1)];
+  if (counted.every((r) => !r.correct)) return TIERS[Math.max(0, i - 1)];
+  return tier;
+}

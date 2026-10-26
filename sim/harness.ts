@@ -3,14 +3,13 @@
 // protocol (joinRequest → state/secret events → intents), so the cheater only
 // ever learns answers through the same private channel a real phone uses.
 import { HostEngine, type Transport } from "../client/src/engine";
-import { localOnlySource, resetLocalDeck, type MatchQuestions, type QuestionSource } from "../client/src/providers";
+import { localOnlySource, resetLocalDeck, type QuestionSource } from "../client/src/providers";
 import { createEventLogger, type MatchEvent } from "../shared/eventlog";
 import { EvidenceTracker, DEFAULT_EVIDENCE, type CalloutKind, type EvidenceParams } from "../shared/evidence";
 import { DEFAULT_HUMAN, logit, lognormal, normal, sigmoid, type Accuracy, type HumanModel } from "../shared/humanModel";
 import { voteResultTimeline } from "../shared/choreo";
 import {
   AVATARS,
-  TIER_PLAN,
   type Intent,
   type PublicState,
   type Question,
@@ -490,22 +489,28 @@ class SimPhone {
 function simSource(rngFor: (match: number) => () => number): { source: QuestionSource; current: () => Question[] } {
   let match = 0;
   let qs: Question[] = [];
+  let rng = rngFor(0);
   return {
     current: () => qs,
     source: {
       prefetch() {},
-      async get(): Promise<MatchQuestions> {
-        const rng = rngFor(match++);
-        qs = TIER_PLAN.map((tier, i) => ({
-          text: `Q${i + 1}`,
+      // v0.26: one question at a time, at the tier the class earned.
+      start(asked = []) {
+        if (!asked.length) rng = rngFor(match++);
+        qs = [...asked];
+      },
+      next(tier) {
+        const q: Question = {
+          text: `Q${qs.length + 1}`,
           options: ["A", "B", "C", "D"],
           correctIdx: Math.floor(rng() * 4) as Question["correctIdx"],
           tier,
           subject: "Sim",
           subjectEmoji: "🧪",
           source: "local" as const,
-        }));
-        return { questions: qs, usedFallback: false };
+        };
+        qs.push(q);
+        return q;
       },
     },
   };
@@ -519,10 +524,14 @@ function localPackSource(): { source: QuestionSource; current: () => Question[] 
     current: () => qs,
     source: {
       prefetch() {},
-      async get(): Promise<MatchQuestions> {
-        const r = await localOnlySource.get();
-        qs = r.questions;
-        return { questions: qs, usedFallback: false };
+      start(asked = []) {
+        localOnlySource.start(asked);
+        qs = [...asked];
+      },
+      next(tier) {
+        const q = localOnlySource.next(tier);
+        qs.push(q);
+        return q;
       },
     },
   };

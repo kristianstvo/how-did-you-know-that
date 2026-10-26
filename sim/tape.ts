@@ -20,6 +20,10 @@ clock.install();
 const endOf = (r: MatchRecord) => r.events.find((e): e is Ev<"matchEnd"> => e.type === "matchEnd")!;
 const votes = (r: MatchRecord) => r.events.filter((e): e is Ev<"voteResult"> => e.type === "voteResult");
 const reveals = (r: MatchRecord) => r.events.filter((e): e is Ev<"reveal"> => e.type === "reveal" && !e.final);
+/** v0.26: the class moved the difficulty at least once (a stamped question). */
+const curved = (r: MatchRecord) => !!r.tape?.frames.some((f) => f.state.match?.question?.shift);
+/** A reveal rang the last bell (the a11y and layout checks need one). */
+const rang = (r: MatchRecord) => !!r.tape?.frames.some((f) => f.state.phase === "reveal" && !!f.state.match?.reveal?.lastBell.length);
 
 interface Want {
   name: string;
@@ -48,10 +52,10 @@ const WANTS: Want[] = [
   },
   {
     name: "topscore",
-    description: "Nobody graduates; top of the class takes it at Q10.",
+    description: "Nobody graduates; top of the class takes it at Q10, and the class moves the difficulty.",
     strategy: "careful",
     policy: "scoreAware",
-    test: (r) => endOf(r).reason === "top_score" && reveals(r).length === 10,
+    test: (r) => endOf(r).reason === "top_score" && reveals(r).length === 10 && curved(r),
   },
   {
     name: "struckout",
@@ -65,7 +69,7 @@ const WANTS: Want[] = [
     description: "An innocent goes to detention mid-match; the match continues.",
     strategy: "sprint",
     policy: "score",
-    test: (r) => votes(r).some((v) => v.banishedId && !v.wasCheater) && endOf(r).q >= 7,
+    test: (r) => votes(r).some((v) => v.banishedId && !v.wasCheater) && endOf(r).q >= 7 && rang(r),
   },
   {
     name: "fullclass",

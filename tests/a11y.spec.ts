@@ -6,9 +6,18 @@ import { readFileSync } from "node:fs";
 import { mkdirSync } from "node:fs";
 
 // Moments derived from the recorded fixtures (never hard-coded times).
+interface TapeState {
+  phase: string;
+  phaseStartedAt: number;
+  match: {
+    questionIdx: number;
+    reveal?: { lastBell: string[] } | null;
+    voteResult?: { banishedId: string | null; wasCheater: boolean } | null;
+  } | null;
+}
 interface Tape {
   t0: number;
-  frames: { t: number; state: { phase: string; phaseStartedAt: number; match: { questionIdx: number } | null } }[];
+  frames: { t: number; state: TapeState }[];
 }
 
 const cache = new Map<string, Tape>();
@@ -26,16 +35,35 @@ function phaseAt(name: string, phase: string, questionIdx?: number): number {
   return Math.round(f.state.phaseStartedAt - t.t0);
 }
 
+/** v0.26: the curve changes each tape's path, so these moments are found by
+ *  what happens in them, not by question number. */
+function firstWhere(name: string, what: string, ok: (s: TapeState) => boolean): TapeState {
+  const f = tape(name).frames.find((x) => ok(x.state));
+  if (!f) throw new Error(`no ${what} in fixture ${name}`);
+  return f.state;
+}
+/** The first reveal that rings the last bell. */
+const lastBellAt = (name: string) => {
+  const s = firstWhere(name, "last-bell reveal", (x) => x.phase === "reveal" && !!x.match?.reveal?.lastBell.length);
+  return Math.round(s.phaseStartedAt - tape(name).t0);
+};
+/** 1.5 s before the question that follows the first innocent's detention. */
+const afterDetentionAt = (name: string) => {
+  const vr = firstWhere(name, "wrong detention", (x) => !!x.match?.voteResult?.banishedId && !x.match.voteResult.wasCheater);
+  const next = firstWhere(name, "question after the detention", (x) => x.phase === "question" && (x.match?.questionIdx ?? -1) > vr.match!.questionIdx);
+  return Math.round(next.phaseStartedAt - tape(name).t0) - 1_500;
+};
+
 const INSTANTS = [
   { fixture: "caught", t: phaseAt("caught", "role") + 1_000, label: "role" },
   { fixture: "caught", t: phaseAt("caught", "question", 0) + 4_000, label: "question" },
   { fixture: "caught", t: phaseAt("caught", "reveal", 3) + 3_600, label: "reveal-answer" },
   { fixture: "caught", t: phaseAt("caught", "reveal", 3) + 8_500, label: "reveal-armed" },
-  // v0.23: re-aimed at the reveals that ring the last bell (Q9 in both tapes)
-  // and the reveal after the detention; the old moments had drifted onto votes.
-  { fixture: "graduated", t: phaseAt("graduated", "reveal", 8) + 8_000, label: "reveal-lastbell" },
-  { fixture: "detention", t: phaseAt("detention", "reveal", 8) + 8_000, label: "reveal-lastbell-2" },
-  { fixture: "graduated", t: phaseAt("graduated", "question", 9) - 1_500, label: "reveal-after-detention" },
+  // v0.23: the reveals that ring the last bell and the reveal after the
+  // detention (v0.26: found by what happens, since the curve moves them).
+  { fixture: "graduated", t: lastBellAt("graduated") + 8_000, label: "reveal-lastbell" },
+  { fixture: "detention", t: lastBellAt("detention") + 8_000, label: "reveal-lastbell-2" },
+  { fixture: "graduated", t: afterDetentionAt("graduated"), label: "reveal-after-detention" },
   { fixture: "caught", t: phaseAt("caught", "vote") + 2_500, label: "vote" },
   { fixture: "caught", t: phaseAt("caught", "vote") + 7_000, label: "vote-open" }, // v0.23: after the floor
   { fixture: "graduated", t: phaseAt("graduated", "voteResult") + 6_000, label: "voteResult-drop" },

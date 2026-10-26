@@ -650,6 +650,34 @@ interface Tape {
   t0: number;
   frames: { state: { phase: string; phaseStartedAt: number; match: { questionIdx: number } | null } }[];
 }
+/** v0.26: the curve changes each tape's path, so some moments are found by
+ *  what happens in them. A question the class ran to the bell (pencils down),
+ *  in whichever tape has one first. */
+function timedOutQuestion(): { fixture: string; t: number } {
+  type Q = { phase: string; phaseStartedAt: number; match: { questionIdx: number; question?: { deadline: number } | null; reveal?: { startedAt: number } | null } | null };
+  for (const fixture of ["caught", "graduated", "topscore", "struckout", "detention", "fullclass"]) {
+    const t = JSON.parse(readFileSync(`client/public/fixtures/${fixture}.json`, "utf8")) as { t0: number; frames: { state: Q }[] };
+    for (const f of t.frames) {
+      if (f.state.phase !== "question" || !f.state.match?.question) continue;
+      const i = f.state.match.questionIdx;
+      const r = t.frames.find((x) => x.state.phase === "reveal" && x.state.match?.questionIdx === i && x.state.match.reveal);
+      if (r && r.state.match!.reveal!.startedAt >= f.state.match.question.deadline) return { fixture, t: Math.round(f.state.phaseStartedAt - t.t0) };
+    }
+  }
+  throw new Error("no question ran to the bell in any tape");
+}
+/** The last reveal (any tape) with a CLEARED classmate, seen by someone else. */
+function clearedRevealMoment(): { fixture: string; t: number; as: string } {
+  type R = { phase: string; phaseStartedAt: number; match: { cleared: string[]; reveal?: { startedAt: number } | null } | null; players: { id: string; name: string; banished: boolean }[] };
+  for (const fixture of ["struckout", "graduated", "detention", "caught", "topscore", "fullclass"]) {
+    const t = JSON.parse(readFileSync(`client/public/fixtures/${fixture}.json`, "utf8")) as { t0: number; frames: { state: R }[] };
+    const f = [...t.frames].reverse().find((x) => x.state.phase === "reveal" && x.state.match?.reveal && x.state.match.cleared.length > 0);
+    if (!f) continue;
+    const viewer = f.state.players.find((p) => !f.state.match!.cleared.includes(p.id) && !p.banished)!;
+    return { fixture, t: Math.round(f.state.match!.reveal!.startedAt - t.t0) + 7600, as: viewer.name.toLowerCase() };
+  }
+  throw new Error("no tape has a CLEARED classmate on a reveal");
+}
 function phaseAt(name: string, phase: string, qi?: number): number {
   const t = JSON.parse(readFileSync(`client/public/fixtures/${name}.json`, "utf8")) as Tape;
   const f = t.frames.find((x) => x.state.phase === phase && (qi === undefined || x.state.match?.questionIdx === qi))!;
@@ -657,9 +685,11 @@ function phaseAt(name: string, phase: string, qi?: number): number {
 }
 
 test("phone: game-show sound plays on the beats, the same for the cheater, and one switch silences it", async ({ browser }) => {
-  const from = phaseAt("caught", "question", 3) + 9000; // the end of Q4, then its reveal
+  const bell = timedOutQuestion(); // a question the class ran to the bell, then its reveal
+  const fx = bell.fixture;
+  const from = bell.t + 9000;
   const hear = async (view: string) => {
-    const { ctx, page } = await phone(browser, `/#/fixture/caught?as=cheater${view}&t=${from}&ui=0`);
+    const { ctx, page } = await phone(browser, `/#/fixture/${fx}?as=cheater${view}&t=${from}&ui=0`);
     await page.waitForFunction(() => !!window.__fixture);
     await page.click(".qz-head"); // a first tap unlocks audio on phones
     await page.waitForTimeout(9000);
@@ -676,11 +706,11 @@ test("phone: game-show sound plays on the beats, the same for the cheater, and o
   expect(masked, "the cheater's phone sounds exactly like an innocent's").toEqual(real);
 
   // One switch, remembered on this phone.
-  const { ctx, page } = await phone(browser, "/#/fixture/caught?as=innocent&t=-1500&paused=1&ui=0");
+  const { ctx, page } = await phone(browser, `/#/fixture/${fx}?as=innocent&t=-1500&paused=1&ui=0`);
   await page.waitForFunction(() => !!window.__fixture);
   await page.click("#snd-lb-snd");
   await expect(page.locator("#snd-lb-snd")).toHaveAttribute("aria-pressed", "false");
-  await page.goto(`/#/fixture/caught?as=innocent&t=${from}&ui=0`);
+  await page.goto(`/#/fixture/${fx}?as=innocent&t=${from}&ui=0`);
   await page.reload();
   await page.waitForFunction(() => !!window.__fixture);
   await page.click(".qz-head");
@@ -717,9 +747,10 @@ test("phone: every new screen starts at its top", async ({ browser }) => {
 });
 
 test("phone: the 👉 sheet keeps every name readable, CLEARED and a crowd included (v0.23)", async ({ browser }) => {
-  // struckout's Q10 reveal, as Leo: Ana is CLEARED, has an exhibit, and five
-  // classmates (Leo too) point at her. The accuse sheet uses the same rows.
-  const { ctx, page } = await phone(browser, `/#/fixture/struckout?as=leo&t=${phaseAt("struckout", "reveal", 9) + 7600}&paused=1&ui=0`);
+  // A late reveal with a CLEARED classmate (v0.26: found in whichever tape has
+  // one), seen by someone else. The accuse sheet uses the same rows.
+  const m = clearedRevealMoment();
+  const { ctx, page } = await phone(browser, `/#/fixture/${m.fixture}?as=${encodeURIComponent(m.as)}&t=${m.t}&paused=1&ui=0`);
   await page.waitForFunction(() => !!window.__fixture);
   await page.waitForTimeout(800);
   await page.click("#rv-point");
@@ -924,17 +955,18 @@ test("back on a new tab mid-match: told to wait for the report card, with no oth
 // ---- v0.25 Tomatoes! ----
 
 test("phone: tomatoes and applause after the unmask reach every phone and the big screen (v0.25)", async ({ browser }) => {
-  // Bea is the cheater (local test hook) and graduates at Q2 on a 200 line,
-  // so no accusation is needed to reach the report card.
+  // Bea is the cheater (local test hook) and graduates at Q2 on a 400 line
+  // (v0.26: Q1 is medium, 200; Q2 is medium or harder, since she's right), so
+  // no accusation is needed to reach the report card.
   const host = await phone(browser, "/?debugCheater=Bea");
   await host.page.fill("#playerName", "Hana");
   await host.page.click("#hm-next");
   await host.page.click('[data-action="create"]');
   const code = (await host.page.locator(".roomcode").innerText({ timeout: 15000 })).replace(/\s/g, "");
   await host.page.click("#lb-adv summary");
-  await host.page.fill("#set-line", "200");
+  await host.page.fill("#set-line", "400");
   await host.page.locator("#set-line").blur();
-  await expect(host.page.locator(".lb-adv-sum")).toContainText("line 200");
+  await expect(host.page.locator(".lb-adv-sum")).toContainText("line 400");
   const tvCtx = await browser.newContext({ viewport: { width: 1280, height: 720 }, isMobile: false, hasTouch: false });
   const tv = await tvCtx.newPage();
   await tv.goto(`/#/tv/${code}`);
@@ -1166,5 +1198,78 @@ test("phone: a mash of tomatoes streams at the host's pace, and after this perio
   await page.waitForTimeout(800);
   await expect(page.locator("#me-tomato")).toBeDisabled();
   await expect(page.locator("#me-clap")).toBeDisabled();
+  await ctx.close();
+});
+
+// ---- v0.26 Grading on a curve ----
+
+test("the class sets the difficulty: the next question is stamped harder or easier, and the reveal says why (v0.26)", async ({ browser }) => {
+  type CurveTape = {
+    t0: number;
+    frames: {
+      state: {
+        phase: string;
+        phaseStartedAt: number;
+        match: null | {
+          questionIdx: number;
+          question: null | { tier: string; shift?: "up" | "down" };
+          reveal: null | { next?: string; callout: unknown; startedAt: number };
+        };
+      };
+    }[];
+  };
+  const t = JSON.parse(readFileSync("client/public/fixtures/topscore.json", "utf8")) as CurveTape;
+  const stamped = t.frames.find((f) => f.state.phase === "question" && f.state.match?.question?.shift)!;
+  expect(stamped, "the top-score tape moves the difficulty at least once").toBeTruthy();
+  const shift = stamped.state.match!.question!.shift!;
+  const qi = stamped.state.match!.questionIdx;
+  const { ctx, page } = await phone(browser, `/#/fixture/topscore?as=innocent&t=${Math.round(stamped.state.phaseStartedAt - t.t0) + 1500}&paused=1&ui=0`);
+  await page.waitForFunction(() => !!window.__fixture);
+  await expect(page.locator(".qz-shift")).toHaveText(shift === "up" ? "▲ HARDER" : "▼ EASIER");
+  await expect(page.locator(".qz-shift")).toHaveAttribute("aria-label", shift === "up" ? /everyone got the last one/ : /nobody got the last one/);
+  // The question before it: its reveal carried the next tier, and (with no
+  // evidence card in the slot) the class note says what happens next.
+  const before = t.frames.find((f) => f.state.phase === "reveal" && f.state.match?.questionIdx === qi - 1 && f.state.match.reveal)!;
+  const r = before.state.match!.reveal!;
+  expect(r.next).toBe(stamped.state.match!.question!.tier);
+  if (!r.callout) {
+    await page.goto("about:blank");
+    await page.goto(`/#/fixture/topscore?as=innocent&t=${Math.round(r.startedAt - t.t0) + 9000}&paused=1&ui=0`);
+    await page.waitForFunction(() => !!window.__fixture);
+    await expect(page.locator(".ev-curve")).toHaveText(shift === "up" ? "📈 Next one's harder." : "📉 Next one's easier.");
+  }
+  // A question the class didn't move carries no stamp.
+  const plain = t.frames.find((f) => f.state.phase === "question" && f.state.match?.question && !f.state.match.question.shift)!;
+  await page.goto("about:blank");
+  await page.goto(`/#/fixture/topscore?as=innocent&t=${Math.round(plain.state.phaseStartedAt - t.t0) + 1500}&paused=1&ui=0`);
+  await page.waitForFunction(() => !!window.__fixture);
+  await expect(page.locator(".qz-card")).toBeVisible();
+  await expect(page.locator(".qz-shift")).toHaveCount(0);
+  await ctx.close();
+});
+
+test("fresh questions: the teacher's phone says how many it remembers, and Forget clears them (v0.26)", async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: SE, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
+  await ctx.addInitScript(() => {
+    if (!sessionStorage.getItem("seeded")) {
+      localStorage.setItem("hdykt-seen", JSON.stringify(["a1", "b2", "c3"]));
+      sessionStorage.setItem("seeded", "1");
+    }
+  });
+  const page = await ctx.newPage();
+  await page.goto("/");
+  await page.fill("#playerName", "Hana");
+  await page.click("#hm-next");
+  await page.click('[data-action="create"]');
+  await page.waitForSelector(".screen-lobby");
+  await page.click("#lb-adv summary");
+  await expect(page.locator("#lb-fresh")).toContainText("remembers the 3 questions");
+  const forget = page.locator("#lb-forget");
+  expect((await forget.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await forget.click();
+  await expect(page.locator("#lb-fresh")).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem("hdykt-seen"))).toBeNull();
+  // The rules card explains the curve.
+  await expect(page.locator(".how-card").first()).toContainText("starts medium");
   await ctx.close();
 });

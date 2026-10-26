@@ -74,7 +74,10 @@ export function hostCue(s: PublicState | null, screenKey: string, added: string[
       // She finishes her sentence (the bell's speech runs into the first
       // question; a quick teacher can start the next one mid-verdict), then
       // calls the number if it's still news, or lets the screen show it.
-      if (entered && fresh) say(`q${m.questionIdx + 1}` as LineId, { mode: "next", wait: 3000 });
+      // v0.26: when the class moved the difficulty, that's the news (the
+      // number is on screen). The final question keeps its own call.
+      const call: LineId = q.shift && m.questionIdx < m.questionCount - 1 ? (q.shift === "up" ? "harder" : "easier") : (`q${m.questionIdx + 1}` as LineId);
+      if (entered && fresh) say(call, { mode: "next", wait: 3000 });
       if (has("u5") && s.players.some((p) => p.connected && !p.answeredCurrent)) say(take("five_a", "five_b"), { mode: "aside" });
       // Pencils down on hard questions only: their reveals are slow enough to
       // fit it before the answer call. A quick reveal needs her for the letter.

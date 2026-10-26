@@ -19,6 +19,12 @@ interface Sample {
 let offsetMs = 0; // serverTime - localTime
 let bestRtt = Infinity;
 let lastReturned = -Infinity;
+/** v0.26: no sample adopted yet. Until then nothing timed is on screen (a
+ *  phone syncs before it joins or hosts), so the never-backwards floor only
+ *  starts with the first real estimate: a phone whose clock runs ahead must
+ *  not stay pinned to its unsynced time (it skipped a bell rung within ~2s of
+ *  joining, as long as its clock was ahead). */
+let synced = false;
 let override: (() => number) | null = null;
 const pool: Sample[] = []; // best samples across bursts
 const POOL_MAX = 12;
@@ -28,6 +34,7 @@ const SAMPLE_TTL_MS = 10 * 60_000; // clocks drift; old samples expire
 export function serverNow(): number {
   if (override) return override();
   const t = localNow() + offsetMs;
+  if (!synced) return t;
   if (t < lastReturned) return lastReturned;
   lastReturned = t;
   return t;
@@ -77,6 +84,7 @@ export async function syncClock(socket: Socket, n = 8): Promise<void> {
   const mid = offsets.length >> 1;
   offsetMs = offsets.length % 2 ? offsets[mid] : (offsets[mid - 1] + offsets[mid]) / 2;
   bestRtt = best[0].rtt;
+  synced = true;
 }
 
 /** Keep the estimate fresh: periodic resync, and immediately when the page

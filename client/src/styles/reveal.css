@@ -222,6 +222,10 @@
   opacity: 0; transform: translateY(8px);
 }
 .screen-reveal .ev-note .ev-fast { color: var(--accent2); min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* v0.26 the curve: the class moved the difficulty (red marker up, pencil yellow down, like the question card's stamp). */
+.screen-reveal .ev-note .ev-curve { font-weight: 800; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.screen-reveal .ev-note .ev-curve.up { color: var(--accent); }
+.screen-reveal .ev-note .ev-curve.down { color: var(--accent2); }
 .screen-reveal.b-grade .ev-note { opacity: 1; transform: none; transition: transform var(--t-base) var(--e-enter), opacity var(--t-base) var(--e-standard); }
 
 /* ---------------- LAST BELL ---------------- */

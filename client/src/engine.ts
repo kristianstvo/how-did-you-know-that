@@ -29,9 +29,11 @@ import {
   MAX_PLAYERS,
   MAX_SCREENS,
   MIN_PLAYERS,
+  FIRST_TIER,
+  nextTier,
   QUESTIONS_PER_MATCH,
   SESSION_POINTS,
-  TIER_PLAN,
+  TIERS,
   type Award,
   type CaseEntry,
   type Intent,
@@ -43,6 +45,7 @@ import {
   type PublicState,
   type Question,
   type RevealRow,
+  type Tier,
   type SecretState,
   type Settings,
 } from "../../shared/protocol";
@@ -107,6 +110,7 @@ const SAVED_FIELDS = [
   "roleMs",
   "hallway",
   "usedFallback",
+  "upcomingTier",
   "questionDeadline",
   "answers",
   "voteLog",
@@ -212,6 +216,8 @@ export class HostEngine {
   private cheerLog: Record<string, { at: number; n: number }> = {};
   private stopped = false; // v0.18: this page no longer hosts (see stop())
   private usedFallback = false;
+  /** v0.26: the tier the next question is drawn at (the class moves it). */
+  private upcomingTier: Tier = FIRST_TIER;
   private questionDeadline = 0;
   private answers: Record<string, AnswerRecord>[] = []; // per question: playerId -> record
   // v0.8 superlatives: every vote this match, and the most 👉 anyone drew at once.
@@ -708,24 +714,14 @@ export class HostEngine {
     const present = this.players.filter((p) => p.connected);
     if (present.length < MIN_PLAYERS || this.loadingQuestions) return;
 
-    this.loadingQuestions = true;
-    this.broadcast(); // lets the lobby show a brief "loading questions" state
-    const batch = await this.source.get();
-    this.loadingQuestions = false;
-    this.source.prefetch(); // background-fetch the NEXT match during this one
-    // The room may have changed during the wait (up to ~8s): re-check it.
-    const ready = this.players.filter((p) => p.connected);
-    if ((this.phase !== "lobby" && this.phase !== "matchEnd") || ready.length < MIN_PLAYERS) {
-      // The start fell through: anyone who arrived while the quiz printed
-      // takes their seat now instead of waiting in an empty hallway.
-      if (this.phase === "lobby" || this.phase === "matchEnd") this.seatHallway();
-      this.broadcast();
-      return;
-    }
-    present.splice(0, present.length, ...ready);
+    // v0.26: questions are drawn one at a time as the period goes (the class
+    // sets their difficulty), so the bell rings without waiting for a quiz.
+    this.source.start();
+    this.source.prefetch(); // keep the online shelf topped up during the period
 
-    this.questions = batch.questions;
-    this.usedFallback = batch.usedFallback;
+    this.questions = [];
+    this.upcomingTier = FIRST_TIER;
+    this.usedFallback = false;
     this.matchNumber++;
     this.qIdx = 0;
     this.threshold = this.settings.threshold;
@@ -818,6 +814,12 @@ export class HostEngine {
 
   private startQuestion(idx: number): void {
     this.qIdx = idx;
+    // v0.26: drawn now, at the tier the last question's answers earned.
+    if (!this.questions[idx]) {
+      const q = this.source.next(this.upcomingTier);
+      this.questions[idx] = q;
+      if (q.source === "local") this.usedFallback = true;
+    }
     this.reveal = null;
     this.voteResult = null;
     for (const p of this.players) p.answeredCurrent = false;
@@ -851,6 +853,15 @@ export class HostEngine {
     if (this.phase !== "question") return;
     const q = this.questions[this.qIdx];
     const points = this.settings.tierPoints[q.tier];
+    // v0.26 the curve: everyone right → the next question is a tier harder;
+    // nobody right → a tier easier. A phone away at the bell without an
+    // answer doesn't count.
+    const answered = this.answers[this.qIdx];
+    const last = this.qIdx >= QUESTIONS_PER_MATCH - 1;
+    this.upcomingTier = nextTier(
+      q.tier,
+      this.players.map((p) => ({ correct: answered[p.id]?.pick === q.correctIdx, counted: !!answered[p.id] || p.connected })),
+    );
     const rows: RevealRow[] = this.players.map((p) => {
       const rec = this.answers[this.qIdx][p.id] ?? { pick: -1, timeMs: 0 };
       const correct = rec.pick === q.correctIdx;
@@ -880,8 +891,7 @@ export class HostEngine {
       : null;
     if (callout) this.caseFile.push(callout);
     const suspectIds = activeIds.filter((id) => !this.evidence.cleared.has(id));
-    const nextTier = TIER_PLAN[this.qIdx + 1];
-    const lastBell = lastBellIds(scores, suspectIds, this.threshold, nextTier ? this.settings.tierPoints[nextTier] : null);
+    const lastBell = lastBellIds(scores, suspectIds, this.threshold, last ? null : this.settings.tierPoints[this.upcomingTier]);
     const stakes = revealStakes(q.tier, res.selected, lastBell.length > 0);
     const tl = revealTimeline(stakes, rows.length, !!callout);
     const accuseAt = now + tl.beats.accuse;
@@ -893,6 +903,7 @@ export class HostEngine {
       lastBell,
       accuseAt,
       minNextAt: Math.max(now + this.settings.revealMinMs, accuseAt + TALK_HOLD_MS),
+      ...(last ? {} : { next: this.upcomingTier }),
     };
 
     this.setPhase("reveal");
@@ -1108,8 +1119,8 @@ export class HostEngine {
         this.caseFile.push({ q: this.qIdx, tier: this.questions[this.qIdx].tier, kind: "cleared", subjectIds: fresh, detail: { threshold: this.threshold } });
       }
       const suspects = active.filter((id) => !this.evidence.cleared.has(id));
-      const nextTier = TIER_PLAN[this.qIdx + 1];
-      this.reveal.lastBell = lastBellIds(scores, suspects, this.threshold, nextTier ? this.settings.tierPoints[nextTier] : null);
+      const last = this.qIdx >= QUESTIONS_PER_MATCH - 1;
+      this.reveal.lastBell = lastBellIds(scores, suspects, this.threshold, last ? null : this.settings.tierPoints[this.upcomingTier]);
     }
     // Back to the same reveal; its show has finished, so it renders settled.
     this.voteResult = null;
@@ -1333,6 +1344,14 @@ export class HostEngine {
     }, ms);
   }
 
+  /** v0.26: did the class move the difficulty since the last question? */
+  private shiftOf(idx: number): { shift?: "up" | "down" } {
+    const q = this.questions[idx];
+    const prev = idx > 0 ? this.questions[idx - 1] : undefined;
+    if (!q || !prev || prev.tier === q.tier) return {};
+    return { shift: TIERS.indexOf(q.tier) > TIERS.indexOf(prev.tier) ? "up" : "down" };
+  }
+
   publicState(): PublicState {
     const players: PublicPlayer[] = this.players.map((p) => ({
       id: p.id,
@@ -1377,6 +1396,7 @@ export class HostEngine {
                   subjectEmoji: q.subjectEmoji,
                   points: this.settings.tierPoints[q.tier],
                   deadline: this.questionDeadline,
+                  ...this.shiftOf(this.qIdx),
                 }
               : null,
             reveal: this.phase === "question" ? null : this.reveal,
@@ -1437,6 +1457,7 @@ export class HostEngine {
     Object.assign(engine as unknown as Record<string, unknown>, snap.fields);
     engine.evidence = EvidenceTracker.load(snap.evidence);
     engine.loadingQuestions = false; // a fetch in flight died with the page: Start again
+    if (engine.phase !== "lobby" && engine.phase !== "sessionEnd") source.start(engine.questions); // v0.26: this period's subjects so far
     engine.rearm();
     return engine;
   }

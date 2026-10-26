@@ -262,3 +262,8 @@
 /* v0.20: the one-minute video, at the top of How to play (a big screen plays it by itself). */
 .btn.lb-howto { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; margin: 2px 0 10px; border: 2px solid rgba(255, 209, 102, 0.5); border-radius: 99px; color: var(--accent2); font-size: 0.95rem; }
 .tv .lb-howto { display: none; }
+
+/* v0.26: fresh questions, in the teacher's Advanced settings. */
+.lb-fresh { display: flex; align-items: center; gap: 10px; margin: 4px 0 12px; font-size: 0.82rem; line-height: 1.35; color: var(--dim); }
+.lb-fresh b { color: var(--ink); }
+.btn.lb-forget { flex: none; width: auto; min-height: 44px; padding: 8px 14px; font-size: 0.85rem; }
