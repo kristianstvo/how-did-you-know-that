@@ -19,9 +19,11 @@
 //   · an avatar that isn't one of the students never reaches a screen (v0.21)
 //   · nobody misses the bell: it closes How to play, and a note missed in
 //     another app waits behind ⭐, read by holding 📝 (v0.27)
+//   · the verdicts are heard, and your own answer is stamped and dinged (v0.28)
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { io } from "socket.io-client";
+import { revealTimeline } from "../shared/choreo.ts";
 
 const SE = { width: 375, height: 553 };
 
@@ -263,6 +265,13 @@ test("phone: the accused has the floor, then the class votes (v0.23)", async ({ 
   await host.page.click("#vo-go");
   await host.page.waitForSelector(".screen-voteResult", { timeout: 30000 });
   await expect(host.page.locator(".vr-top")).toContainText("Cy → Bea");
+  // v0.28: Bea never hands in, so the vote runs its whole clock: the last five
+  // seconds tick on her phone (urgent, then 4, 3, 2, 1), then the bell's whistle.
+  await bea.waitForSelector(".screen-voteResult", { timeout: 5000 });
+  const vote = (await heard()).join(",").split("gavel").at(-1)!.split(",").filter(Boolean);
+  expect(vote.filter((x) => x === "tick").length, `heard: ${vote.join(",")}`).toBeGreaterThanOrEqual(5);
+  expect(inOrder(vote, ["pop", "tick", "tick", "tick", "tick", "tick", "whistle"]), `heard: ${vote.join(",")}`).toBe(true);
+  expect(vote.filter((x) => x === "whistle").length).toBe(1);
   await close();
 });
 
@@ -655,7 +664,7 @@ interface Tape {
 /** v0.26: the curve changes each tape's path, so some moments are found by
  *  what happens in them. A question the class ran to the bell (pencils down),
  *  in whichever tape has one first. */
-function timedOutQuestion(): { fixture: string; t: number } {
+function timedOutQuestion(): { fixture: string; t: number; qi: number } {
   type Q = { phase: string; phaseStartedAt: number; match: { questionIdx: number; question?: { deadline: number } | null; reveal?: { startedAt: number } | null } | null };
   for (const fixture of ["caught", "graduated", "topscore", "struckout", "detention", "fullclass"]) {
     const t = JSON.parse(readFileSync(`client/public/fixtures/${fixture}.json`, "utf8")) as { t0: number; frames: { state: Q }[] };
@@ -663,7 +672,7 @@ function timedOutQuestion(): { fixture: string; t: number } {
       if (f.state.phase !== "question" || !f.state.match?.question) continue;
       const i = f.state.match.questionIdx;
       const r = t.frames.find((x) => x.state.phase === "reveal" && x.state.match?.questionIdx === i && x.state.match.reveal);
-      if (r && r.state.match!.reveal!.startedAt >= f.state.match.question.deadline) return { fixture, t: Math.round(f.state.phaseStartedAt - t.t0) };
+      if (r && r.state.match!.reveal!.startedAt >= f.state.match.question.deadline) return { fixture, t: Math.round(f.state.phaseStartedAt - t.t0), qi: i };
     }
   }
   throw new Error("no question ran to the bell in any tape");
@@ -686,26 +695,81 @@ function phaseAt(name: string, phase: string, qi?: number): number {
   return Math.round(f.state.phaseStartedAt - t.t0);
 }
 
+/** v0.28: the sounds a phone has played, by name, in order. */
+const heardOn = (page: Page) => page.evaluate(() => (window.__hdykt as unknown as { sounds?: string[] }).sounds ?? []);
+/** Whether `want` plays in this order (other sounds may come between). */
+function inOrder(list: string[], want: string[]): boolean {
+  let i = 0;
+  for (const x of list) if (x === want[i]) i++;
+  return i === want.length;
+}
+
+type Row = { playerId: string; pick: number; correct: boolean; pointsGained: number };
+interface FullTape {
+  t0: number;
+  cheaterId: string;
+  players: { id: string; name: string }[];
+  frames: {
+    state: {
+      phase: string;
+      phaseStartedAt: number;
+      match: null | {
+        questionIdx: number;
+        reveal: null | { stakes: "low" | "mid" | "high"; rows: Row[]; callout: object | null };
+        voteResult: null | { votes: Record<string, string>; accusedId?: string };
+      };
+    };
+  }[];
+}
+const tapeOf = (name: string) => JSON.parse(readFileSync(`client/public/fixtures/${name}.json`, "utf8")) as FullTape;
+const nameIn = (t: FullTape, id: string) => t.players.find((p) => p.id === id)!.name;
+
+/** v0.28: a recorded reveal: its playhead, when its verdict lands (the same
+ *  timeline every phone runs) and who answered what. */
+function revealOf(name: string, qi: number) {
+  const t = tapeOf(name);
+  const s = t.frames.find((f) => f.state.phase === "reveal" && f.state.match?.questionIdx === qi)!.state;
+  const r = s.match!.reveal!;
+  const row = (pick: (x: Row) => boolean) => r.rows.find(pick)!;
+  return {
+    at: Math.round(s.phaseStartedAt - t.t0),
+    verdict: revealTimeline(r.stakes, r.rows.length, !!r.callout).beats.verdict,
+    cheater: row((x) => x.playerId === t.cheaterId),
+    /** A classmate who answered wrong, and one who didn't answer (if anyone didn't). */
+    wrong: row((x) => x.playerId !== t.cheaterId && x.pick !== -1 && !x.correct),
+    silent: r.rows.find((x) => x.playerId !== t.cheaterId && x.pick === -1),
+    name: (x: Row) => nameIn(t, x.playerId),
+  };
+}
+/** What a seat's own row stamps on its header, and the sound it plays. */
+const verdictOf = (x: Row) => (x.pick === -1 ? { stamp: "YOU 🤐", sound: "" } : x.correct ? { stamp: `YOU ✓ +${x.pointsGained}`, sound: "right" } : { stamp: "YOU ✗", sound: "wrong" });
+
 test("phone: game-show sound plays on the beats, the same for the cheater, and one switch silences it", async ({ browser }) => {
   const bell = timedOutQuestion(); // a question the class ran to the bell, then its reveal
   const fx = bell.fixture;
   const from = bell.t + 9000;
+  // v0.28: at the verdict each seat also hears its own answer, the cheater's included.
+  const rv = revealOf(fx, bell.qi);
+  const mine = verdictOf(rv.cheater).sound;
   const hear = async (view: string) => {
-    const { ctx, page } = await phone(browser, `/#/fixture/${fx}?as=cheater${view}&t=${from}&ui=0`);
+    const { ctx, page } = await phone(browser, `/#/fixture/${fx}?as=${view}&t=${from}&ui=0`);
     await page.waitForFunction(() => !!window.__fixture);
     await page.click(".qz-head"); // a first tap unlocks audio on phones
-    await page.waitForTimeout(9000);
-    const sounds = await page.evaluate(() => (window.__hdykt as unknown as { sounds?: string[] }).sounds ?? []);
+    await page.waitForTimeout(13000); // through the verdict and the exhibit, before the next question
+    const sounds = await heardOn(page);
     await ctx.close();
     return sounds;
   };
-  const real = await hear("");
-  const masked = await hear("&mask=1");
-  // The show in order: pencils down, slaps, drumroll, the answer sting.
-  const order = ["whistle", "slaps", "drumroll", "sting"].map((x) => real.indexOf(x));
+  // Side by side, so every window opens on the same beat.
+  const [real, masked, wrong] = await Promise.all([hear("cheater"), hear("cheater&mask=1"), hear(rv.name(rv.wrong))]);
+  // The show in order: pencils down, slaps, drumroll, the answer sting, then your own ding.
+  const order = ["whistle", "slaps", "drumroll", "sting", ...(mine ? [mine] : [])].map((x) => real.indexOf(x));
   expect(order.every((i) => i >= 0), `heard: ${real.join(",")}`).toBe(true);
   expect(order, "in beat order").toEqual([...order].sort((a, b) => a - b));
   expect(masked, "the cheater's phone sounds exactly like an innocent's").toEqual(real);
+  // A classmate who got it wrong hears a bonk instead, on the same beat.
+  expect(inOrder(wrong, ["sting", "wrong"]), `a wrong answer bonks: ${wrong.join(",")}`).toBe(true);
+  expect(wrong).not.toContain("right");
 
   // One switch, remembered on this phone.
   const { ctx, page } = await phone(browser, `/#/fixture/${fx}?as=innocent&t=-1500&paused=1&ui=0`);
@@ -716,8 +780,100 @@ test("phone: game-show sound plays on the beats, the same for the cheater, and o
   await page.reload();
   await page.waitForFunction(() => !!window.__fixture);
   await page.click(".qz-head");
-  await page.waitForTimeout(9000);
+  await page.waitForTimeout(13000); // v0.28: your own ding too
   expect(await page.evaluate(() => (window.__hdykt as unknown as { sounds?: string[] }).sounds ?? [])).toEqual([]);
+  await ctx.close();
+});
+
+test("phone: the verdicts are heard: ballots flick, a drumroll, ta-da or a sad trombone, the unmask's crash (v0.28)", async ({ browser }) => {
+  // Real time through a recorded window, side by side so each opens on the same beat.
+  const listen = async (fx: string, view: string, from: number, to: number) => {
+    const { ctx, page } = await phone(browser, `/#/fixture/${fx}?as=${view}&t=${from}&ui=0`);
+    await page.waitForFunction(() => !!window.__fixture);
+    await page.mouse.click(4, 4); // a first tap unlocks audio on phones (nothing to press up there)
+    await page.waitForFunction((end) => window.__fixture!.playhead() >= end, to, { timeout: to - from + 15000, polling: 100 });
+    const sounds = await heardOn(page);
+    await ctx.close();
+    return sounds;
+  };
+  // The caught tape's trial through the unmask; the graduated tape's vote sends an innocent away.
+  const caught = [phaseAt("caught", "vote") - 500, phaseAt("caught", "matchEnd") + 4000] as const;
+  const sent = [phaseAt("graduated", "voteResult") - 500, phaseAt("graduated", "voteResult") + 5000] as const;
+  const [real, masked, innocent] = await Promise.all([
+    listen("caught", "cheater", ...caught),
+    listen("caught", "cheater&mask=1", ...caught),
+    listen("graduated", "cheater", ...sent),
+  ]);
+  // The gavel, ballots open, the ballots flip, the drumroll into the stamp and
+  // its ta-da; then the report card's fanfare, "The cheater was…" and the crash.
+  const show = ["gavel", "pop", "flip", "drumroll", "stamp", "sting", "fanfare", "drumroll", "crash"];
+  expect(inOrder(real, show), `heard: ${real.join(",")}`).toBe(true);
+  // One flick per ballot, each on its own beat.
+  const t = tapeOf("caught");
+  const ballots = Object.keys(t.frames.find((f) => f.state.phase === "voteResult")!.state.match!.voteResult!.votes).length;
+  expect(real.filter((x) => x === "flip").length, `heard: ${real.join(",")}`).toBe(ballots);
+  expect(masked, "the cheater's phone sounds exactly like an innocent's").toEqual(real);
+  // An innocent goes to detention: the stamp, then the sad trombone, then the line slides.
+  expect(innocent[innocent.indexOf("stamp") + 1], `heard: ${innocent.join(",")}`).toBe("wahwah");
+  expect(inOrder(innocent, ["flip", "drumroll", "stamp", "wahwah", "slide"]), `heard: ${innocent.join(",")}`).toBe(true);
+  expect(innocent).not.toContain("sting");
+});
+
+test("phone: your own answer is stamped on the reveal's header at the verdict, the same for the cheater (v0.28)", async ({ browser }) => {
+  const rv = revealOf("caught", 3);
+  const look = async (as: string, t: number, size = SE) => {
+    const { ctx, page } = await phone(browser, `/#/fixture/caught?as=${as}&t=${t}&paused=1&ui=0`, size);
+    await page.waitForFunction(() => !!window.__fixture);
+    await page.waitForTimeout(900);
+    const r = await page.evaluate(() => {
+      const me = document.getElementById("rv-me");
+      const subj = document.querySelector<HTMLElement>(".rv-subj")!;
+      return {
+        text: me?.textContent ?? null,
+        opacity: me ? getComputedStyle(me).opacity : null,
+        subj: subj.clientWidth,
+        subjFull: subj.scrollWidth,
+        overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+      };
+    });
+    await ctx.close();
+    return r;
+  };
+  const at = rv.at + rv.verdict + 600;
+  const mine = verdictOf(rv.cheater).stamp;
+  // In its box from the first frame, invisible until the verdict lands…
+  const before = await look("cheater", rv.at + rv.verdict - 300);
+  expect(before.text).toBe(mine);
+  expect(before.opacity).toBe("0");
+  // …then stamped, from the seat's own row: the same for the cheater and the masked cheater.
+  const real = await look("cheater", at);
+  expect(real.text).toBe(mine);
+  expect(real.opacity).toBe("1");
+  expect((await look("cheater&mask=1", at)).text, "the cheater's stamp is anyone's").toBe(mine);
+  // A classmate who got it wrong, and one who didn't answer.
+  expect((await look(rv.name(rv.wrong), at)).text).toBe("YOU ✗");
+  if (rv.silent) expect((await look(rv.name(rv.silent), at)).text).toBe("YOU 🤐");
+  // A 320px phone: the subject keeps room to read, and nothing scrolls sideways.
+  const narrow = await look("cheater", at, { width: 320, height: 553 });
+  expect(narrow.subj, "the subject is squeezed").toBeGreaterThanOrEqual(Math.min(60, narrow.subjFull));
+  expect(narrow.overflow).toBe(false);
+});
+
+test("phone: on the vote result your own ballot wears a ring, and the votes against you say YOU (v0.28)", async ({ browser }) => {
+  // The graduated tape's accused: a voter, and the one the class voted for.
+  const t = tapeOf("graduated");
+  const vr = t.frames.find((f) => f.state.phase === "voteResult")!.state.match!.voteResult!;
+  const me = vr.accusedId!;
+  expect(Object.keys(vr.votes)).toContain(me);
+  const { ctx, page } = await phone(browser, `/#/fixture/graduated?as=${nameIn(t, me)}&t=${phaseAt("graduated", "voteResult") + 6000}&paused=1&ui=0`);
+  await page.waitForFunction(() => !!window.__fixture);
+  await page.waitForTimeout(900);
+  await expect(page.locator(`#vl-${me}.me`)).toHaveCount(1);
+  await expect(page.locator(".vr-line.me")).toHaveCount(1);
+  await expect(page.locator(`#vt-${me} .vr-you`)).toHaveText("YOU");
+  await expect(page.locator(".vr-you")).toHaveCount(1);
+  // The ring is the ballot's own outline: 2px of pencil yellow, inside the row.
+  expect(await page.locator(`#vl-${me}`).evaluate((el) => getComputedStyle(el).boxShadow)).toContain("inset");
   await ctx.close();
 });
 
@@ -776,6 +932,7 @@ test("phone: no field small enough for iOS to zoom; nothing scrolls sideways at 
     `/#/fixture/fullclass?as=innocent&t=${phaseAt("fullclass", "reveal", 4) + 9500}&paused=1&ui=0`,
     `/#/fixture/fullclass?as=innocent&t=${phaseAt("fullclass", "vote") + 3000}&paused=1&ui=0`, // the accused's floor
     `/#/fixture/fullclass?as=innocent&t=${phaseAt("fullclass", "vote") + 7000}&paused=1&ui=0`, // v0.23: ballots open
+    `/#/fixture/fullclass?as=innocent&t=${phaseAt("fullclass", "voteResult") + 6000}&paused=1&ui=0`, // v0.28: your ring, and YOU on the votes against you
     `/#/fixture/fullclass?as=innocent&t=${phaseAt("fullclass", "matchEnd") + 7000}&paused=1&ui=0&host=1`,
   ];
   for (const url of urls) {

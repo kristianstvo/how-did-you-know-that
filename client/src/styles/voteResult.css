@@ -83,6 +83,13 @@
 .out-caught .vr-chip.win { border-color: var(--good); }
 .out-innocent .vr-chip.win { border: 2px solid var(--bad); }
 .vr-chip.lose { opacity: 0.45; }
+/* v0.28: votes against you: a small tag on the chip's top edge (the verdict
+   tag owns the right), so it never squeezes the name. */
+.vr-you {
+  position: absolute; top: -9px; left: 8px; padding: 0 5px; border-radius: 5px;
+  font-family: var(--hand); font-weight: 900; font-size: 0.62rem; letter-spacing: 0.5px; line-height: 1.45;
+  background: var(--ink); color: var(--bg);
+}
 
 /* ---- Ballots: voter → sealed card that flips to the target ---- */
 .vr-lines { list-style: none; display: grid; gap: 4px; }
@@ -91,6 +98,7 @@
   height: 36px; padding: 0 6px 0 8px; border-radius: 10px; background: rgba(244, 241, 232, 0.04);
 }
 .dense .vr-line { height: 30px; }
+.vr-line.me { box-shadow: inset 0 0 0 2px var(--accent2); } /* v0.28: your own ballot */
 .vr-who, .vr-face { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 0.88rem; }
 .vr-hand { flex: none; font-size: 0.8rem; }
 .vr-arrow { color: var(--dim); font-weight: 900; text-align: center; }

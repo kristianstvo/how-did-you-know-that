@@ -499,3 +499,29 @@
   font-family: inherit; font-size: 0.78rem; font-weight: 700; color: var(--accent2);
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
 }
+
+/* v0.28 Hear the verdict: your own answer, stamped on the header ("YOU ✓
+   +200", "YOU ✗", "YOU 🤐"), in a fixed box from frame 0 so the subject never
+   moves. It lands with the board's ✓/✗ badges as a TRANSITION, so a settle
+   never replays it. The glyph is the cue; the colour only agrees with it.
+   18px tall, the header line's own height, so the header never grows. */
+.screen-reveal .rv-me {
+  flex: none; width: 84px; height: 18px; margin-left: auto; align-self: center; padding: 0 3px;
+  border: 2px solid currentColor; border-radius: 6px; background: rgba(22, 40, 30, 0.6);
+  font: 800 max(11px, 0.72rem)/14px system-ui, sans-serif; text-align: center; white-space: nowrap; overflow: hidden;
+  opacity: 0; transform: scale(1.8) rotate(-8deg);
+}
+.screen-reveal .rv-me.ok { color: var(--good); }
+.screen-reveal .rv-me.no { color: var(--bad); }
+.screen-reveal .rv-me.none { color: var(--dim); }
+.screen-reveal.b-verdict .rv-me {
+  opacity: 1; transform: rotate(-4deg);
+  transition: transform var(--t-stamp) var(--e-impact), opacity var(--t-quick) linear;
+}
+/* …and your face in the tray grows a size, above its neighbours (z-index in reveal.ts). */
+.screen-reveal.b-verdict .tav.me .av { transform: scale(1.18); }
+@media (prefers-reduced-motion: reduce) {
+  .screen-reveal .rv-me { transform: rotate(-4deg); }
+  .screen-reveal.b-verdict .rv-me { transition: opacity var(--t-stamp) linear; }
+  .screen-reveal.b-verdict .tav.me .av { transform: none; }
+}

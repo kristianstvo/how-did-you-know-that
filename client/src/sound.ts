@@ -98,6 +98,7 @@ function hiss(at: number, dur: number, opts: { gain?: number; type?: BiquadFilte
   g.gain.setValueAtTime(opts.gain ?? 0.3, t);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   src.connect(f).connect(g).connect(master);
+  src.loop = true; // v0.28: the unmask's crash rings longer than the one-second buffer
   src.start(t, Math.random() * 0.5);
   src.stop(t + dur + 0.02);
 }
@@ -116,9 +117,9 @@ export const sfx = {
   pop(): void {
     tone(660, 0, 0.09, { wave: "triangle", gain: 0.25, to: 990 });
   },
-  /** The last five seconds. */
-  tick(): void {
-    hiss(0, 0.03, { type: "highpass", freq: 3200, gain: 0.35 });
+  /** The last five seconds. v0.28: the vote's clock ticks softer (.2). */
+  tick(gain = 0.35): void {
+    hiss(0, 0.03, { type: "highpass", freq: 3200, gain });
   },
   /** Pencils down. */
   whistle(): void {
@@ -136,9 +137,10 @@ export const sfx = {
     const n = Math.max(3, Math.floor(ms / 45));
     for (let i = 0; i < n; i++) hiss((i * 45) / 1000, 0.04, { freq: 1900, q: 0.6, gain: 0.08 + (0.32 * i) / n });
   },
-  /** Ta-da: the answer. */
-  sting(): void {
-    [0, 4, 7, 12].forEach((s, i) => tone(NOTE(s), i * 0.065, 0.42, { wave: "triangle", gain: 0.24 }));
+  /** Ta-da: the answer. v0.28: also a caught cheater's verdict, `delay`
+   *  seconds after its stamp. */
+  sting(delay = 0): void {
+    [0, 4, 7, 12].forEach((s, i) => tone(NOTE(s), delay + i * 0.065, 0.42, { wave: "triangle", gain: 0.24 }));
   },
   /** A rubber stamp: exhibits, verdicts, CLEARED, DETENTION. */
   stamp(): void {
@@ -180,6 +182,38 @@ export const sfx = {
   /** v0.25: a round of applause lands (the big screen only). */
   clap(): void {
     for (const at of [0, 0.07, 0.15]) hiss(at, 0.02, { freq: 1500, q: 0.7, gain: 0.3 });
+  },
+  /** v0.28: a ballot flips over. `n` is its target's running tally, so a
+   *  pile-on climbs in pitch. */
+  flip(n: number): void {
+    hiss(0, 0.035, { freq: 3200, gain: 0.25 });
+    tone(NOTE(Math.min(12, 2 * (n - 1))), 0, 0.06, { wave: "triangle", gain: 0.12 });
+  },
+  /** v0.28: the sad trombone: an innocent went to detention. */
+  wahwah(delay = 0): void {
+    const o = { wave: "triangle" as Wave, gain: 0.18 };
+    tone(NOTE(-2), delay, 0.28, o);
+    tone(NOTE(-3), delay + 0.3, 0.28, o);
+    tone(NOTE(-4), delay + 0.6, 0.7, { ...o, to: NOTE(-5) });
+  },
+  /** v0.28: a tie, nobody goes. */
+  boing(delay = 0): void {
+    tone(300, delay, 0.15, { gain: 0.25, to: 600 });
+    tone(600, delay + 0.15, 0.2, { gain: 0.25, to: 300 });
+  },
+  /** v0.28: the cymbal crash of the unmask. */
+  crash(): void {
+    hiss(0, 1.4, { type: "highpass", freq: 5000, gain: 0.35 });
+    tone(90, 0, 0.25, { gain: 0.6, to: 45 });
+  },
+  /** v0.28: your own answer was right (the reveal's verdict, your row only). */
+  right(): void {
+    tone(NOTE(7), 0.12, 0.12, { wave: "triangle", gain: 0.2 });
+    tone(NOTE(12), 0.19, 0.16, { wave: "triangle", gain: 0.2 });
+  },
+  /** v0.28: your own answer was wrong: a bonk, never louder or longer than right(). */
+  wrong(): void {
+    tone(196, 0.12, 0.18, { wave: "square", gain: 0.07, to: 147 });
   },
 };
 

@@ -34,7 +34,8 @@ function beats(ctx: RenderCtx): string[] {
   if (ctx.elapsed < 0) return []; // the beat lead: the gavel waits for the shared clock
   const { open, close } = windowOf(ctx.s);
   const trial = ctx.s.match?.vote?.opensAt !== undefined;
-  const at: [string, number][] = [["in", 0], ...(trial ? ([["open", open]] as [string, number][]) : []), ["urgent", Math.max(open, close - URGENT_MS)], ["closed", close]];
+  const urgent = Math.max(open, close - URGENT_MS);
+  const at: [string, number][] = [["in", 0], ...(trial ? ([["open", open]] as [string, number][]) : []), ["urgent", urgent], ["closed", close]];
   const seen = new Set<number>();
   const out: string[] = [];
   for (const [beat, t] of at) {
@@ -42,6 +43,11 @@ function beats(ctx: RenderCtx): string[] {
     seen.add(t);
     out.push(beat);
   }
+  // v0.28: each of the last four seconds is a beat too (main.ts ticks on it),
+  // as ONE token that replaces itself (u4 → u1), like the question's clock: a
+  // second token would read as a jump. "urgent" covers the 5.
+  const secs = Math.ceil((close - ctx.elapsed) / 1000);
+  if (secs >= 1 && secs <= 4 && close - secs * 1000 > urgent) out.push(`u${secs}`);
   return out;
 }
 

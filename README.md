@@ -14,6 +14,8 @@ Built from the specs in `00-overview.md` … `07-ui-screens.md`.
 
 Newest first (details in `CHANGELOG.md`, decisions in `PRODUCT.md`):
 
+- **Hear the verdict** (v0.28) — the ballot count, the verdict and the unmask
+  get their sounds, and your own answer dings and is stamped on the reveal.
 - **Nobody misses the bell** (v0.27) — the bell closes How to play, the
   first period's note stays up longer, you can re-read your note any time
   (hold 📝 in the ⭐ sheet), and period 1 explains exhibits, the 🎓 line

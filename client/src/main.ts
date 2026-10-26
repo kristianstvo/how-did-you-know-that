@@ -13,7 +13,7 @@ import "./styles/voteResult.css";
 import "./styles/matchEnd.css";
 import "./styles/sessionEnd.css";
 import "./styles/transitions.css";
-import { REVEAL_TIMING } from "../../shared/choreo";
+import { matchEndTimeline, REVEAL_TIMING, VOTE_FLIP_STAGGER, voteResultTimeline } from "../../shared/choreo";
 import { AVATARS, type Intent, type PublicState, type SecretState } from "../../shared/protocol";
 import { STUDENTS } from "./avatars";
 import { clockStatus, serverNow } from "./clock";
@@ -49,7 +49,7 @@ import { CHEATER_LINE, INNOCENT_LINE, role } from "./screens/role";
 import { sessionEnd } from "./screens/sessionEnd";
 import type { App, Screen } from "./screens/types";
 import { vote } from "./screens/vote";
-import { voteResult } from "./screens/voteResult";
+import { ballotOrder, outcomeOf, voteResult } from "./screens/voteResult";
 import { awake, keepAwake } from "./wakelock";
 import { countPeriod } from "./record";
 import { cheeredAt, cheersSpent, cheerTap, syncCheers } from "./cheers";
@@ -163,7 +163,23 @@ function onBeat(screenKey: string, beatKey: string, prev: string, settled: boole
   if (added.includes("answer")) buzz(25);
   if (added.includes("verdict") && screenKey.startsWith("voteResult")) buzz(70);
   if (added.includes("unmask")) buzz([40, 30, 120]);
+  if (added.includes("verdict") && screenKey.startsWith("reveal-")) {
+    const mine = myVerdict(); // v0.28: your own answer, in your hand
+    if (mine === "right") buzz(20);
+    else if (mine === "wrong") buzz([25, 60, 25]);
+  }
   beatSounds(screenKey, added, entered);
+}
+
+/** v0.28: how this phone's own answer did, from its own public row, at the
+ *  reveal's verdict (when every board shows every ✓/✗): "right", "wrong", or
+ *  null for no answer, the hallway and the big screen. A cheater's row is just
+ *  a row, so this is an outcome, never a role (v0.6). */
+function myVerdict(): "right" | "wrong" | null {
+  const s = app.state;
+  if (app.tv || !s?.players.some((p) => p.id === app.selfId)) return null;
+  const row = s.match?.reveal?.rows.find((r) => r.playerId === app.selfId);
+  return !row || row.pick === -1 ? null : row.correct ? "right" : "wrong";
 }
 
 /** Game-show sound on the same shared-clock beats as the motion (v0.6). Only
@@ -182,19 +198,61 @@ function beatSounds(screenKey: string, added: string[], entered: boolean): void 
     if (added.includes("slap")) sfx.slaps(m.reveal.rows.length, t.slapStagger);
     if (added.includes("drumroll")) sfx.drumroll(t.drumroll);
     if (added.includes("answer")) sfx.sting();
+    if (added.includes("verdict")) {
+      // v0.28: a ding or a bonk for your own answer (nothing for no answer).
+      const mine = myVerdict();
+      if (mine === "right") sfx.right();
+      else if (mine === "wrong") sfx.wrong();
+    }
     if (added.includes("evidence")) sfx.stamp();
     if (added.includes("grade") && m.reveal.lastBell.length) sfx.bell();
   }
-  if (phase === "vote" && added.includes("in")) sfx.gavel();
-  if (phase === "vote" && added.includes("open")) sfx.pop(); // v0.23: the floor is over, ballots open
-  if (phase === "voteResult") {
-    if (added.includes("verdict")) sfx.stamp();
+  if (phase === "vote") {
+    if (added.includes("in")) sfx.gavel();
+    if (added.includes("open")) sfx.pop(); // v0.23: the floor is over, ballots open
+    // v0.28: the last five seconds tick (softer than a question's), then the bell.
+    if (added.some((b) => b === "urgent" || /^u\d+$/.test(b))) sfx.tick(0.2);
+    if (added.includes("closed")) sfx.whistle();
+  }
+  if (phase === "voteResult" && app.state && m?.voteResult) {
+    const vr = m.voteResult;
+    // v0.28: each ballot flips with a flick that climbs as its target's pile
+    // grows; the last one rolls the drum, stopping just short of the stamp.
+    const voters = ballotOrder(app.state);
+    for (const b of added) {
+      const i = b === "flip" ? 0 : /^f\d+$/.test(b) ? Number(b.slice(1)) : -1;
+      if (i < 0 || i >= voters.length) continue;
+      const target = vr.votes[voters[i]];
+      sfx.flip(voters.slice(0, i + 1).filter((v) => vr.votes[v] === target).length);
+      if (i === voters.length - 1) {
+        const tl = voteResultTimeline(voters.length, vr.newThreshold !== null);
+        sfx.drumroll(tl.beats.verdict - (tl.beats.flip + i * VOTE_FLIP_STAGGER) - 100);
+      }
+    }
+    if (added.includes("verdict")) {
+      sfx.stamp();
+      // …then the outcome: ta-da, the sad trombone (a strike-out too), or a boing.
+      const outcome = outcomeOf(vr);
+      if (outcome === "caught") sfx.sting(0.12);
+      else if (outcome === "innocent") sfx.wahwah(0.12);
+      else sfx.boing(0.12);
+    }
     if (added.includes("drop")) sfx.slide();
   }
-  if (phase === "matchEnd" && added.includes("takeover") && m?.end) {
-    if (m.end.reason === "cheater_threshold") sfx.siren();
-    else if (m.end.reason === "cheater_banished") sfx.fanfare();
-    else sfx.bell();
+  if (phase === "matchEnd" && m?.end) {
+    if (added.includes("takeover")) {
+      if (m.end.reason === "cheater_threshold") sfx.siren();
+      else if (m.end.reason === "cheater_banished") sfx.fanfare();
+      else sfx.bell();
+    }
+    // v0.28: "The cheater was…" gets a drumroll up to the unmask, the final
+    // blow a stamp, and the unmask a cymbal crash.
+    if (added.includes("drumroll")) {
+      const tl = matchEndTimeline(m.end.reason);
+      sfx.drumroll(tl.beats.unmask - tl.beats.drumroll - 100);
+    }
+    if (added.includes("finalBlow")) sfx.stamp();
+    if (added.includes("unmask")) sfx.crash();
   }
   if (phase === "sessionEnd" && added.includes("crown")) sfx.fanfare(); // the valedictorian stamp
 }

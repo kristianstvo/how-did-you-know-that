@@ -130,7 +130,8 @@ export const reveal: Screen = {
       const rank = !none && i < 3 ? `<span class="tav-rank">${i + 1}</span>` : "";
       const mark = none ? "" : `<span class="tav-mark ${row.correct ? "ok" : "no"}">${row.correct ? "✓" : "✗"}</span>`;
       const tip = `${esc(p.name)}${none ? " · no answer" : ` · ${fmtTime(row.timeMs)}`}`;
-      return `<span class="tav${p.id === app.selfId ? " me" : ""}" id="tav-${p.id}" title="${tip}" style="--d:${delay}ms;--dj:${dj}ms;z-index:${20 - j}"><span class="av">${face(p.avatar)}</span>${rank}${mark}</span>`;
+      const me = p.id === app.selfId; // v0.28: your face grows at the verdict, on top of its neighbours
+      return `<span class="tav${me ? " me" : ""}" id="tav-${p.id}" title="${tip}" style="--d:${delay}ms;--dj:${dj}ms;z-index:${me ? 21 : 20 - j}"><span class="av">${face(p.avatar)}</span>${rank}${mark}</span>`;
     };
     const tray = (list: RevealRow[]) =>
       `<span class="tray" aria-hidden="true" style="--ov:${traySpacing(list.length)}px">${list.map((row, j) => tav(row, j, list.length)).join("")}</span>`;
@@ -282,10 +283,19 @@ export const reveal: Screen = {
         : `<button class="btn secondary rv-host" id="rv-host" data-action="skipShow" data-min-next="0">Skip ⏩</button>`
       : "";
 
+    // ---- v0.28: your own verdict, stamped on the header (a seat's phone, not
+    // the hallway or the big screen). It comes from your own public row, so a
+    // cheater's stamp is anyone's, and it lands with every ✓/✗ on the board ----
+    const mine = self && !app.tv ? rowOf.get(self.id) : undefined;
+    const meKind = !mine ? "" : mine.pick === -1 ? "none" : mine.correct ? "ok" : "no";
+    const meText = meKind === "ok" ? `YOU ✓ +${mine!.pointsGained}` : meKind === "no" ? "YOU ✗" : "YOU 🤐";
+    const meStamp = meKind ? `<span class="rv-me ${meKind}" id="rv-me" aria-hidden="true">${meText}</span>` : "";
+
     // ---- screen-reader narration: one span per beat, appended as beats land
     // (polite status region; the LAST BELL goes to an alert region) ----
     const said: string[] = ["Pencils down."];
     if (b.has("answer")) said.push(`Answer: ${LETTERS[r.correctIdx]}, ${esc(q.options[r.correctIdx])}. ${correct.length} of ${rows.length} got it.`);
+    if (b.has("verdict") && mine) said.push(meKind === "ok" ? `You: right, +${mine.pointsGained}.` : meKind === "no" ? "You: wrong." : "You: no answer.");
     if (callout && b.has("evidence")) said.push(`Exhibit: ${esc(callout.title)}. ${callout.line} ${esc(callout.ask)}`);
     if (teach2 && b.has("evidence")) said.push(`Teacher's note: ${teach2.replace(/^🍎 /, "")}`);
     if (!callout && b.has("grade")) said.push(classNote.replace(/<[^>]+>/g, ""));
@@ -311,7 +321,7 @@ export const reveal: Screen = {
     return `<section class="${cls}" style="--hold:${hold}ms;--rowh:${rowH}px" aria-label="Reveal, question ${m.questionIdx + 1}">
     ${sessionTab(app, s)}
     <header class="rv-head">
-      <div class="rv-h1"><span class="rv-q">Q${m.questionIdx + 1}/${m.questionCount}</span><span class="rv-subj">${q.subjectEmoji} ${esc(q.subject)}</span></div>
+      <div class="rv-h1"><span class="rv-q">Q${m.questionIdx + 1}/${m.questionCount}</span><span class="rv-subj">${q.subjectEmoji} ${esc(q.subject)}</span>${meStamp}</div>
       <div class="rv-h2"><span class="rv-ticks" role="img" title="${q.tier} · ${q.points} pts" aria-label="${q.tier} question, ${q.points} points">${tierTicks(q.tier)}</span><span class="chip rv-act">${act.n} · ${act.name}</span></div>
     </header>
     <p class="rv-qtext" title="${esc(q.text)}">${esc(q.text)}</p>

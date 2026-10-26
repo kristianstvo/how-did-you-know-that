@@ -1,22 +1,26 @@
 // ACCESSIBILITY: reduced motion is opacity-only with identical beat timing;
-// correctness is readable without colour; tap targets ≥44px; no horizontal
-// overflow at 380px. Colour-vision screenshots are saved for human review.
+// correctness is readable without colour; your own answer is said in words
+// (v0.28); tap targets ≥44px; no horizontal overflow at 380px. Colour-vision
+// screenshots are saved for human review.
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { mkdirSync } from "node:fs";
+import { revealTimeline } from "../shared/choreo.ts";
 
 // Moments derived from the recorded fixtures (never hard-coded times).
+type Row = { playerId: string; pick: number; correct: boolean; pointsGained: number };
 interface TapeState {
   phase: string;
   phaseStartedAt: number;
   match: {
     questionIdx: number;
-    reveal?: { lastBell: string[]; callout?: { kind: string } | null } | null;
+    reveal?: { lastBell: string[]; callout?: { kind: string } | null; rows: Row[]; stakes: "low" | "mid" | "high" } | null;
     voteResult?: { banishedId: string | null; wasCheater: boolean } | null;
   } | null;
 }
 interface Tape {
   t0: number;
+  players: { id: string; name: string }[];
   frames: { t: number; state: TapeState }[];
 }
 
@@ -64,6 +68,7 @@ const INSTANTS = [
   { fixture: "caught", t: phaseAt("caught", "role") + 1_000, label: "role" },
   { fixture: "caught", t: phaseAt("caught", "question", 0) + 4_000, label: "question" },
   { fixture: "caught", t: phaseAt("caught", "reveal", 3) + 3_600, label: "reveal-answer" },
+  { fixture: "caught", t: phaseAt("caught", "reveal", 3) + 4_400, label: "reveal-verdict" }, // v0.28: your stamp has landed
   { fixture: "caught", t: phaseAt("caught", "reveal", 3) + 8_500, label: "reveal-armed" },
   // v0.23: the reveals that ring the last bell and the reveal after the
   // detention (v0.26: found by what happens, since the curve moves them).
@@ -80,11 +85,11 @@ const INSTANTS = [
   { fixture: "caught", t: phaseAt("caught", "matchEnd") + 7_500, label: "matchEnd-host", host: true },
 ];
 
-async function at(page: Page, fixture: string, t: number, host = false) {
+async function at(page: Page, fixture: string, t: number, host = false, as = "innocent") {
   // v0.23: a hash-only goto doesn't reload, and main.ts reads the fixture
   // route once at boot: without this every instant measured the first one.
   await page.goto("about:blank");
-  await page.goto(`/#/fixture/${fixture}?as=innocent&t=${t}&paused=1&ui=0${host ? "&host=1" : ""}`);
+  await page.goto(`/#/fixture/${fixture}?as=${as}&t=${t}&paused=1&ui=0${host ? "&host=1" : ""}`);
   await page.waitForFunction(() => !!window.__fixture);
   await page.waitForTimeout(1200);
 }
@@ -146,6 +151,29 @@ test("correct vs wrong is readable without colour", async ({ page, context }) =>
     await cdp.send("Emulation.setEmulatedVisionDeficiency", { type });
     await page.screenshot({ path: `test-results/colour/reveal-${type}.png` });
   }
+});
+
+test("your own answer is said in words; the stamp is only its picture (v0.28)", async ({ page }) => {
+  // Q4 of the caught tape, from a seat that got it right, one that got it
+  // wrong and one that didn't answer (whichever the tape has).
+  const t = tape("caught");
+  const start = phaseAt("caught", "reveal", 3);
+  const r = t.frames.find((f) => f.state.phase === "reveal" && f.state.match?.questionIdx === 3)!.state.match!.reveal!;
+  const rows = r.rows;
+  // When its answer and verdict land (the timeline every phone runs; the curve moves the stakes).
+  const { beats } = revealTimeline(r.stakes, rows.length, !!r.callout);
+  const seats = [rows.find((r) => r.correct), rows.find((r) => r.pick !== -1 && !r.correct), rows.find((r) => r.pick === -1)].filter((r): r is Row => !!r);
+  const said = () => page.evaluate(() => document.querySelector("#app .screen-reveal [role=status]")?.textContent ?? "");
+  for (const row of seats) {
+    const as = t.players.find((p) => p.id === row.playerId)!.name;
+    const words = row.pick === -1 ? "You: no answer." : row.correct ? `You: right, +${row.pointsGained}.` : "You: wrong.";
+    await at(page, "caught", start + Math.round((beats.answer + beats.verdict) / 2), false, as); // the answer is out, the verdict isn't
+    expect(await said(), as).not.toContain("You:");
+    await at(page, "caught", start + beats.verdict + 600, false, as);
+    expect(await said(), as).toContain(words);
+    expect(await page.locator("#rv-me").getAttribute("aria-hidden"), "the stamp isn't read twice").toBe("true");
+  }
+  expect(seats.length).toBeGreaterThanOrEqual(2);
 });
 
 test("tap targets ≥44px and no horizontal overflow at 380px", async ({ page }) => {

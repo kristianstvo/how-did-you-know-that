@@ -11,18 +11,29 @@ import type { RenderCtx, Screen } from "./types";
 import { face } from "../avatars";
 
 type Outcome = "caught" | "innocent" | "tie";
+type VoteResult = NonNullable<NonNullable<PublicState["match"]>["voteResult"]>;
+
+/** The ballots in the order they flip: seat order. v0.28: main.ts plays each
+ *  flip's sound from the same list (`flip` is ballot 0, `f<i>` ballot i). */
+export function ballotOrder(s: PublicState): string[] {
+  const vr = s.match!.voteResult!;
+  const seat = new Map(s.players.map((p, i) => [p.id, i] as const));
+  return Object.keys(vr.votes).sort((a, b) => (seat.get(a) ?? 1e9) - (seat.get(b) ?? 1e9) || a.localeCompare(b));
+}
+
+/** What the verdict says (v0.28: and which sound follows its stamp). */
+export const outcomeOf = (vr: VoteResult): Outcome => (vr.tie || !vr.banishedId ? "tie" : vr.wasCheater ? "caught" : "innocent");
 
 function plan(ctx: RenderCtx) {
   const { s, elapsed } = ctx;
   const vr = s.match!.voteResult!;
-  const seat = new Map(s.players.map((p, i) => [p.id, i] as const));
-  const voters = Object.keys(vr.votes).sort((a, b) => (seat.get(a) ?? 1e9) - (seat.get(b) ?? 1e9) || a.localeCompare(b));
+  const voters = ballotOrder(s);
   const dropped = vr.newThreshold !== null;
   const tl = voteResultTimeline(voters.length, dropped);
   const flipAt = (i: number) => tl.beats.flip + i * VOTE_FLIP_STAGGER;
   const flipped = voters.length ? Math.max(0, Math.min(voters.length, Math.floor((elapsed - tl.beats.flip) / VOTE_FLIP_STAGGER) + 1)) : 0;
   const b = reached(tl, elapsed);
-  const outcome: Outcome = vr.tie || !vr.banishedId ? "tie" : vr.wasCheater ? "caught" : "innocent";
+  const outcome = outcomeOf(vr);
   return { vr, voters, dropped, tl, flipAt, flipped, b, outcome };
 }
 
@@ -102,8 +113,10 @@ export const voteResult: Screen = {
         const c = landed.get(t)!;
         const times = lands.get(t)!;
         const win = verdict && chipTag(t) !== "";
+        // v0.28: the votes against you are tagged, so you never hunt for your face.
+        const you = t === app.selfId ? `<span class="vr-you" aria-hidden="true">YOU</span><span class="vr-sr"> (you)</span>` : "";
         return `<div class="vr-chip${win ? " win" : verdict ? " lose" : ""}" id="vt-${t}" ${enter(times[0], el)}>
-          ${player(t) ? av(player(t)!, "vr-av") : ""}${nm(player(t))}
+          ${player(t) ? av(player(t)!, "vr-av") : ""}${nm(player(t))}${you}
           <span class="vr-ticks" aria-hidden="true">${ticks(t, c)}</span>
           <span class="vr-count" id="vn-${t}-${c}" ${enter(times[c - 1], el)}><span class="vr-sr">: </span>${c}<span class="vr-sr"> vote${c === 1 ? "" : "s"}</span></span>
           ${verdict ? chipTag(t) : ""}
@@ -122,8 +135,10 @@ export const voteResult: Screen = {
         const mk = verdict ? markFor(t) : "";
         const vp = player(v);
         const tp = player(t);
-        return `<li class="vr-line${isF ? " flipped" : ""}${mk ? ` ${mk}` : ""}" id="vl-${v}">
-          <span class="vr-who">${vp ? av(vp, "vr-av") : ""}${nm(vp)}${v === vr.accuserId ? `<span class="vr-hand" title="Raised the hand">🙋</span>` : ""}</span>
+        // v0.28: your own ballot wears a ring.
+        const me = v === app.selfId;
+        return `<li class="vr-line${isF ? " flipped" : ""}${mk ? ` ${mk}` : ""}${me ? " me" : ""}" id="vl-${v}">
+          <span class="vr-who">${vp ? av(vp, "vr-av") : ""}${nm(vp)}${me ? `<span class="vr-sr"> (you)</span>` : ""}${v === vr.accuserId ? `<span class="vr-hand" title="Raised the hand">🙋</span>` : ""}</span>
           <span class="vr-arrow" aria-hidden="true">→</span><span class="vr-sr">${isF ? "voted for" : "ballot sealed"}</span>
           <span class="vr-card">
             <span class="vr-back" aria-hidden="true">✉ sealed</span>

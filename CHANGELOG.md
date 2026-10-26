@@ -19,6 +19,72 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.28.0 — Hear the verdict · 2026-10-26 12:28
+
+**Why:** the loudest moments of a period played almost in silence. The
+ballot count, the verdict, "The cheater was…" and the unmask had a stamp, a
+slide and one fanfare between them. Nobody heard whether they had got the
+answer right, and on a ten-player board you hunted for your own small face.
+
+**Added**
+- **The count and the verdict, heard.** Each ballot flips with a flick, one
+  step higher for every vote its target already has, so a pile-on sounds
+  like one. The last ballot rolls a drum into the stamp. Then the outcome:
+  ta-da for a caught cheater, a sad trombone for an innocent (a strike-out
+  too), a boing for a tie.
+- **The vote's last five seconds tick**, softer than a question's, and a
+  whistle closes it.
+- **The unmask.** "The cheater was…" gets a drumroll up to the reveal, a
+  graduation's final blow a stamp, and the unmask a cymbal crash.
+- **Your own answer, at the reveal's verdict** (when every board shows every
+  ✓/✗):
+  - your phone dings if you were right, or bonks, softer and shorter, if you
+    weren't; no answer stays quiet;
+  - "YOU ✓ +200", "YOU ✗" or "YOU 🤐" stamps onto the header;
+  - your face in the tray grows a size, on top of its neighbours;
+  - Android buzzes once for right, twice for wrong;
+  - screen readers hear "You: right, +200." with the rest of the reveal.
+
+  The hallway and the big screen get none of it: they have no answer.
+- **The vote result points you out.** Your own ballot wears a pencil-yellow
+  ring, and the votes against you say YOU.
+- Tests: the trial through the unmask heard in order, one flick per ballot,
+  the same on the cheater's phone and the same seat masked; an innocent's
+  detention gets the sad trombone; a vote nobody finishes ticks its last five
+  seconds and whistles; the stamp is in its box from the first frame and lands
+  at the verdict, the same for the cheater, with "✗" and "🤐" for the others,
+  and leaves the subject room at 320px; your ring and the YOU tag; the words
+  for a screen reader.
+
+**Changed**
+- Every new sound is synthesized like the rest, no louder than the old ones,
+  and fires on a shared-clock beat, never a packet; a skipped show stays
+  silent. On the big screen they duck under the host, as before.
+
+**Evidence**
+- The full suite passes: 64 tests (phones, parity, sync, frame time,
+  accessibility) and every engine check.
+- Parity: 0 differences between the cheater's phone and the same seat
+  masked, on all five recorded periods (caught 117, graduated 145, topscore
+  152, detention 159, struckout 162 instants). The header stamp, the ring
+  and the YOU tag are included.
+- Sync: beats land together across phones (median 0 ms, worst 1 ms).
+  Reduced motion: no transform animations (36 at full motion).
+- Frame time at 4× and 6× CPU throttle: p95 at most 8.4 ms (budget
+  18.2 ms), at most 2.7% of frames over budget (limit 5%).
+- Heard on the recorded periods, and checked by the tests:
+  - the caught tape, from the vote to the unmask: gavel, pop, a flick for
+    each of the six ballots, drumroll, stamp, ta-da, fanfare, drumroll,
+    crash (the same on the cheater's phone masked);
+  - the graduated tape's detention: the stamp, then the sad trombone, then
+    the line's slide (no ta-da).
+- The big screen (`npm run host-voice`): 35 of 35 host lines heard, none
+  overlapping, no page errors, every answer call within 7 ms of its answer
+  lighting up.
+- Playwright mutes the browser, so the host's verdict lines over the ta-da
+  and the sad trombone (both ducked under her) still need a listen in a real
+  room.
+
 ## v0.27.0 — Nobody misses the bell · 2026-10-26 11:37
 
 **Why:** the worst first night is a cheater who never learns they're the

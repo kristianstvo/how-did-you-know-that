@@ -187,7 +187,8 @@ such as timer bars, opt out with `data-keep-style`.
 - **low** otherwise
 
 **Layout at 380px:**
-- **Header:** Q n/10 · subject · tier ticks · act chip
+- **Header:** Q n/10 · subject · tier ticks · act chip · your own verdict
+  stamp (v0.28; seated phones)
 - **Question text:** two lines at most
 - **The Board:** 4 option rows, each with an avatar tray
 - **Evidence slot:** fixed height
@@ -205,7 +206,7 @@ grows by one stagger per extra player.
 | slap | 250 | 400 | 600 | Avatars slap into the tray of the option they picked, **fastest first**. Stagger 110/140/190ms. Players who didn't answer drop into a "🤐 no answer" chip. The first three get small ①②③ speed ranks |
 | drumroll | +250 after last slap | same | same | The Board dims and a chalk underline sweeps across. Hold 300/800/1400ms. High stakes adds a slow shimmer |
 | answer | ≈1.35s | ≈2.15s | ≈3.2s | The correct row gets a ✓ stamp and a solid border, and its avatars pop. Wrong rows get ✗ and a thin, faint outline (dashed until v0.22). **The room reacts out loud here** |
-| verdict | +350 | +450 | +600 | ✓ or ✗ badges on tray avatars. Time chips land on Grade Book rows (⚡ marks the fastest correct). "+points" pops |
+| verdict | +350 | +450 | +600 | ✓ or ✗ badges on tray avatars. Time chips land on Grade Book rows (⚡ marks the fastest correct). "+points" pops. Your own answer stamps on the header ("YOU ✓ +200", "YOU ✗", "YOU 🤐"), your face in the tray grows a size, and your phone dings or bonks (v0.28) |
 | evidence | (none) | +550 | +700 | The **EXHIBIT** card stamps into the slot: icon, title, observation, question. Its icon pins onto the subject's row as an exhibit badge |
 | grade | +350 | callout hold 1300 | callout hold 1600 | Bars grow with `scaleX` from the old to the new share, and rows reorder with `translateY`. CLEARED stamps land. **LAST BELL** banner if active |
 | accuse | +750 → ≈2.8s | +750 → ≈5.2s | +750 → ≈6.85s | ACCUSE arms with one glow pulse once the 700ms grade-book motion has finished: nothing that carries information moves after this. **Talk hold** begins |
@@ -240,7 +241,7 @@ note** at the grade beat, for example "Everyone got it.", "4 of 6 got it.", or
 | **Role** | bell 0 (swing), line1 350, line2 1000, role 1700, next screen at 3200 (5200 in a day's first period, so a first-timer can read the note: v0.27) | Both role lines have the same length, weight, colour and emoji: "It's you. Play it cool. 🤫" and "Not you. Watch closely. 🤫". Both appear on the role beat, never when the packet arrives, and neither is announced through a live region (a screen reader could otherwise speak it into the room) |
 | **Question** | The subject flashcard flips in (0–450). The question rises at 150. Options cascade at 250 plus 50 each. The timer bar runs on `scaleX` on the compositor, with a negative delay for the time already elapsed. Urgent from deadline −5000: red bar and the number pulses. On tap: press, then a "LOCKED IN" stamp, then other options fade to 55%. A **"locked in" avatar strip** pops each classmate in as they answer. "✏️ PENCILS DOWN" at the deadline | The cheater's marker is a faint corner dot with no geometry change |
 | **Vote** | Takeover: the accuser's avatar and "🙋 MAYA RAISES A HAND" stamp. The candidate grid cascades in seat order (110ms). The countdown bar runs on `scaleX`. A "handed in" strip pops avatars as votes land (who voted, never for whom). Your pick gets a chalk-circle stamp | Each cell shows exhibits, the candidate's last pick and time (✓ 4.1s), and a **CLEARED** stamp (still votable, but labeled) |
-| **Vote result** | sealed 0: "THE VOTES ARE IN…". Flips start at 700, one every 260ms in seat order ("Maya → Leo"), and tally chips count up. Verdict at last flip +1300: a "DETENTION: LEO" or "CHEATER CAUGHT ✓" stamp. Drop at +1100: the graduation-line marker **slides left** (`translateX`) with "−200 → 1200". Done at +1400 | Votes are revealed with names (Among Us convention) |
+| **Vote result** | sealed 0: "THE VOTES ARE IN…". Flips start at 700, one every 260ms in seat order ("Maya → Leo"), and tally chips count up. Verdict at last flip +1300: a "DETENTION: LEO" or "CHEATER CAUGHT ✓" stamp. Drop at +1100: the graduation-line marker **slides left** (`translateX`) with "−200 → 1200". Done at +1400 | Votes are revealed with names (Among Us convention). Your own ballot wears a ring, and the votes against you say YOU (v0.28) |
 | **Match end: graduated** | Siren takeover at 0 (red overlay pulses ×3). **Final blow** at 300: "Q8 · Leo answered 'Femur' in 4.1s → 1500 🎓". Unmask stamp at 1300. Scores at 2400. Case-file recap at 3500. Session deltas at 4800. Done at 5700 | The answer that did it is shown (carried in the matchEnd state) |
 | **Match end: caught / top of class** | Banner at 0 and confetti on caught. Drumroll "The cheater was…" from 700. Unmask at 2500. Scores at 3600. Case file at 4700. Session at 6000. Done at 6900 | The case-file recap lists the exhibits against the cheater, and those that pointed at innocents (evidence ≠ proof) |
 | **Session end** | Podium columns rise 3rd → 2nd → 1st (`scaleY` from the bottom, 300ms apart). Valedictorian stamp. Confetti. The standings list cascades | The host can download the session log |
@@ -257,6 +258,27 @@ broadcast):
 | Vote result ↔ reveal | **fade** |
 | Lobby or home changes | **slide** |
 | Any change, under reduced motion | **fade** |
+
+**Sound on the beats** (v0.6; v0.28 filled in the climaxes). Every sound is
+synthesized (`client/src/sound.ts`) and fired by `main.ts` on a shared-clock
+beat, never on a packet, so the room hears each moment together. A settled
+jump (a skip, a late join, back from a vote) is silent. The big screen plays
+the same sounds, ducked under its host's voice.
+
+| Screen | Beat → sound |
+|---|---|
+| Role | bell → the school bell |
+| Question | entry → pop · each of the last 5 s → tick · pencils → whistle |
+| Reveal | slap → slaps, fastest first · drumroll → a snare roll for the hold · answer → ta-da · **verdict → your own answer: a ding if right, a softer, shorter bonk if wrong, nothing for no answer, the hallway or the big screen** · evidence → stamp · grade → bell on LAST BELL |
+| Vote | in → gavel · open → pop (the floor is over) · **urgent and each of the last 4 s → a soft tick · closed → whistle** |
+| Vote result | **each ballot → a flick that climbs a step for every vote its target already has · the last ballot → a drumroll into the stamp** · verdict → stamp, then **ta-da (caught), a sad trombone (an innocent, a strike-out too) or a boing (tie)** · drop → slide whistle |
+| Match end | takeover → siren, fanfare or bell · **drumroll → a snare roll up to the unmask · final blow → stamp · unmask → a cymbal crash** |
+| Session end | crown → fanfare |
+
+Your own verdict comes from your own row of the public board, at the beat
+when every phone shows every ✓/✗: it is an outcome, not a role (parity).
+Haptics mirror the same beats on Android (your verdict: one short buzz if
+right, a double if wrong).
 
 ---
 

@@ -51,6 +51,7 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.25.0 | Tomatoes!: pelt the unmasked cheater or applaud them, from every phone | shipped |
 | v0.26.0 | Grading on a curve: the class sets the difficulty; 285 more questions; fresh questions across nights | shipped |
 | v0.27.0 | Nobody misses the bell: the bell closes How to play, a longer first bell, your note any time, Teacher's notes for Act II | shipped |
+| v0.28.0 | Hear the verdict: the count, the verdict and the unmask get their sounds; your own answer dings and is stamped | shipped |
 | later | A big-screen layout that uses the width (side-by-side reveal) | ideas |
 
 Later versions take the best of what playtests and audits turn up.
@@ -159,3 +160,6 @@ Later versions take the best of what playtests and audits turn up.
 | v0.27.0 | ✅ Re-read your note by holding 📝 in the ⭐ sheet, on every seat | The row is the same for everyone and the note shows only while held, so reading it again is no tell, and a glance over a shoulder catches it only for as long as you hold |
 | v0.27.0 | ✅ A missed bell earns a dot and one toast, cleared by a real hold (0.7 s) | A phone in another app at the bell would otherwise play a whole period not knowing its role; a brush of the thumb isn't reading it |
 | v0.27.0 | ✅ Act II's clues taught once each, in period 1, in the footer's own box | The Teacher's notes stopped before exhibits, the 🎓 line and CLEARED ever appeared; the footer's reserved box keeps ACCUSE on an SE's screen |
+| v0.28.0 | ✅ Your own answer dings or bonks, and is stamped on the reveal ("YOU ✓ +200") | It is read from your own row of the public board, on the beat when every phone already shows every ✓/✗: an outcome sound, not a role sound, so v0.6's rule holds. A cheater's phone dings exactly when the board shows them right, and the parity test finds no difference from the same seat masked |
+| v0.28.0 | ✅ The bonk is softer and shorter than the ding | Getting one wrong is part of the game, not a punishment; across a room, the right answers should carry |
+| v0.28.0 | ✅ Ballot flicks climb in pitch as a pile-on grows | The room hears a landslide coming before the stamp; it reads only the ballots every phone flips |
