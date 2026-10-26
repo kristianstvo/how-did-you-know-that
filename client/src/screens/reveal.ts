@@ -16,7 +16,7 @@
 // short window after their beat — a pure function of the shared clock.
 import { REVEAL_TIMING, reached, revealTimeline, slapAt, type RevealBeat, type Timeline } from "../../../shared/choreo";
 import { TIER_PLAN, type PublicPlayer, type RevealRow } from "../../../shared/protocol";
-import { actOf, calloutCopy, CALLOUT_ICON, esc, exhibitBadges, fmtTime, lastBellLine, LETTERS, nameOf, pointerChip, pointSheet, sessionTab, speedOrder, tierTicks } from "./common";
+import { actOf, calloutCopy, CALLOUT_ICON, esc, exhibitBadges, fmtTime, lastBellLine, LETTERS, myPointer, nameOf, pointerChip, pointSheet, sessionTab, speedOrder, tierTicks } from "./common";
 import type { RenderCtx, Screen } from "./types";
 import { face } from "../avatars";
 
@@ -232,17 +232,20 @@ export const reveal: Screen = {
         : "";
 
     // ---- 👉 Point (v0.5): free and public; opens the sheet ----
-    const myPtr = self?.pointingAt ? s.players.find((p) => p.id === self.pointingAt) : undefined;
-    const pointBtn = `<button class="btn secondary rv-point${myPtr ? " on" : ""}" id="rv-point" data-action="pointSheet" aria-haspopup="dialog" aria-expanded="${app.ui.pointOpen}" ${self ? "" : "disabled"}
+    const myPtrId = self ? myPointer(app, s) : null; // v0.23: the 👉 you just sent, before the host echoes it
+    const myPtr = myPtrId ? s.players.find((p) => p.id === myPtrId) : undefined;
+    const pointBtn = `<button class="btn secondary rv-point${myPtr ? " on" : ""}" id="rv-point" data-action="pointSheet" aria-haspopup="dialog" aria-expanded="${app.ui.pointOpen && app.ui.pointMode === "point"}" ${self ? "" : "disabled"}
         aria-label="${myPtr ? `Pointing at ${esc(myPtr.name)}. Change` : "Point at a suspect"}"><span aria-hidden="true">👉${myPtr ? `<span class="rv-point-av">${face(myPtr.avatar)}</span>` : ""}</span></button>`;
 
     // ---- ACCUSE dock ----
     const armed = b.has("accuse");
     const blocked = !self ? "Watching" : self.banished ? "In detention" : self.tokenUsed ? "Accusation used ✋" : !self.votingRights ? "No accusing" : "";
     const canAccuse = armed && !blocked;
-    const confirm = canAccuse && app.ui.accuseConfirm;
+    // v0.23: the confirm names whom you accuse.
+    const target = app.ui.accuseTarget ? byId.get(app.ui.accuseTarget) : undefined;
+    const confirm = canAccuse && app.ui.accuseConfirm && !!target && !target.banished;
     const accState = blocked ? "off" : confirm ? "confirm" : armed ? "go" : "wait";
-    const accLabel = { off: blocked, confirm: "Use your only accusation? Tap again to confirm.", go: "🙋 ACCUSE", wait: "Grading…" }[accState];
+    const accLabel = { off: blocked, confirm: `Accuse ${target?.name ?? ""}? Tap again to confirm.`, go: "🙋 ACCUSE", wait: "Grading…" }[accState];
     const accTitle = self?.banished ? "You're in detention — no accusing" : self?.tokenUsed ? "You already used your accusation" : !armed ? "Opens when the board is graded" : "";
     const lastQ = m.questionIdx + 1 >= m.questionCount;
     const hostBtn = app.isHost
@@ -312,7 +315,7 @@ export const reveal: Screen = {
         <span class="ac-bg go"></span><span class="ac-bg confirm"></span><span class="ac-glow"></span>
         <span class="ac-l wait" aria-hidden="true">Grading…</span>
         <span class="ac-l go" aria-hidden="true">🙋 ACCUSE</span>
-        <span class="ac-l confirm" aria-hidden="true">Sure? Tap again</span>
+        <span class="ac-l confirm" aria-hidden="true">${confirm ? `<span class="ac-who">🙋 Accuse ${face(target!.avatar)}?</span> <small>Tap again</small>` : "Sure? Tap again"}</span>
         <span class="ac-l off" aria-hidden="true">${esc(blocked || "—")}</span>
       </button>
       ${hostBtn}

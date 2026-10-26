@@ -36,11 +36,27 @@
 .vo-stamp-name { font-size: 1.45rem; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vo-stamp-line { font-size: 0.98rem; letter-spacing: 1.5px; }
 
+/* v0.23 the trial: the ACCUSED on the stage, the accuser's face on its badge. */
+.vo-by {
+  position: absolute; left: -8px; bottom: -5px; display: inline-flex; align-items: center; gap: 1px;
+  height: 26px; padding: 2px 4px 2px 2px; border-radius: 13px; background: var(--card2); box-shadow: 0 0 0 2px var(--bg);
+  font-size: 0.8rem; line-height: 1;
+}
+.vo-by > img.face, .vo-by > .face { width: 22px; height: 22px; }
+.trial .vo-stamp-line { font-size: 0.86rem; letter-spacing: 0.5px; }
+
 .vo-sub {
   text-align: center; font-family: var(--hand); color: var(--dim); font-size: 0.92rem; line-height: 1.35;
   min-height: 1.35em; margin: 0 0 6px;
   animation: hd-enter-up var(--t-base) var(--e-enter) var(--d, 0ms) backwards;
 }
+/* v0.23: the floor line and the ballot line in one box (the taller sets its
+   height from frame 0), crossfading when ballots open. */
+.vo-sub.trial { display: grid; }
+.vo-sub-l { grid-area: 1 / 1; min-width: 0; padding: 2px 8px; border: 1.5px solid transparent; border-radius: 10px; transition: opacity var(--t-base) var(--e-standard); }
+.vo-sub-l.floor { color: var(--ink); font-weight: 700; }
+.vo-sub-l.open, .b-open .vo-sub-l.floor { opacity: 0; }
+.b-open .vo-sub-l.open { opacity: 1; }
 
 /* ---- Countdown: scaleX on the compositor + the [data-count] number.
    Pinned to the top while a long class list scrolls under it. ---- */
@@ -55,6 +71,7 @@
   position: absolute; inset: 0; border-radius: inherit; background: var(--accent2); transform-origin: left center;
   animation: vo-drain var(--dur, 20000ms) linear var(--d, 0ms) both;
 }
+.vo-drain.floor { background: var(--ink); opacity: 0.85; } /* v0.23: the accused's floor (chalk), then the ballot clock */
 .vo-drain::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--accent); opacity: 0; transition: opacity var(--t-base) var(--e-standard); }
 .b-urgent .vo-drain::after { opacity: 1; }
 /* A settle must never zero the countdown: keep its real timing. */
@@ -87,7 +104,12 @@
 .vo-cell .vo-av { grid-row: 1 / span 2; width: 34px; height: 34px; font-size: 1.15rem; align-self: center; }
 .vo-nm { grid-column: 2; font-weight: 800; font-size: 0.95rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vo-tags { grid-column: 3; display: inline-flex; gap: 3px; align-items: center; }
-.vo-hand-tag { font-size: 0.85rem; line-height: 1; }
+.vo-hand-tag, .vo-mic-tag { font-size: 0.85rem; line-height: 1; }
+/* v0.23: the accused's card comes first, across both columns. */
+.vo-wrap.accused { grid-column: 1 / -1; }
+.vo-wrap.accused .vo-cell:not(.sel):not(.picked) { border-color: rgba(255, 107, 107, 0.45); }
+/* While they have the floor, the spotlight is on them; the class steps back. */
+.on-floor:not(.has-voted) .vo-wrap:not(.accused) { opacity: 0.6; }
 .vo-you { font-size: 0.64rem; font-weight: 900; letter-spacing: 0.5px; padding: 1px 5px; border-radius: 5px; background: var(--ink); color: var(--bg); font-family: var(--hand); }
 .vo-meta { grid-column: 2 / span 2; display: flex; flex-wrap: wrap; align-items: center; gap: 3px 5px; min-width: 0; overflow: hidden; white-space: nowrap; }
 .vo-pick { flex: none; font-size: 0.82rem; font-weight: 800; font-variant-numeric: tabular-nums; padding: 0 5px; border-radius: 6px; line-height: 1.45; }
@@ -165,7 +187,10 @@
   .vo-stamp { padding: 3px 10px 5px; border-width: 2.5px; max-width: calc(100% - 64px); }
   .vo-stamp-name { font-size: 1.15rem; }
   .vo-stamp-line { font-size: 0.8rem; letter-spacing: 1px; }
+  .trial .vo-stamp-line { font-size: 0.76rem; letter-spacing: 0.3px; } /* ≥12px */
+  .vo-by { left: -10px; bottom: -6px; }
   .vo-sub { font-size: 0.84rem; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vo-sub-l { overflow: hidden; text-overflow: ellipsis; padding-block: 1px; }
   .vo-cap { display: none; }
   .vo-grid { gap: 6px; }
   .vo-cell, .roomy .vo-cell { min-height: 54px; padding-block: 5px; }
@@ -189,3 +214,4 @@
   color: var(--accent); font-weight: 800; white-space: normal;
   border: 1.5px solid var(--accent); border-radius: 10px; padding: 2px 8px; margin-inline: 6px;
 }
+.vo-sub-l.last-strike { color: var(--accent); font-weight: 800; white-space: normal; border-color: var(--accent); margin-inline: 6px; }

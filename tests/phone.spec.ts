@@ -6,6 +6,7 @@
 //   · a player's phone drops out and comes back to the same seat
 //   · a reload mid-match takes the seat back without retyping anything
 //   · a fumbled double-tap on ACCUSE does nothing
+//   · an accusation names someone, who has the floor before ballots open (v0.23)
 //   · a vote tap only PICKS; the ballot goes in with Hand in, or by itself
 //     just before the bell
 //   · every new screen starts at its top
@@ -153,13 +154,17 @@ test("phone: a reload mid-match takes the seat back without retyping", async ({ 
 });
 
 test("phone: a fumbled double-tap on ACCUSE does nothing; a vote tap only picks; Hand in sends; a pick goes in before the bell", async ({ browser }) => {
-  const { host, players, close } = await classroom(browser, ["Bea"], 2);
-  const bea = players[0].page;
-  await answer(host.page);
-  await answer(bea);
+  const { host, players, close } = await classroom(browser, ["Bea", "Cy"], 2);
+  const [bea, cy] = players.map((p) => p.page);
+  for (const p of [host.page, bea, cy]) await answer(p);
   await host.page.waitForSelector("#rv-host", { timeout: 40000 });
   await host.page.click("#rv-host"); // skip the show to the accuse beat
   await host.page.waitForSelector("#rv-accuse.st-go:not([disabled])", { timeout: 15000 });
+  // v0.23: an accusation names someone. The teacher points 👉 at a bot first,
+  // so ACCUSE arms on them.
+  await host.page.click("#rv-point");
+  await host.page.locator(".pt-row", { hasText: "Sleepy Sam" }).click();
+  await expect(host.page.locator("#pt-sheet")).toHaveCount(0);
 
   // Two taps 90ms apart = a fumble, not a decision.
   const box = (await host.page.locator("#rv-accuse").boundingBox())!;
@@ -175,22 +180,87 @@ test("phone: a fumbled double-tap on ACCUSE does nothing; a vote tap only picks;
   await host.page.waitForSelector(".screen-vote", { timeout: 10000 });
   await bea.waitForSelector(".screen-vote", { timeout: 10000 });
 
-  // Host: tap a classmate = a pick, not a ballot.
+  // The accuser's ballot went in with the accusation.
   const hostId = (await host.page.locator(".vo-cell:has(.vo-you)").getAttribute("id"))!.slice(3);
-  const target = host.page.locator(".vo-cell:not(:has(.vo-you))").first();
-  await target.click();
-  await expect(host.page.locator("#vo-go:not([disabled])")).toBeVisible();
-  await host.page.waitForTimeout(400);
-  expect(await host.page.locator(`#vs-${hostId}.in`).count(), "a pick must not hand the ballot in").toBe(0);
-  await host.page.click("#vo-go");
-  await expect(host.page.locator(`#vs-${hostId}.in`)).toBeAttached({ timeout: 5000 });
+  await expect(host.page.locator(`#vs-${hostId}.in`)).toBeAttached();
+  // A bot has a short floor: Bea's ballot opens within 3s, not before.
+  expect(await bea.locator(".vo-cell:not([disabled])").count(), "no picking while the accused has the floor").toBe(0);
+  await expect(bea.locator(".vo-cell:not([disabled])").first()).toBeVisible({ timeout: 3000 });
 
-  // Bea only picks, never presses Hand in: it goes in before the bell.
+  // Bea: tap a classmate = a pick, not a ballot.
   const beaId = (await bea.locator(".vo-cell:has(.vo-you)").getAttribute("id"))!.slice(3);
   await bea.locator(".vo-cell:not(:has(.vo-you))").first().click();
+  await expect(bea.locator("#vo-go:not([disabled])")).toBeVisible();
+  await bea.waitForTimeout(400);
+  expect(await host.page.locator(`#vs-${beaId}.in`).count(), "a pick must not hand the ballot in").toBe(0);
+  await bea.click("#vo-go");
+  await expect(host.page.locator(`#vs-${beaId}.in`)).toBeAttached({ timeout: 5000 });
+
+  // Cy only picks, never presses Hand in: it goes in before the bell.
+  const cyId = (await cy.locator(".vo-cell:has(.vo-you)").getAttribute("id"))!.slice(3);
+  await cy.locator(".vo-cell:not(:has(.vo-you))").first().click();
   await host.page.waitForSelector(".screen-voteResult", { timeout: 30000 });
-  await expect(host.page.locator(`#vl-${beaId}`), "Bea's picked ballot was counted").toBeAttached();
+  await expect(host.page.locator(`#vl-${cyId}`), "Cy's picked ballot was counted").toBeAttached();
   await expect(host.page.locator(`#vl-${hostId}`)).toBeAttached();
+  await close();
+});
+
+test("phone: the accused has the floor, then the class votes (v0.23)", async ({ browser }) => {
+  const { host, players, close } = await classroom(browser, ["Bea", "Cy"], 1);
+  const [bea, cy] = players.map((p) => p.page);
+  for (const p of [host.page, bea, cy]) await answer(p);
+  await host.page.waitForSelector("#rv-host", { timeout: 40000 });
+  await host.page.click("#rv-host"); // skip Q1's show
+  await cy.waitForSelector("#rv-accuse.st-go:not([disabled])", { timeout: 15000 });
+  // Cy points at nobody: ACCUSE asks whom (no "Stop pointing"; Cancel backs out).
+  await cy.click("#rv-accuse");
+  await expect(cy.locator("#pt-sheet h2")).toContainText("Who do you accuse?");
+  await expect(cy.locator("#pt-close")).toHaveText("Cancel");
+  expect(await cy.locator("#pt-stop").count()).toBe(0);
+  const row = cy.locator(".pt-row", { hasText: "Bea" });
+  expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(48);
+  await row.click();
+  await expect(cy.locator("#pt-sheet")).toHaveCount(0);
+  // ACCUSE now names her, with her face: "Accuse Bea? Tap again".
+  const beaFace = await host.page.locator('.gb-row[title="Bea"] img.face').getAttribute("src");
+  await expect(cy.locator("#rv-accuse.st-confirm")).toBeVisible();
+  await expect(cy.locator("#rv-accuse .ac-l.confirm img.face")).toHaveAttribute("src", beaFace!);
+  await expect(cy.locator("#rv-accuse")).toHaveAttribute("aria-label", "Accuse Bea? Tap again to confirm.");
+  // Picking from ACCUSE also points at her, for everyone to see.
+  await expect(host.page.locator(".gb-row", { hasText: "Bea" }).locator(".ptr")).toHaveText("👉1", { timeout: 5000 });
+  await cy.waitForTimeout(600);
+  await cy.click("#rv-accuse");
+
+  for (const p of [host.page, bea, cy]) await p.waitForSelector(".screen-vote", { timeout: 10000 });
+  await expect(cy.locator("#vo-stamp")).toContainText("Bea");
+  await expect(cy.locator("#vo-stamp")).toContainText("NO WAY YOU KNEW THAT");
+  await expect(host.page.locator(".vo-top")).toContainText("🙋 Cy");
+  // Each phone is told what the floor is for: by seat, never by role.
+  await expect(bea.locator("#vo-dock-note")).toContainText("You have the floor");
+  await expect(cy.locator("#vo-dock-note")).toContainText("Your ballot is in");
+  await expect(host.page.locator("#vo-dock-note")).toContainText("Bea has the floor");
+  // The accused's card comes first, across both columns.
+  const first = host.page.locator(".vo-wrap").first();
+  await expect(first).toHaveClass(/accused/);
+  const [cardW, gridW] = await Promise.all([first.boundingBox(), host.page.locator(".vo-grid").boundingBox()]).then((b) => b.map((x) => x!.width));
+  expect(cardW).toBeGreaterThan(gridW * 0.9);
+  // The teacher's ballot stays shut for the 5s floor, then opens.
+  const inBeat = async () => (await beatsOf(host.page)).find((b) => /^vote-.*\|in$/.test(b.key))?.wall ?? 0;
+  await expect.poll(inBeat, { timeout: 2000 }).toBeGreaterThan(0); // the gavel, after the beat lead
+  const voteIn = await inBeat();
+  await host.page.waitForTimeout(Math.max(0, voteIn + 4000 - Date.now()));
+  expect(await host.page.locator(".vo-cell:not([disabled])").count(), "ballots stay shut while Bea has the floor").toBe(0);
+  await expect(host.page.locator(".vo-cell:not([disabled])").first()).toBeVisible({ timeout: Math.max(500, voteIn + 6000 - Date.now()) });
+  // Ballots open with a pop, on every phone.
+  const heard = () => bea.evaluate(() => (window.__hdykt as unknown as { sounds?: string[] }).sounds ?? []);
+  await expect.poll(async () => (await heard()).join(",").split("gavel").at(-1), { timeout: 2000 }).toContain("pop");
+  // Cy's ballot is in (no take-backs): the chalk circle is on Bea.
+  await expect(cy.locator(".vo-wrap.picked .vo-nm")).toHaveText("Bea");
+  await expect(cy.locator("#vo-dock-note")).toContainText("you accused them");
+  await host.page.locator('.vo-cell:has(.vo-nm[title="Bea"])').click();
+  await host.page.click("#vo-go");
+  await host.page.waitForSelector(".screen-voteResult", { timeout: 30000 });
+  await expect(host.page.locator(".vr-top")).toContainText("Cy → Bea");
   await close();
 });
 
@@ -218,6 +288,24 @@ test("phone: pointing at a suspect is free, public and changeable", async ({ bro
   await bea.click("#rv-point");
   await bea.click("#pt-stop");
   await expect(host.page.locator(".gb-row", { hasText: "Hana" }).locator(".ptr")).toHaveCount(0, { timeout: 5000 });
+
+  // v0.23: ACCUSE names the 👉 you just picked, not the one the host last
+  // echoed. Bea points at Hana and the host's state says so; then she
+  // re-points at Sam and taps ACCUSE in one go, before any state can land.
+  await bea.click("#rv-point");
+  await bea.locator(".pt-row", { hasText: "Hana" }).click();
+  await expect(bea.locator("#rv-point")).toHaveAttribute("aria-label", "Pointing at Hana. Change");
+  await bea.waitForTimeout(800); // past the 350ms coalescing and the round trip
+  await bea.evaluate(() => {
+    const tap = (el: Element | null | undefined) => (el as HTMLElement).click();
+    tap(document.querySelector("#rv-point"));
+    tap([...document.querySelectorAll(".pt-row")].find((r) => r.textContent!.includes("Sleepy Sam")));
+    tap(document.querySelector("#rv-accuse"));
+  });
+  await expect(bea.locator("#rv-accuse")).toHaveAttribute("aria-label", "Accuse Sleepy Sam? Tap again to confirm.");
+  await expect(bea.locator("#rv-point")).toHaveAttribute("aria-label", "Pointing at Sleepy Sam. Change");
+  await bea.waitForTimeout(800); // the host's state catches up: still Sam
+  await expect(bea.locator("#rv-accuse")).toHaveAttribute("aria-label", "Accuse Sleepy Sam? Tap again to confirm.");
   await close();
 });
 
@@ -244,16 +332,17 @@ test("phone: your report card counts a finished period once, across a reload", a
   await host.page.waitForSelector("#rv-host", { timeout: 40000 });
   await host.page.click("#rv-host"); // skip to the accuse beat
   await cy.page.waitForSelector("#rv-accuse.st-go:not([disabled])", { timeout: 15000 });
+  // v0.23: Cy names Bea from the sheet; his ballot goes in with it.
   await cy.page.click("#rv-accuse");
+  await cy.page.locator(".pt-row", { hasText: "Bea" }).click();
   await cy.page.waitForTimeout(600); // a deliberate confirm, not a fumble
   await cy.page.click("#rv-accuse");
   const vote = async (p: Page, whom: string) => {
     await p.waitForSelector(".screen-vote", { timeout: 15000 });
-    await p.locator(`.vo-cell:has(.vo-nm[title="${whom}"])`).click();
+    await p.locator(`.vo-cell:has(.vo-nm[title="${whom}"])`).click(); // waits out Bea's floor
     await p.click("#vo-go");
   };
   await vote(host.page, "Bea");
-  await vote(cy.page, "Bea");
   await vote(bea.page, "Cy");
   await host.page.click("#vr-continue", { timeout: 30000 });
   await bea.page.waitForSelector(".screen-matchEnd", { timeout: 30000 });
@@ -627,6 +716,24 @@ test("phone: every new screen starts at its top", async ({ browser }) => {
   await ctx.close();
 });
 
+test("phone: the 👉 sheet keeps every name readable, CLEARED and a crowd included (v0.23)", async ({ browser }) => {
+  // struckout's Q10 reveal, as Leo: Ana is CLEARED, has an exhibit, and five
+  // classmates (Leo too) point at her. The accuse sheet uses the same rows.
+  const { ctx, page } = await phone(browser, `/#/fixture/struckout?as=leo&t=${phaseAt("struckout", "reveal", 9) + 7600}&paused=1&ui=0`);
+  await page.waitForFunction(() => !!window.__fixture);
+  await page.waitForTimeout(800);
+  await page.click("#rv-point");
+  const rows = await page.locator(".pt-row").evaluateAll((els) =>
+    els.map((r) => ({ name: r.querySelector(".pt-nm")!.textContent, w: r.querySelector(".pt-nm")!.getBoundingClientRect().width, cleared: !!r.querySelector(".badge.cleared"), fits: r.scrollWidth <= r.clientWidth })),
+  );
+  expect(rows.some((r) => r.cleared), "the tape still has a CLEARED classmate").toBe(true);
+  for (const r of rows) {
+    expect(r.w, `${r.name}'s name is squeezed`).toBeGreaterThanOrEqual(40);
+    expect(r.fits, `${r.name}'s row spills`).toBe(true);
+  }
+  await ctx.close();
+});
+
 test("phone: no field small enough for iOS to zoom; nothing scrolls sideways at 320px", async ({ browser }) => {
   const urls = [
     "/",
@@ -634,7 +741,8 @@ test("phone: no field small enough for iOS to zoom; nothing scrolls sideways at 
     "/#/fixture/fullclass?as=innocent&t=-1500&paused=1&ui=0&host=1",
     `/#/fixture/fullclass?as=innocent&t=${phaseAt("fullclass", "question", 7) + 3000}&paused=1&ui=0`,
     `/#/fixture/fullclass?as=innocent&t=${phaseAt("fullclass", "reveal", 4) + 9500}&paused=1&ui=0`,
-    `/#/fixture/fullclass?as=innocent&t=${phaseAt("fullclass", "vote") + 3000}&paused=1&ui=0`,
+    `/#/fixture/fullclass?as=innocent&t=${phaseAt("fullclass", "vote") + 3000}&paused=1&ui=0`, // the accused's floor
+    `/#/fixture/fullclass?as=innocent&t=${phaseAt("fullclass", "vote") + 7000}&paused=1&ui=0`, // v0.23: ballots open
     `/#/fixture/fullclass?as=innocent&t=${phaseAt("fullclass", "matchEnd") + 7000}&paused=1&ui=0&host=1`,
   ];
   for (const url of urls) {

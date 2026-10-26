@@ -98,9 +98,10 @@ async function playPeriod(period, { accuseAfterFirstReveal = false, reloadAtQues
     }
     for (const p of players()) await tryClick(p, "button.opt:not([disabled])");
     if (!accused && (await screenOf(pages.cy)) === "screen-reveal" && (await tryClick(pages.cy, "#rv-accuse.st-go:not([disabled])"))) {
+      // v0.23: an accusation names someone: Cy picks from the sheet ACCUSE opens.
+      await tryClick(pages.cy, "#pt-sheet .pt-row");
       await pages.cy.waitForTimeout(600); // a deliberate confirm, not a fumble
-      await tryClick(pages.cy, "#rv-accuse");
-      accused = true;
+      accused = await tryClick(pages.cy, "#rv-accuse.st-confirm");
     }
     for (const p of players()) {
       if ((await screenOf(p)) === "screen-vote" && (await tryClick(p, ".vo-cell:not([disabled]):not(:has(.vo-you))"))) await tryClick(p, "#vo-go:not([disabled])");

@@ -73,7 +73,7 @@ function howCards(st: Settings): string {
     { icon: "✏️", title: "10 questions", text: `Everyone answers the same quiz. Easy → hard: ${t.easy} · ${t.medium} · ${t.hard} points.` },
     { icon: "🤫", title: "One cheater", text: `Sees a faint dot on the right answer. Graduates at 🎓 ${st.threshold} points.` },
     { icon: "👀", title: "Watch the board", text: "Who's right <i>and</i> fast on the hard ones? Point 👉 at a suspect: free and public." },
-    { icon: "🙋", title: "Accuse", text: `One accusation each forces a vote. Catch the cheater: the class wins. ${strikeRule}` },
+    { icon: "🙋", title: "Accuse", text: `One accusation each: name a suspect, they get the floor, then the class votes. Catch the cheater: the class wins. ${strikeRule}` },
   ];
   return cards
     .map((c, i) => `<div class="how-card" style="--i:${i}"><span class="how-ic" aria-hidden="true">${c.icon}</span><b>${c.title}</b><span>${c.text}</span></div>`)
@@ -84,7 +84,7 @@ const FINE_PRINT = [
   "A wrong detention also drops the line by <b>{drop}</b>, and that classmate loses their vote (but keeps answering). Ties send nobody.",
   "Anyone over the line with <b>no siren</b> is proven innocent: <b>CLEARED</b>.",
   "Nobody wins by Q10? <b>Top of the class</b> takes the period.",
-  "<b>Gold stars ⭐</b> add up over the day: +2 for voting the cheater into detention (+1 for whoever accused), −1 for voting an innocent in, +3 for a cheater who graduates (+1 for one who just lasts to Q10), +2 for top of the class.",
+  "<b>Gold stars ⭐</b> add up over the day: +2 for voting the cheater into detention (+1 for the accuser, if they named the cheater), −1 for voting an innocent in, +3 for a cheater who graduates (+1 for one who just lasts to Q10), +2 for top of the class.",
 ];
 
 export const lobby: Screen = {

@@ -6,7 +6,7 @@
 // the identical show.
 import { reached, VOTE_FLIP_STAGGER, voteResultTimeline } from "../../../shared/choreo";
 import type { PublicPlayer, PublicState } from "../../../shared/protocol";
-import { av, esc, sessionTab } from "./common";
+import { av, esc, sessionTab, voteTopLine } from "./common";
 import type { RenderCtx, Screen } from "./types";
 import { face } from "../avatars";
 
@@ -57,6 +57,7 @@ export const voteResult: Screen = {
     const done = beats.includes("done");
     const player = (id: string) => s.players.find((p) => p.id === id);
     const accuser = player(vr.accuserId);
+    const accused = vr.accusedId ? player(vr.accusedId) : undefined; // v0.23: on record
     const banished = vr.banishedId ? player(vr.banishedId) : undefined;
     const vAt = tl.beats.verdict;
 
@@ -212,7 +213,7 @@ export const voteResult: Screen = {
       .join(" ");
     return `<section class="${cls}">
     ${sessionTab(app, s)}
-    <div class="vr-top">Q${m.questionIdx + 1}/${m.questionCount} · 🗳️ CLASS VOTE${accuser ? ` · 🙋 ${esc(accuser.name)}` : ""}</div>
+    <div class="vr-top">${voteTopLine(`Q${m.questionIdx + 1}/${m.questionCount}`, accuser ? [accuser.name, ...(accused ? [accused.name] : [])] : [])}</div>
     <div class="vr-head">
       <div class="vr-sealed" id="vr-sealed" ${enter(0, el)}>
         <div class="vr-sealed-t">The votes are in…</div>

@@ -31,10 +31,13 @@ const INSTANTS = [
   { fixture: "caught", t: phaseAt("caught", "question", 0) + 4_000, label: "question" },
   { fixture: "caught", t: phaseAt("caught", "reveal", 3) + 3_600, label: "reveal-answer" },
   { fixture: "caught", t: phaseAt("caught", "reveal", 3) + 8_500, label: "reveal-armed" },
-  { fixture: "graduated", t: phaseAt("graduated", "reveal", 6) + 8_000, label: "reveal-lastbell" },
-  { fixture: "detention", t: phaseAt("detention", "reveal", 7) + 8_000, label: "reveal-lastbell-2" },
-  { fixture: "graduated", t: phaseAt("graduated", "matchEnd") - 18_000, label: "reveal-after-3-detentions" },
+  // v0.23: re-aimed at the reveals that ring the last bell (Q9 in both tapes)
+  // and the reveal after the detention; the old moments had drifted onto votes.
+  { fixture: "graduated", t: phaseAt("graduated", "reveal", 8) + 8_000, label: "reveal-lastbell" },
+  { fixture: "detention", t: phaseAt("detention", "reveal", 8) + 8_000, label: "reveal-lastbell-2" },
+  { fixture: "graduated", t: phaseAt("graduated", "question", 9) - 1_500, label: "reveal-after-detention" },
   { fixture: "caught", t: phaseAt("caught", "vote") + 2_500, label: "vote" },
+  { fixture: "caught", t: phaseAt("caught", "vote") + 7_000, label: "vote-open" }, // v0.23: after the floor
   { fixture: "graduated", t: phaseAt("graduated", "voteResult") + 6_000, label: "voteResult-drop" },
   { fixture: "graduated", t: phaseAt("graduated", "matchEnd") + 6_500, label: "matchEnd-graduated" },
   { fixture: "caught", t: phaseAt("caught", "matchEnd") + 7_500, label: "matchEnd-caught" },
@@ -43,6 +46,9 @@ const INSTANTS = [
 ];
 
 async function at(page: Page, fixture: string, t: number, host = false) {
+  // v0.23: a hash-only goto doesn't reload, and main.ts reads the fixture
+  // route once at boot: without this every instant measured the first one.
+  await page.goto("about:blank");
   await page.goto(`/#/fixture/${fixture}?as=innocent&t=${t}&paused=1&ui=0${host ? "&host=1" : ""}`);
   await page.waitForFunction(() => !!window.__fixture);
   await page.waitForTimeout(1200);
@@ -111,6 +117,9 @@ test("tap targets ≥44px and no horizontal overflow at 380px", async ({ page })
   const problems: string[] = [];
   for (const it of INSTANTS) {
     await at(page, it.fixture, it.t, "host" in it && it.host);
+    // The instant must be on screen (a stale page would measure nothing new).
+    const phase = it.label.split("-")[0];
+    if (!(await page.locator(`#app .screen-${phase}`).count())) problems.push(`${it.label}: not on .screen-${phase}`);
     const found = await page.evaluate(() => {
       const out: string[] = [];
       if (document.documentElement.scrollWidth > document.documentElement.clientWidth + 1) out.push(`overflowX ${document.documentElement.scrollWidth}px`);

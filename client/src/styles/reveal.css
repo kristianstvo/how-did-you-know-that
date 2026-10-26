@@ -378,6 +378,12 @@
 .screen-reveal .st-off .ac-l.off { opacity: 1; }
 .screen-reveal .ac-l.wait { font-weight: 700; font-size: 0.98rem; }
 .screen-reveal .ac-l.confirm { font-size: 0.98rem; }
+/* v0.23: the confirm names whom you accuse (their face), then "Tap again":
+   two short lines, so it fits the teacher's narrower ACCUSE too. */
+.screen-reveal .ac-l.confirm:has(.ac-who) { display: flex; flex-direction: column; align-items: center; line-height: 1.12; }
+.screen-reveal .ac-who { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; }
+.screen-reveal .ac-who .face { width: 1.45em; height: 1.45em; box-shadow: 0 0 0 2px #241300; }
+.screen-reveal .ac-l.confirm small { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.6px; text-transform: uppercase; }
 .screen-reveal .btn.accuse.st-confirm { animation: hd-shake var(--t-stamp) var(--e-standard); }
 .screen-reveal .rv-host { height: 56px; min-height: 56px; padding: 4px 8px; font-size: 0.88rem; line-height: 1.12; }
 

@@ -7,6 +7,13 @@ import type { PublicState, SecretState } from "../../../shared/protocol";
 
 export interface UiFlags {
   accuseConfirm: boolean;
+  /** v0.23: whom the armed ACCUSE names (the confirm tap sends it). */
+  accuseTarget: string | null;
+  /** v0.23: the 👉 sheet also picks whom to accuse ("accuse"). */
+  pointMode: "point" | "accuse";
+  /** v0.23: the 👉 this phone sent that the host's state doesn't show yet (a
+   *  round trip, and pointer broadcasts are coalesced). null = none pending. */
+  sentPointer: { id: string | null } | null;
   myPick: number | null;
   /** Classmate tapped on the vote screen but not handed in yet. */
   voteSel: string | null;

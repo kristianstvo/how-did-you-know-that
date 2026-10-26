@@ -419,6 +419,12 @@ async function playLoop(ctx, page, isHost) {
             await sleep(1500);
             await act(ctx, `accuse (tap 1) on ${s.key}`, () => page.locator("[data-action=accuse]").click({ timeout: 5000 }));
             await sleep(300);
+            // v0.23: pointing at nobody, ACCUSE asks whom first.
+            if (await page.locator("#pt-sheet").count()) {
+              await shot(ctx, page, "reveal-accuse-who");
+              await act(ctx, `accuse: pick a suspect on ${s.key}`, () => page.locator("#pt-sheet .pt-row").first().click({ timeout: 5000 }));
+              await sleep(600);
+            }
             await shot(ctx, page, "reveal-accuse-confirm");
             await act(ctx, `accuse (tap 2, confirm) on ${s.key}`, () => page.locator("[data-action=accuse]").click({ timeout: 5000 }));
             break;

@@ -79,6 +79,15 @@ export function slapAt(stakes: Stakes, i: number): number {
   return t.slapAt + i * t.slapStagger;
 }
 
+/** v0.23: the accused has the floor before ballots open, so a defence never
+ *  has to race the clock. A bot has nothing to say: it gets a short floor
+ *  (isBot is public, so every phone runs the same timeline). */
+export const VOTE_FLOOR_MS = 5000;
+export const VOTE_FLOOR_BOT_MS = 2000;
+/** A ballot this early is still taken: a tap made the instant ballots open
+ *  may reach the host a little before its clock says so. */
+export const VOTE_EARLY_MS = 300;
+
 export type VoteResultBeat = "sealed" | "flip" | "verdict" | "drop" | "done";
 export const VOTE_FLIP_STAGGER = 260;
 

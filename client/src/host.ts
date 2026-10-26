@@ -104,13 +104,15 @@ export function hostCue(s: PublicState | null, screenKey: string, added: string[
       if (has("accuse") && nudges < 2 && hands === 0 && m.questionIdx <= 2 && say("accuse_open", { mode: "aside" })) nudges++;
       break;
     }
-    case "vote":
-      if (has("in")) {
-        hands++;
-        if (fresh) say(take("vote_a", "vote_b"));
-      }
+    case "vote": {
+      // v0.23: "…Everybody, vote!" waits for the ballots to open, after the
+      // accused has had the floor. A v0.22 vote (no floor) calls it at once.
+      const opensAt = m?.vote?.opensAt;
+      if (has("in")) hands++;
+      if (opensAt === undefined ? has("in") && fresh : has("open") && serverNow() - opensAt < FRESH_MS) say(take("vote_a", "vote_b"));
       if (has("urgent") && s.players.some((p) => p.connected && p.votingRights && !p.banished && !p.votedCurrent)) say("vote_urgent", { mode: "aside" });
       break;
+    }
     case "voteResult": {
       const vr = m?.voteResult;
       if (!m || !vr || !has("verdict")) break;

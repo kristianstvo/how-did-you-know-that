@@ -19,6 +19,57 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.23.0 — No way you knew that! · 2026-10-26 10:09
+
+**Why:** an accusation named nobody. The vote stage showed who raised a
+hand and opened a 20-second ballot over every name, so nobody was ever put
+on the spot, and a defence had to race the clock. Now you accuse someone
+out loud, they get the floor, and then the class votes. The accuser is on
+record, so a cheater who frames an innocent leaves fingerprints.
+
+**Added**
+- **ACCUSE names a suspect.**
+  - If your 👉 points at a classmate, the first tap arms on them:
+    "🙋 Accuse <face>? Tap again".
+  - If you point at nobody, the 👉 sheet opens as "🙋 Who do you accuse?"
+    (you and anyone in detention aren't listed; CLEARED players are, with
+    their badge). Picking a row points at them and arms the button.
+  - The second tap, at least 450 ms later, accuses. An unconfirmed arm
+    resets after 4 seconds.
+- **The trial.** The vote opens on the accused: their face, the accuser's
+  face on a 🙋 badge, and the stamp "KIKO / NO WAY YOU KNEW THAT!".
+  - **The floor:** for 5 seconds (2 for a bot) the accused has the floor.
+    Ballots are closed, a bar drains, and every phone says whose turn it is:
+    "🎤 You have the floor. Make your case!" for the accused, "🙋 Your
+    ballot is in: Kiko." for the accuser, "ballots open in N" for everyone
+    else.
+  - **Ballots open** with a pop on every phone and the big screen, and the
+    host's "Everybody, vote!" now lands on that moment.
+  - The accused's card comes first and spans the row, with a 🎤 tag.
+- **The accuser's ballot goes on the accused** the moment they accuse (no
+  take-backs). The class can still vote for anyone.
+- The vote result's top line says who accused whom: "🙋 Cy → Bea".
+- Tests: an engine check of the new rules (who can be accused, the floor,
+  ballots during the floor, a host reload mid-floor, stars); a phone test of
+  the trial on three phones; the double-tap test now picks a suspect first.
+
+**Changed**
+- The accuser's +1 gold star is paid only when the person they named is
+  caught as the cheater. The +2 for voting for the cheater is unchanged.
+- How to play and the fine print explain naming a suspect.
+- Saves and recordings from v0.22 still show the old raised-hand vote.
+
+**Fixed (found in review)**
+- ACCUSE could arm on the suspect you had just stopped pointing at, before
+  the host's state caught up. It now uses the 👉 this phone last sent.
+- A CLEARED badge in the 👉 sheet could squeeze a name to nothing.
+- The accessibility test's fixture moments never reloaded the page, so most
+  of them weren't really checked. They are now (and pass).
+
+**Evidence:** `sim/tune-line.ts 2 2100` — every human cell unchanged (6
+players hiding: 34–56%); bot rooms 4/6/8 players 27/37/45% (was 27/37/46%).
+`sim/determinism.ts`: deterministic.
+
 ## v0.22.0 — Clean slate · 2026-10-20 21:42
 
 **Why:** you said the dashed borders everywhere were distracting. The chalk

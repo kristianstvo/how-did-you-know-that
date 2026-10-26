@@ -32,7 +32,7 @@ export type MatchEvent =
       callout?: { kind: string; subjectIds: string[] } | null;
       cleared?: string[];
     })
-  | (Base & { type: "accuse"; q: number; accuserId: string })
+  | (Base & { type: "accuse"; q: number; accuserId: string; accusedId?: string }) // v0.23: whom they named
   | (Base & {
       type: "voteResult";
       q: number;
@@ -139,7 +139,7 @@ export function createEventLogger(emit: (e: MatchEvent) => void): (s: PublicStat
       const key = `${match}:${m.questionIdx}:${m.vote.accuserId}`;
       if (key !== voteKey) {
         voteKey = key;
-        emit({ type: "accuse", t, match, q: m.questionIdx, accuserId: m.vote.accuserId });
+        emit({ type: "accuse", t, match, q: m.questionIdx, accuserId: m.vote.accuserId, ...(m.vote.accusedId ? { accusedId: m.vote.accusedId } : {}) });
       }
     }
     if (m && s.phase === "voteResult" && m.voteResult) {

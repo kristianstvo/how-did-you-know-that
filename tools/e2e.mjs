@@ -11,6 +11,7 @@ let code = run(["tsx", "sim/protocol-check.ts"]);
 code ||= run(["tsx", "sim/relay-check.ts"]);
 code ||= run(["tsx", "sim/hallway-check.ts"]);
 code ||= run(["tsx", "sim/yearbook-check.ts"]);
+code ||= run(["tsx", "sim/accuse-check.ts"]);
 code ||= run(["tsx", "sim/pack-check.ts"]);
 code ||= run(["tsx", "sim/practice-check.ts"]);
 code ||= run(["tsx", "sim/resume-check.ts"]);

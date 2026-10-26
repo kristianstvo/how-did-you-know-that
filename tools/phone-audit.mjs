@@ -68,6 +68,9 @@ const MOMENTS = [
   { id: "reveal-armed-10", url: fx("fullclass", "innocent", phaseAt("fullclass", "reveal", 4) + 9500), primary: ["#rv-accuse", ".board"] },
   { id: "vote-10", url: fx("fullclass", "innocent", phaseAt("fullclass", "vote") + 3000), primary: [".vo-cell", ".vo-num"] },
   { id: "vote-6", url: fx("caught", "innocent", phaseAt("caught", "vote") + 3000), primary: [".vo-cell", ".vo-num"] },
+  // v0.23: the floor is over, ballots open (the accused's card spans the grid).
+  { id: "vote-open-10", url: fx("fullclass", "innocent", phaseAt("fullclass", "vote") + 7000), primary: [".vo-cell", "#vo-stamp", "#vo-go"] },
+  { id: "vote-open-6", url: fx("caught", "innocent", phaseAt("caught", "vote") + 7000), primary: [".vo-cell", "#vo-stamp", "#vo-go"] },
   { id: "voteResult-10-host", url: fx("fullclass", "innocent", phaseAt("fullclass", "voteResult") + 7000, "&host=1"), primary: ['[data-action="advance"]'] },
   { id: "matchEnd-10-host", url: fx("fullclass", "innocent", phaseAt("fullclass", "matchEnd") + 7000, "&host=1"), primary: ['[data-action="advance"]'] },
   { id: "matchEnd-6-guest", url: fx("caught", "innocent", phaseAt("caught", "matchEnd") + 7000), primary: [] },
@@ -226,6 +229,9 @@ for (const phone of PHONES) {
   await page.waitForSelector("#rv-host", { timeout: 40000 });
   await page.click("#rv-host"); // Skip the show to the accuse beat
   await page.waitForSelector("#rv-accuse.st-go:not([disabled])", { timeout: 15000 });
+  // v0.23: ACCUSE names whoever 👉 points at: point at a bot first.
+  await page.click("#rv-point");
+  await page.locator("#pt-sheet .pt-row").first().click();
   const box = await page.locator("#rv-accuse").boundingBox();
   const x = box.x + box.width / 2;
   const y = box.y + box.height / 2;

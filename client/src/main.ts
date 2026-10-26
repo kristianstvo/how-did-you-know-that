@@ -36,6 +36,7 @@ import {
 import { createRenderer, reducedMotion, type Router, type TransitionKind } from "./render";
 import { startHostVoice, toggleHostVoice } from "./voice";
 import { closeTutorial, mountTutorialRender, playTutorial, tutorialPlaying } from "./tutorial/player";
+import { myPointer } from "./screens/common";
 import { home } from "./screens/home";
 import { lobby } from "./screens/lobby";
 import { matchEnd } from "./screens/matchEnd";
@@ -61,15 +62,22 @@ const app: App = {
   error: null,
   closedReason: null,
   home: { name: "", code: "", avatar: "", busy: false, step: 1 },
-  ui: { accuseConfirm: false, myPick: null, voteSel: null, myVote: null, boardOpen: false, qrOpen: false, pointOpen: false, toast: null },
+  ui: { accuseConfirm: false, accuseTarget: null, pointMode: "point", sentPointer: null, myPick: null, voteSel: null, myVote: null, boardOpen: false, qrOpen: false, pointOpen: false, toast: null },
   fixture: false,
 };
 
 let session: HostSession | PlayerSession | null = null;
-/** When ACCUSE turned into "Burn your only token?" — a confirm tap that comes
+/** When ACCUSE turned into "Accuse Kiko? Tap again" — a confirm tap that comes
  *  sooner than ACCUSE_ARM_MS after it is the second half of a double-tap. */
 let accuseArmedAt = 0;
 const ACCUSE_ARM_MS = 450;
+/** An armed ACCUSE that isn't confirmed goes back to plain ACCUSE. */
+const ACCUSE_DISARM_MS = 4000;
+let disarmTimer = 0;
+/** v0.23: when ACCUSE opened the 👉 sheet to pick a suspect. Its Cancel sits
+ *  where ACCUSE was: a tap on it sooner than ACCUSE_ARM_MS after is the same
+ *  fumbled double-tap, not a change of mind. */
+let pointOpenedAt = 0;
 /** A ballot that was picked but never handed in goes in this long before the
  *  vote closes (the host counts at the deadline). */
 const AUTO_HAND_IN_MS = 1200;
@@ -168,6 +176,7 @@ function beatSounds(screenKey: string, added: string[], entered: boolean): void 
     if (added.includes("grade") && m.reveal.lastBell.length) sfx.bell();
   }
   if (phase === "vote" && added.includes("in")) sfx.gavel();
+  if (phase === "vote" && added.includes("open")) sfx.pop(); // v0.23: the floor is over, ballots open
   if (phase === "voteResult") {
     if (added.includes("verdict")) sfx.stamp();
     if (added.includes("drop")) sfx.slide();
@@ -203,6 +212,12 @@ function onState(state: PublicState): void {
   }
   app.state = state;
   lastPhase = state.phase;
+  // v0.23: the 👉 this phone sent is pending until the host's state shows it.
+  // An ACCUSE armed on your 👉 never outlives it: moved elsewhere (another tab
+  // of your seat), it asks again.
+  const ptr = state.players.find((p) => p.id === app.selfId)?.pointingAt ?? null;
+  if (app.ui.sentPointer && ptr === app.ui.sentPointer.id) app.ui.sentPointer = null;
+  else if (!app.ui.sentPointer && app.ui.accuseConfirm && ptr && ptr !== app.ui.accuseTarget) disarmAccuse();
   if (state.phase === "role") lastQuestionKey = "";
   banner();
   // Your report card (v0.12): count each finished period once, on this phone.
@@ -221,9 +236,11 @@ function onState(state: PublicState): void {
     }
   }
   if (state.phase !== prevPhase) {
-    app.ui.accuseConfirm = false;
+    disarmAccuse();
     app.ui.qrOpen = false;
     app.ui.pointOpen = false;
+    app.ui.pointMode = "point";
+    app.ui.sentPointer = null; // a 👉 the host refused (say, they went to detention) stops waiting
     if (state.phase === "vote") {
       app.ui.myVote = null;
       app.ui.voteSel = null;
@@ -687,22 +704,26 @@ root.addEventListener("click", (ev) => {
       break;
     }
     case "accuse":
-      // Confirmation tap required: "Burn your only accusation?" (spec 07). A
-      // confirm tap within ACCUSE_ARM_MS is a fumbled double-tap: ignored.
+      // Confirmation tap required (spec 07). v0.23: an accusation names
+      // someone. The first tap arms on whoever your 👉 points at, or opens the
+      // sheet to pick them; "Accuse Kiko? Tap again" sends it. A confirm tap
+      // within ACCUSE_ARM_MS is a fumbled double-tap: ignored.
       if (!app.ui.accuseConfirm) {
-        app.ui.accuseConfirm = true;
-        accuseArmedAt = performance.now();
-        render();
-        setTimeout(() => {
-          if (app.ui.accuseConfirm) {
-            app.ui.accuseConfirm = false;
-            render();
-          }
-        }, 3500);
-      } else if (performance.now() - accuseArmedAt >= ACCUSE_ARM_MS) {
-        app.ui.accuseConfirm = false;
+        // The 👉 you just sent, not the last broadcast: never the suspect you left.
+        const target = accusable(myPointer(app, app.state));
+        if (target) armAccuse(target);
+        else {
+          app.ui.pointMode = "accuse";
+          app.ui.pointOpen = true;
+          pointOpenedAt = performance.now();
+          render();
+          focusSoon("#pt-sheet .pt-row");
+        }
+      } else if (performance.now() - accuseArmedAt >= ACCUSE_ARM_MS && app.ui.accuseTarget) {
+        const targetPlayerId = app.ui.accuseTarget;
+        disarmAccuse();
         buzz(40);
-        act({ kind: "burnToken" });
+        act({ kind: "burnToken", targetPlayerId });
       }
       break;
     case "vote": {
@@ -716,20 +737,36 @@ root.addEventListener("click", (ev) => {
     case "handIn":
       handIn();
       break;
-    case "pointSheet":
+    case "pointSheet": {
+      const accusing = app.ui.pointMode === "accuse";
+      if (accusing && app.ui.pointOpen && performance.now() - pointOpenedAt < ACCUSE_ARM_MS) break; // the fumble that opened it
       app.ui.pointOpen = !app.ui.pointOpen;
+      if (!app.ui.pointOpen) app.ui.pointMode = "point";
       render();
-      focusSoon(app.ui.pointOpen ? "#pt-sheet .pt-row" : "#rv-point");
+      focusSoon(app.ui.pointOpen ? "#pt-sheet .pt-row" : accusing ? "#rv-accuse" : "#rv-point");
       break;
-    case "point":
-      // Free and public; "" = stop pointing.
+    }
+    case "point": {
+      // Free and public; "" = stop pointing. v0.23: picked from ACCUSE, the
+      // row also arms ACCUSE on them (the confirm tap is still to come).
+      const accusing = app.ui.pointMode === "accuse";
+      const id = btn.dataset.id || null;
       app.ui.pointOpen = false;
+      app.ui.pointMode = "point";
       buzz(10);
       sfx.click();
-      act({ kind: "point", targetPlayerId: btn.dataset.id || null });
+      if (session) app.ui.sentPointer = { id }; // before act(): the host's own phone hears back at once
+      act({ kind: "point", targetPlayerId: id });
+      if (accusing && id) {
+        armAccuse(id);
+        focusSoon("#rv-accuse");
+        break;
+      }
+      if (app.ui.accuseConfirm && id !== app.ui.accuseTarget) disarmAccuse(); // a new suspect: ask again
       render();
       focusSoon("#rv-point");
       break;
+    }
     case "toggleSound":
       setSound(!soundOn());
       render();
@@ -802,6 +839,33 @@ function focusSoon(selector: string): void {
   requestAnimationFrame(() => document.querySelector<HTMLElement>(selector)?.focus({ preventScroll: true }));
 }
 
+/** v0.23: whom ACCUSE may name: a classmate in the match, not you, not in
+ *  detention (the host refuses anyone else and keeps the token). */
+function accusable(id: string | null): string | null {
+  const p = id ? app.state?.players.find((x) => x.id === id) : undefined;
+  return p && p.id !== app.selfId && !p.banished ? p.id : null;
+}
+
+/** ACCUSE asks "Accuse Kiko? Tap again", and forgets after a few seconds. */
+function armAccuse(id: string): void {
+  app.ui.accuseConfirm = true;
+  app.ui.accuseTarget = id;
+  accuseArmedAt = performance.now();
+  render();
+  clearTimeout(disarmTimer);
+  disarmTimer = window.setTimeout(() => {
+    if (!app.ui.accuseConfirm) return;
+    disarmAccuse();
+    render();
+  }, ACCUSE_DISARM_MS);
+}
+
+function disarmAccuse(): void {
+  app.ui.accuseConfirm = false;
+  app.ui.accuseTarget = null;
+  clearTimeout(disarmTimer);
+}
+
 function handIn(): void {
   const id = app.ui.voteSel;
   if (!id || app.ui.myVote || app.state?.phase !== "vote") return;
@@ -833,9 +897,11 @@ function tick(): void {
 // Keyboard: Escape closes the gold-stars sheet.
 document.addEventListener("keydown", (ev) => {
   if (ev.key === "Escape" && app.ui.pointOpen) {
+    const accusing = app.ui.pointMode === "accuse";
     app.ui.pointOpen = false;
+    app.ui.pointMode = "point";
     render();
-    document.getElementById("rv-point")?.focus();
+    document.getElementById(accusing ? "rv-accuse" : "rv-point")?.focus();
   }
   if (ev.key === "Escape" && app.ui.qrOpen) {
     app.ui.qrOpen = false;

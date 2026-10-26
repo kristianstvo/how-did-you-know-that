@@ -98,31 +98,57 @@ export function pointerChip(s: PublicState, id: string): string {
   return `<span class="ptr" role="img" aria-label="${by.length} pointing: ${names}" title="Pointed at by ${names}">👉${by.length}</span>`;
 }
 
+/** v0.23: the vote and result top line, "Q8/10 · 🗳️ CLASS VOTE · 🙋 Maya →
+ *  Kiko". The names outlast the label: short of room, "🗳️ CLASS VOTE ·"
+ *  gives way first, then each name ellipsizes (style.css .top-*). */
+export function voteTopLine(q: string, names: string[]): string {
+  if (!names.length) return `${q} · 🗳️ CLASS VOTE`;
+  const who = names.map((n) => `<span class="top-nm">${esc(n)}</span>`).join(`<span class="top-fix"> → </span>`);
+  return `<span class="top-fix">${q} · </span><span class="top-cut">🗳️ CLASS VOTE · </span><span class="top-fix">🙋 </span>${who}`;
+}
+
+/** v0.23: whom this phone points at: the 👉 it just sent until the host's
+ *  state shows it, so the 👉 button, the sheet and ACCUSE all name the
+ *  suspect you picked, not the one you just left. */
+export function myPointer(app: App, s: PublicState | null): string | null {
+  if (app.ui.sentPointer) return app.ui.sentPointer.id;
+  return s?.players.find((p) => p.id === app.selfId)?.pointingAt ?? null;
+}
+
+/** v0.23: faces per row before "+N", so a crowd never squeezes out the name
+ *  (the aria-label has the count). */
+const PT_FACES = 3;
+
 /** The sheet behind the 👉 button: one 52px row per classmate (thumb-sized),
- *  with who already points at them. A tap points and closes. */
+ *  with who already points at them. A tap points and closes. v0.23: opened by
+ *  ACCUSE (pointMode "accuse"), the same rows pick whom to accuse. */
 export function pointSheet(app: App, s: PublicState): string {
   if (!app.ui.pointOpen) return "";
-  const mine = s.players.find((p) => p.id === app.selfId)?.pointingAt ?? null;
+  const accusing = app.ui.pointMode === "accuse";
+  const mine = myPointer(app, s);
+  const cleared = new Set(s.match?.cleared ?? []);
   const rows = s.players
     .filter((p) => p.id !== app.selfId && !p.banished)
     .map((p) => {
       const by = pointersAt(s, p.id);
       const on = mine === p.id;
-      return `<button class="pt-row${on ? " on" : ""}" id="pt-${p.id}" data-action="point" data-id="${p.id}" aria-pressed="${on}" aria-label="Point at ${esc(p.name)}${by.length ? `, ${by.length} already pointing` : ""}">
-        ${av(p)}<span class="pt-nm">${esc(p.name)}</span>${exhibitBadges(s, p.id)}
-        <span class="pt-by" aria-hidden="true">${by.map((x) => `<span class="pt-by-av" title="${esc(x.name)}">${face(x.avatar)}</span>`).join("")}</span>
+      const label = `${accusing ? "Accuse" : "Point at"} ${esc(p.name)}${cleared.has(p.id) ? " (cleared)" : ""}${by.length ? `, ${by.length} already pointing` : ""}`;
+      const more = by.length > PT_FACES ? `<span class="pt-by-more">+${by.length - PT_FACES}</span>` : "";
+      return `<button class="pt-row${on ? " on" : ""}" id="pt-${p.id}" data-action="point" data-id="${p.id}" aria-pressed="${on}" aria-label="${label}">
+        ${av(p)}<span class="pt-nm">${esc(p.name)}</span>${cleared.has(p.id) ? `<span class="badge cleared">CLEARED</span>` : ""}${exhibitBadges(s, p.id)}
+        <span class="pt-by" aria-hidden="true">${by.slice(0, PT_FACES).map((x) => `<span class="pt-by-av" title="${esc(x.name)}">${face(x.avatar)}</span>`).join("")}${more}</span>
         ${on ? `<span class="pt-on" aria-hidden="true">👉 you</span>` : ""}
       </button>`;
     })
     .join("");
-  return `<div class="overlay pt-sheet" id="pt-sheet" role="dialog" aria-modal="true" aria-labelledby="pt-h" data-action="pointSheet">
+  return `<div class="overlay pt-sheet${accusing ? " accusing" : ""}" id="pt-sheet" role="dialog" aria-modal="true" aria-labelledby="pt-h" data-action="pointSheet">
     <div class="pt-card" data-action="noop">
-      <h2 id="pt-h">👉 Point at a suspect</h2>
-      <p class="pt-sub">Free, public, changeable. Not a vote: it shows the class who you suspect.</p>
+      <h2 id="pt-h">${accusing ? "🙋 Who do you accuse?" : "👉 Point at a suspect"}</h2>
+      <p class="pt-sub">${accusing ? "Your one accusation, and your vote. They get the floor, then the class votes." : "Free, public, changeable. Not a vote: it shows the class who you suspect."}</p>
       <div class="pt-list">${rows}</div>
-      ${mine ? `<button class="btn ghost pt-stop" id="pt-stop" data-action="point" data-id="">Stop pointing</button>` : ""}
+      ${mine && !accusing ? `<button class="btn ghost pt-stop" id="pt-stop" data-action="point" data-id="">Stop pointing</button>` : ""}
     </div>
-    <button class="btn secondary pt-close" id="pt-close" data-action="pointSheet">Close</button>
+    <button class="btn secondary pt-close" id="pt-close" data-action="pointSheet">${accusing ? "Cancel" : "Close"}</button>
   </div>`;
 }
 

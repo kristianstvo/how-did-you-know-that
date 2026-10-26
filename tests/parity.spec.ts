@@ -30,7 +30,7 @@ function playheads(name: string): number[] {
     if (s.phase === "role") [400, 1100, 1800, 3000].forEach(add);
     if (s.phase === "question") [300, 900, 6000, 11000].forEach(add);
     if (s.phase === "reveal") [100, 900, 1900, 2600, 3400, 4100, 4900, 6300, 7200, 9000].forEach(add);
-    if (s.phase === "vote") [600, 4000].forEach(add);
+    if (s.phase === "vote") [600, 4000, 7000].forEach(add); // v0.23: the floor, then ballots open
     if (s.phase === "voteResult") [300, 1500, 3500, 6000].forEach(add);
     if (s.phase === "matchEnd") [200, 1000, 2000, 3000, 4500, 6200, 7500].forEach(add);
   }

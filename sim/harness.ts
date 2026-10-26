@@ -94,11 +94,11 @@ export type Strategy = "naive" | "mimic" | "careful" | "sprint";
 // leader but never a player the reveal has CLEARED. evidence: accumulate the
 // announced callouts (and respect CLEARED).
 // circle: the whole class agrees to send everyone to detention in seat order,
-// ignoring the evidence, until the cheater is caught. Whoever is next accuses
-// themselves; if they won't (the cheater never volunteers), the next person
-// in line accuses instead. circleInformed: the same sweep, ordered by the
-// announced evidence and then by score instead of by seat. Both skip players
-// the reveal has CLEARED.
+// ignoring the evidence, until the cheater is caught. The person after the
+// one on the spot accuses them (v0.23: nobody may accuse themselves); if they
+// won't (the cheater never does), the next in line does. circleInformed: the
+// same sweep, ordered by the announced evidence and then by score instead of
+// by seat. Both skip players the reveal has CLEARED.
 export type Policy = "none" | "score" | "scoreAware" | "evidence" | "circle" | "circleInformed";
 
 /** Experimental rule variants, applied by the harness around the real engine
@@ -368,10 +368,15 @@ class SimPhone {
     return live.map((p) => p.id);
   }
 
-  /** Who may step up to accuse, in line order starting from the target. */
+  /** Who may step up to accuse the next in line, in line order after them
+   *  (v0.23: an accusation names someone else, so the target can't). */
   private sweepAccusers(s: PublicState): string[] {
     const order = this.circleOrder(s);
-    return order.map((id) => s.players.find((p) => p.id === id)!).filter((p) => !p.tokenUsed && !p.banished && p.votingRights).map((p) => p.id);
+    return order
+      .slice(1)
+      .map((id) => s.players.find((p) => p.id === id)!)
+      .filter((p) => !p.tokenUsed && !p.banished && p.votingRights)
+      .map((p) => p.id);
   }
 
   private sweepActive(s: PublicState): boolean {
@@ -415,14 +420,15 @@ class SimPhone {
     const policy = this.sc.policy;
     if (isCircle(policy)) {
       if (this.secret.isCheater || !this.eligible() || !this.sweepActive(s)) return;
-      // The person on the spot accuses themselves; each later person in line
-      // waits a little longer, in case the ones before them won't.
+      // The next person in line accuses the one on the spot; each later
+      // person waits a little longer, in case the ones before them won't.
       const rank = this.sweepAccusers(s).indexOf(this.playerId);
       if (rank < 0) return;
+      const target = this.circleOrder(s)[0];
       const armed = Math.max(0, (s.match?.reveal?.accuseAt ?? Date.now()) - Date.now());
       const seq = this.phaseSeq;
       setTimeout(() => {
-        if (this.phaseSeq === seq) this.send({ kind: "burnToken" });
+        if (this.phaseSeq === seq) this.send({ kind: "burnToken", targetPlayerId: target });
       }, armed + 600 + rank * 2500 + this.social() * 400);
       return;
     }
@@ -430,26 +436,32 @@ class SimPhone {
     const others = this.suspects(s);
     if (!others.length) return;
     let fire = false;
+    let target = "";
     // On the last strike a wrong detention ends the match: people want more.
     const lastStrike = s.settings.strikes > 0 && s.match!.wrongDetentions === s.settings.strikes - 1;
+    // v0.23: they name the one they would vote for (the lead rules out a tie).
     if (policy === "score" || policy === "scoreAware") {
       const sorted = [...others].sort((a, b) => b.score - a.score);
       const lead = sorted[0].score - (sorted[1]?.score ?? 0);
       fire = sorted[0].score >= (lastStrike ? 0.75 : 0.6) * s.match!.threshold && lead >= (lastStrike ? 300 : 200);
+      target = sorted[0].id;
     } else {
       const ranked = others.map((p) => ({ id: p.id, s: this.suspicion[p.id] ?? 0 })).sort((a, b) => b.s - a.s);
       fire = ranked[0].s >= (lastStrike ? 4 : 3) && ranked[0].s - (ranked[1]?.s ?? 0) >= (lastStrike ? 1.5 : 1);
+      target = ranked[0].id;
     }
     if (fire && this.social() < (lastStrike ? 0.2 : 0.35)) {
       // ACCUSE arms at the end of the reveal show; people react 1–4s later.
       const armed = Math.max(0, (s.match?.reveal?.accuseAt ?? Date.now()) - Date.now());
-      setTimeout(() => this.send({ kind: "burnToken" }), armed + 1000 + this.social() * 3000);
+      setTimeout(() => this.send({ kind: "burnToken", targetPlayerId: target }), armed + 1000 + this.social() * 3000);
     }
   }
 
   private planVote(s: PublicState): void {
     const me = this.me();
     if (!me || me.banished || !me.votingRights) return;
+    // v0.23: ballots open once the accused has had the floor.
+    const open = Math.max(0, (s.match?.vote?.opensAt ?? Date.now()) - Date.now());
     if (isCircle(this.sc.policy)) {
       // Everyone votes for whoever is next in line. The person on the spot
       // knows their own role and votes for the next one instead; the cheater
@@ -457,7 +469,7 @@ class SimPhone {
       const order = this.circleOrder(s);
       if (order.length < 2) return;
       const target = order[0] === this.playerId ? order[1] : order[0];
-      setTimeout(() => this.send({ kind: "castVote", targetPlayerId: target }), 1500 + this.social() * 3000);
+      setTimeout(() => this.send({ kind: "castVote", targetPlayerId: target }), open + 1500 + this.social() * 3000);
       return;
     }
     const others = this.suspects(s);
@@ -469,7 +481,7 @@ class SimPhone {
     } else {
       target = [...others].sort((a, b) => b.score - a.score)[0].id;
     }
-    setTimeout(() => this.send({ kind: "castVote", targetPlayerId: target }), 1500 + this.social() * 8000);
+    setTimeout(() => this.send({ kind: "castVote", targetPlayerId: target }), open + 1500 + this.social() * 8000);
   }
 }
 
@@ -524,14 +536,14 @@ function applyRules(engine: HostEngine, rules: RuleVariant): void {
   const e = engine as unknown as {
     qIdx: number;
     phase: string;
-    onBurnToken(player: unknown): void;
+    onBurnToken(player: unknown, targetId: unknown): void;
   };
   let votedInQ = -1;
   const burn = e.onBurnToken.bind(e);
-  e.onBurnToken = (player) => {
+  e.onBurnToken = (player, targetId) => {
     if (e.qIdx < (rules.accuseFromQ ?? 0)) return;
     if (rules.onePerReveal && votedInQ === e.qIdx) return;
-    burn(player);
+    burn(player, targetId);
     if (e.phase === "vote") votedInQ = e.qIdx;
   };
 }

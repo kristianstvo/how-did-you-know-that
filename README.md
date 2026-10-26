@@ -14,6 +14,8 @@ Built from the specs in `00-overview.md` … `07-ui-screens.md`.
 
 Newest first (details in `CHANGELOG.md`, decisions in `PRODUCT.md`):
 
+- **No way you knew that!** (v0.23) — you accuse a named suspect, they get
+  the floor for five seconds, then the class votes.
 - **Clean slate** (v0.22) — no dashed borders: panels, buttons and empty
   seats each have their own look; Join above Start a class.
 - **Meet the class** (v0.21) — sixteen cartoon students to play as, and a

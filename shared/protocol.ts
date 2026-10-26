@@ -67,7 +67,7 @@ export const DEFAULT_SETTINGS: Settings = {
 // kept as a single table so a lobby-settings editor can slot in later).
 export const SESSION_POINTS = {
   votedForCheaterInBanishingVote: 2,
-  triggeredBanishingVote: 1,
+  triggeredBanishingVote: 1, // v0.23: only when the accuser named the cheater
   cheaterHitThreshold: 3,
   topScoreAtQ10: 2,
   cheaterSurvivedToQ10: 1,
@@ -175,10 +175,15 @@ export interface PublicState {
     cleared: string[]; // proven innocent: at/above the line with no siren
     vote: null | {
       accuserId: string;
+      /** v0.23: whom the accuser named. They get the floor until `opensAt`,
+       *  when ballots open. Both optional: v0.22 saves and tapes have neither. */
+      accusedId?: string;
+      opensAt?: number; // shared-clock ms
       deadline: number;
     };
     voteResult: null | {
       accuserId: string;
+      accusedId?: string; // v0.23
       votes: Record<string, string>; // voterId -> targetId (revealed simultaneously)
       tallies: Record<string, number>; // targetId -> count
       banishedId: string | null;
@@ -216,7 +221,7 @@ export interface SecretState {
 // ---- Client -> host intents (relayed) ----
 export type Intent =
   | { kind: "answer"; questionIdx: number; optionIdx: number; clientElapsedMs: number }
-  | { kind: "burnToken" }
+  | { kind: "burnToken"; targetPlayerId: string } // v0.23: an accusation names a suspect
   | { kind: "castVote"; targetPlayerId: string }
   | { kind: "point"; targetPlayerId: string | null }
   | { kind: "requestFullState" };

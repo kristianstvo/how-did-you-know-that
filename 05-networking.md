@@ -16,14 +16,14 @@ TypeScript across the board. Socket.IO for transport. Same skeleton as the strat
 
 ## Message protocol (intent → host, state → all)
 **Client → host intents**
-- `join {name}` · `answer {questionIdx, optionIdx, clientElapsedMs}` · `burnToken {}` · `castVote {targetPlayerId}` · `hostOnly: startMatch / advanceReveal / endSession / updateSettings`
+- `join {name}` · `answer {questionIdx, optionIdx, clientElapsedMs}` · `burnToken {targetPlayerId}` (v0.23: the accused) · `castVote {targetPlayerId}` · `hostOnly: startMatch / advanceReveal / endSession / updateSettings`
 
 **Host → clients state events**
 - `lobbyState` (players, settings)
 - `roleAssign` — **private per-socket message**; cheater's payload includes `isCheater: true`; everyone else `false`. Identical timing/size padding so traffic analysis by players is unhelpful (best-effort).
 - `questionStart {idx, text, options[], tier, deadline}` — cheater's copy additionally carries `correctIdx` **only in the private variant** (never broadcast).
 - `reveal {correctIdx, perPlayer: {pick, correct, timeMs}[], scores, threshold}`
-- `voteStart {accuserId, deadline}` · `voteResult {tallies, banishedId?, wasCheater?, newThreshold?}`
+- `voteStart {accuserId, accusedId, opensAt, deadline}` (v0.23: ballots open at `opensAt`, after the accused's floor; `accusedId` and `opensAt` are absent in v0.22 saves and tapes, which render the old stage) · `voteResult {accusedId, tallies, banishedId?, wasCheater?, newThreshold?}`
 - `matchEnd {reason, cheaterId, scores, sessionBoard}` · `sessionEnd {board}`
 
 ## Timing & authority notes

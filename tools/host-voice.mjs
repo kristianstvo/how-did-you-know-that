@@ -70,8 +70,9 @@ while (Date.now() - t0 < 6 * 60_000) {
   if (sc === "screen-matchEnd") break;
   await tryClick(host, "button.opt:not([disabled])");
   if (!accused && sc === "screen-reveal" && (await clickAfter(host, "#rv-accuse.st-go:not([disabled])", pause))) {
+    await tryClick(host, "#pt-sheet .pt-row"); // v0.23: name a suspect
     await host.waitForTimeout(600);
-    accused = await tryClick(host, "#rv-accuse");
+    accused = await tryClick(host, "#rv-accuse.st-confirm");
   }
   if (sc === "screen-vote" && (await tryClick(host, ".vo-cell:not([disabled]):not(:has(.vo-you))"))) await tryClick(host, "#vo-go:not([disabled])");
   await clickAfter(host, '#rv-host[data-action="advance"]:not([disabled])', pause);

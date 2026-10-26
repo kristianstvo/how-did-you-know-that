@@ -46,6 +46,7 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.20.0 | How to play, in a minute: a narrated video on Home and the big screen, and as an MP4 | shipped |
 | v0.21.0 | Meet the class: sixteen cartoon students, Home in two steps (you, then where to) | shipped |
 | v0.22.0 | Clean slate: no dashed borders; Join above Start a class | shipped |
+| v0.23.0 | No way you knew that!: accusations name a suspect, who gets the floor before the vote | shipped |
 | later | A big-screen layout that uses the width (side-by-side reveal) | ideas |
 
 Later versions take the best of what playtests and audits turn up.
@@ -132,3 +133,6 @@ Later versions take the best of what playtests and audits turn up.
 | v0.22.0 | ✅ No dashed borders: edges, depth and wells instead | Your call. Dashes on every card, button and field made everything shout, so nothing did; depth tells a panel from a button from an empty seat without outlining anything |
 | v0.22.0 | ✅ Join above Start a class | Your call. Most people join and one person creates, so Join comes first |
 | v0.22.0 | ✅ ✗ and the words are the non-colour cue for wrong, not a border style | The dashes were only ever the second cue; the glyph and the words were always the first |
+| v0.23.0 | ✅ An accusation names a suspect, and the accuser's ballot goes on them | The north star is one person saying "No way you knew that!" to another; a nameless hand put nobody on the spot, and a named one puts the accuser on record too |
+| v0.23.0 | ✅ The accused gets a 5 s floor before ballots open (2 s for a bot) | A defence used to race a 20 s clock; a closed floor makes the room listen first. Sim: human cells unchanged, bots within a point |
+| v0.23.0 | ✅ The accuser's +1 only when the person they named is caught | Pays for a correct accusation, not for starting a vote that happened to catch someone else |

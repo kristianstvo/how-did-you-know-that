@@ -14,6 +14,9 @@ import {
   ROLE_SCREEN_MS,
   ROLE_SCREEN_TV_MS,
   TALK_HOLD_MS,
+  VOTE_EARLY_MS,
+  VOTE_FLOOR_BOT_MS,
+  VOTE_FLOOR_MS,
   voteResultTimeline,
 } from "../../shared/choreo";
 import { DEFAULT_EVIDENCE, EvidenceTracker, type CalloutKind, type EvidenceSave } from "../../shared/evidence";
@@ -206,7 +209,7 @@ export class HostEngine {
   private questionDeadline = 0;
   private answers: Record<string, AnswerRecord>[] = []; // per question: playerId -> record
   // v0.8 superlatives: every vote this match, and the most 👉 anyone drew at once.
-  private voteLog: { q: number; votes: Record<string, string>; banishedId: string | null }[] = [];
+  private voteLog: { q: number; votes: Record<string, string>; banishedId: string | null; accusedId?: string }[] = [];
   private peakPointers: Record<string, number> = {};
   private firstPointAtCheater: Record<string, number> = {}; // playerId -> question index
   /** v0.8: across the session, for the day's yearbook. */
@@ -216,7 +219,8 @@ export class HostEngine {
   private revealMinFrom = 0; // original reveal start (spec 01 minimum counts from here)
   private evidence = new EvidenceTracker(DEFAULT_EVIDENCE);
   private caseFile: CaseEntry[] = [];
-  private vote: { accuserId: string; deadline: number; votes: Record<string, string> } | null = null;
+  /** v0.23: accusedId and opensAt are absent in a v0.22 save (no floor). */
+  private vote: { accuserId: string; accusedId?: string; opensAt?: number; deadline: number; votes: Record<string, string> } | null = null;
   private voteResult: NonNullable<NonNullable<PublicState["match"]>["voteResult"]> | null = null;
   private end: NonNullable<NonNullable<PublicState["match"]>["end"]> | null = null;
   private matchDelta: Record<string, number> = {}; // session points earned this match
@@ -407,7 +411,7 @@ export class HostEngine {
         this.onAnswer(player, intent.questionIdx, intent.optionIdx, intent.clientElapsedMs);
         break;
       case "burnToken":
-        this.onBurnToken(player);
+        this.onBurnToken(player, intent.targetPlayerId);
         break;
       case "castVote":
         this.onCastVote(player, intent.targetPlayerId);
@@ -560,10 +564,10 @@ export class HostEngine {
   }
 
   /** After the show arms ACCUSE, a bot with a clear suspect may raise its
-   *  hand. Never before the accuse beat — the reveal is never interrupted.
-   *  The cheater bot plays by the SAME rule (bluffing at its top suspect):
-   *  a hidden role must never gate a public action, or every accusing bot
-   *  would be provably innocent. */
+   *  hand and name them (v0.23). Never before the accuse beat — the reveal is
+   *  never interrupted. The cheater bot plays by the SAME rule (bluffing at
+   *  its top suspect): a hidden role must never gate a public action, or
+   *  every accusing bot would be provably innocent. */
   private scheduleBotAccusations(): void {
     if (!this.reveal) return;
     const wait = Math.max(0, this.reveal.accuseAt - this.now());
@@ -579,10 +583,11 @@ export class HostEngine {
       const lastStrike = this.settings.strikes > 0 && this.wrongDetentions === this.settings.strikes - 1;
       const need = BOT_TUNING.accuseAt + (lastStrike ? 1 : 0);
       if (ranked[0].s >= need && lead >= BOT_TUNING.minLead && Math.random() < BOT_TUNING.accuseChance * (lastStrike ? 0.5 : 1)) {
+        const accusedId = ranked[0].p.id; // the one it would vote for (the lead rules out a tie)
         this.after(wait + 1200 + Math.random() * 3500, () => {
           if (epoch !== this.botEpoch) return; // superseded (host skipped the show)
           const fresh = this.players.find((p) => p.id === bot.id);
-          if (fresh) this.onBurnToken(fresh);
+          if (fresh) this.onBurnToken(fresh, accusedId);
         });
         return; // at most one bot accusation per reveal
       }
@@ -833,13 +838,7 @@ export class HostEngine {
     if (targetId && (!target || target.id === player.id || target.banished)) return;
     const next = target ? target.id : null;
     if (player.pointingAt === next) return;
-    player.pointingAt = next;
-    if (next) {
-      const n = this.players.filter((p) => p.pointingAt === next).length;
-      this.peakPointers[next] = Math.max(this.peakPointers[next] ?? 0, n);
-      if (next === this.cheaterId && this.firstPointAtCheater[player.id] === undefined) this.firstPointAtCheater[player.id] = this.qIdx;
-    }
-    player.pointedAt = now;
+    this.setPointer(player, next);
     // Every change counts (the latest wins); a flurry of them shares one
     // broadcast per POINT_GUARD_MS instead of flooding every phone.
     if (now - this.pointBroadcastAt >= POINT_GUARD_MS) {
@@ -853,6 +852,18 @@ export class HostEngine {
         this.broadcast();
       }, POINT_GUARD_MS);
     }
+  }
+
+  /** The pointer and its yearbook bookkeeping (most 👉 at once, the first 👉
+   *  at the cheater). Callers broadcast. */
+  private setPointer(player: InternalPlayer, next: string | null): void {
+    player.pointingAt = next;
+    if (next) {
+      const n = this.players.filter((p) => p.pointingAt === next).length;
+      this.peakPointers[next] = Math.max(this.peakPointers[next] ?? 0, n);
+      if (next === this.cheaterId && this.firstPointAtCheater[player.id] === undefined) this.firstPointAtCheater[player.id] = this.qIdx;
+    }
+    player.pointedAt = this.now();
   }
 
   /** Bots point at their top suspect once the board is graded (the cheater
@@ -877,26 +888,41 @@ export class HostEngine {
 
   // ---------------- Accusations & voting (spec 03) ----------------
 
-  private onBurnToken(player: InternalPlayer): void {
+  private onBurnToken(player: InternalPlayer, targetId: unknown): void {
     // Only during reveal, and only once the show has armed ACCUSE; a
     // near-simultaneous second tap arrives when the phase is already "vote"
     // and is simply not consumed (spec 03).
     if (this.phase !== "reveal" || !this.reveal) return;
     if (this.now() < this.reveal.accuseAt) return;
     if (player.tokenUsed || player.banished || !player.votingRights) return;
+    // v0.23: an accusation names someone. Nobody, yourself or a classmate in
+    // detention is refused, and the token is kept. CLEARED may be named.
+    const accused = typeof targetId === "string" ? this.players.find((p) => p.id === targetId) : undefined;
+    if (!accused || accused.id === player.id || accused.banished) return;
     player.tokenUsed = true;
+    // On record: the accuser points at them, and their ballot is in (no take-backs).
+    this.setPointer(player, accused.id);
     for (const p of this.players) p.votedCurrent = false;
+    player.votedCurrent = true;
     this.setPhase("vote");
-    this.vote = { accuserId: player.id, deadline: this.phaseStartedAt + this.settings.voteWindowMs, votes: {} };
+    // The accused has the floor, then the ballot window opens.
+    const floor = accused.isBot ? VOTE_FLOOR_BOT_MS : VOTE_FLOOR_MS;
+    const opensAt = this.phaseStartedAt + floor;
+    this.vote = { accuserId: player.id, accusedId: accused.id, opensAt, deadline: opensAt + this.settings.voteWindowMs, votes: { [player.id]: accused.id } };
     this.broadcast();
-    this.after(this.settings.voteWindowMs + 400, () => this.resolveVote());
+    this.after(floor + this.settings.voteWindowMs + 400, () => this.resolveVote());
+    // If every ballot is already in (the accuser is the only voter left, or
+    // the rest came in the last VOTE_EARLY_MS), the vote resolves once ballots open.
+    this.after(opensAt - this.now(), () => this.resolveOnceOpen());
     for (const bot of this.bots()) {
-      this.after(1500 + Math.random() * 6000, () => this.botVote(bot));
+      this.after(opensAt - this.now() + 1500 + Math.random() * 6000, () => this.botVote(bot));
     }
   }
 
   private onCastVote(player: InternalPlayer, targetPlayerId: string): void {
     if (this.phase !== "vote" || !this.vote) return;
+    // v0.23: no ballots while the accused has the floor.
+    if (this.now() < (this.vote.opensAt ?? 0) - VOTE_EARLY_MS) return;
     if (!player.votingRights || player.banished || player.votedCurrent) return;
     const target = this.players.find((p) => p.id === targetPlayerId);
     if (!target || target.banished) return;
@@ -907,14 +933,25 @@ export class HostEngine {
   }
 
   private maybeResolveVoteEarly(): void {
-    if (this.phase !== "vote") return;
+    if (this.phase !== "vote" || !this.vote) return;
+    if (this.now() < (this.vote.opensAt ?? 0)) return; // v0.23: the floor always runs its course
     const pending = this.players.filter((p) => p.connected && p.votingRights && !p.banished && !p.votedCurrent);
     if (pending.length === 0) this.resolveVote();
   }
 
+  /** v0.23: the check when ballots open. A timer can fire a hair before
+   *  opensAt (setTimeout truncates, and the shared clock can stall after an
+   *  offset fix): early, it waits again rather than sit out the whole window. */
+  private resolveOnceOpen(): void {
+    if (this.phase !== "vote" || !this.vote) return;
+    const wait = (this.vote.opensAt ?? 0) - this.now();
+    if (wait > 0) this.after(Math.ceil(wait) + 1, () => this.resolveOnceOpen());
+    else this.maybeResolveVoteEarly();
+  }
+
   private resolveVote(): void {
     if (this.phase !== "vote" || !this.vote) return;
-    const { accuserId, votes } = this.vote;
+    const { accuserId, accusedId, votes } = this.vote;
     const tallies: Record<string, number> = {};
     for (const target of Object.values(votes)) tallies[target] = (tallies[target] ?? 0) + 1;
 
@@ -948,11 +985,13 @@ export class HostEngine {
       for (const [voterId, targetId] of Object.entries(votes)) {
         if (targetId === banishedId) this.addSessionPoints(voterId, SESSION_POINTS.votedForCheaterInBanishingVote);
       }
-      this.addSessionPoints(accuserId, SESSION_POINTS.triggeredBanishingVote);
+      // v0.23: the accuser's star is for naming the cheater, not for any vote
+      // that happened to catch them (a v0.22 save names nobody: paid as before).
+      if (accusedId === undefined || accusedId === banishedId) this.addSessionPoints(accuserId, SESSION_POINTS.triggeredBanishingVote);
     }
 
-    this.voteResult = { accuserId, votes, tallies, banishedId, wasCheater, newThreshold, tie };
-    this.voteLog.push({ q: this.qIdx, votes: { ...votes }, banishedId });
+    this.voteResult = { accuserId, ...(accusedId ? { accusedId } : {}), votes, tallies, banishedId, wasCheater, newThreshold, tie };
+    this.voteLog.push({ q: this.qIdx, votes: { ...votes }, banishedId, ...(accusedId ? { accusedId } : {}) });
     this.vote = null;
     this.setPhase("voteResult");
     this.broadcast();
@@ -1242,7 +1281,9 @@ export class HostEngine {
             reveal: this.phase === "question" ? null : this.reveal,
             caseFile: [...this.caseFile],
             cleared: [...this.evidence.cleared],
-            vote: this.vote ? { accuserId: this.vote.accuserId, deadline: this.vote.deadline } : null,
+            vote: this.vote
+              ? { accuserId: this.vote.accuserId, ...(this.vote.accusedId ? { accusedId: this.vote.accusedId, opensAt: this.vote.opensAt } : {}), deadline: this.vote.deadline }
+              : null,
             voteResult: this.voteResult,
             end: this.end,
           }
@@ -1314,9 +1355,11 @@ export class HostEngine {
       this.scheduleBotPointers();
     } else if (this.phase === "vote" && this.vote) {
       const left = this.vote.deadline - now;
+      const opensIn = Math.max(0, (this.vote.opensAt ?? 0) - now); // v0.23: still the accused's floor?
       this.after(Math.max(0, left + 400), () => this.resolveVote());
+      if (opensIn > 0) this.after(opensIn, () => this.resolveOnceOpen());
       for (const bot of this.bots()) {
-        if (!bot.votedCurrent) this.after(Math.max(0, Math.min(left - 600, 800 + Math.random() * 2500)), () => this.botVote(bot));
+        if (!bot.votedCurrent) this.after(Math.max(0, Math.min(left - 600, opensIn + 800 + Math.random() * 2500)), () => this.botVote(bot));
       }
       this.maybeResolveVoteEarly();
     }
