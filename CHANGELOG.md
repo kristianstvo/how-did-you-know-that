@@ -19,6 +19,41 @@ git checkout product-lead    # back to the newest
 
 ---
 
+## v0.30.0 — Study abroad, part two · 2026-10-26 14:25
+
+**Why:** the rest of v0.29's batch: the same global, Europe-centric
+questions for the four subjects that weren't ready yet.
+
+**Added**
+- **112 new questions**, 28 each in Math, Science, Mythology and Civics,
+  in v0.29's style:
+  - Math: Euclid, Pascal, Euler's bridges of Königsberg, Napier, Venn, the
+    Möbius strip, the Rubik's Cube, Roman numerals, quick sums in euros, km
+    and °C.
+  - Science: Darwin, Mendel, Röntgen, Nobel, Volta, Linnaeus, Wegener, the
+    Higgs boson, Dolly the sheep, the European bison, Ariane's launch site.
+  - Mythology: Greek, Roman, Norse, Celtic, Slavic and Arthurian myth, and
+    European folklore (William Tell, the Flying Dutchman, Krampus, the Golem
+    of Prague, the Lorelei). Still nothing from living religions.
+  - Civics: how Europe is governed (Schengen, Erasmus, the Council of
+    Europe, the Sejm, Finland's 1906 vote, the Napoleonic Code, Athenian
+    democracy), plus the UN and its agencies. No current politics.
+- A second, independent reviewer fact-checked both files as before: 19
+  questions were fixed (reworded, given a safer wrong option or re-tiered),
+  none dropped. The pack is now 810 (196 easy, 365 medium, 249 hard).
+
+**Changed**
+- The last US-framed Civics question ("the three branches of the U.S.
+  government") now asks about the branches of government in general, in
+  place.
+
+**Evidence**
+- The pack check passes: 810 questions, at least 4 of every tier in every
+  subject, and no repeat across 5 offline periods or 8 medium-only ones.
+  The curve and source checks and every other engine check pass; typecheck
+  and build are clean. The code is unchanged since v0.29, whose full suite
+  (64 tests) passed.
+
 ## v0.29.0 — Study abroad · 2026-10-26 13:56
 
 **Why:** you asked for more questions, more global and more European, for

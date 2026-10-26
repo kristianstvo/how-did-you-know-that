@@ -22,7 +22,7 @@ The **host client** fetches all questions (host-authority, 05). Players never co
 - v1: no category filter (any category) — maximum variety, zero UI. Lobby setting for category selection is a listed v2 candidate, not built now.
 
 ## The curated pack
-- Bundled in the client build (`client/src/localPack.ts`), and since v0.29 the main source: 698 questions (172 easy, 311 medium, 215 hard) across the twelve school subjects, written for an international, mostly European class and fact-checked by a second, independent reviewer (v0.26, v0.29).
+- Bundled in the client build (`client/src/localPack.ts`), and since v0.29 the main source: 810 questions (196 easy, 365 medium, 249 hard) across the twelve school subjects, written for an international, mostly European class and fact-checked by a second, independent reviewer (v0.26, v0.29, v0.30).
 - `sim/pack-check.ts` keeps it honest: every subject has at least 4 questions of every tier, nothing repeats, everything fits a phone (text ≤ 90 characters, options ≤ 32).
 - Until v0.29 it was the fallback for when OpenTDB was unreachable or had nothing ready. A pack question is the normal case now, so there is no "offline questions" badge.
 - Pack format identical to the internal question shape below — the game logic never knows which source fed it.

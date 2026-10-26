@@ -53,6 +53,7 @@ their own, in a 3–4 minute match, with phones in hand.
 | v0.27.0 | Nobody misses the bell: the bell closes How to play, a longer first bell, your note any time, Teacher's notes for Act II | shipped |
 | v0.28.0 | Hear the verdict: the count, the verdict and the unmask get their sounds; your own answer dings and is stamped | shipped |
 | v0.29.0 | Study abroad: 224 more questions, global and Europe-centric; the curated pack comes first | shipped |
+| v0.30.0 | Study abroad, part two: 112 more questions in Math, Science, Mythology and Civics (810 in all) | shipped |
 | later | A big-screen layout that uses the width (side-by-side reveal) | ideas |
 
 Later versions take the best of what playtests and audits turn up.
@@ -168,3 +169,4 @@ Later versions take the best of what playtests and audits turn up.
 | v0.29.0 | ✅ About 70% European, the rest global; metric units; no US-only knowledge | The playtests are in Europe (hosted in Croatia): questions should be fair to that room without becoming parochial |
 | v0.29.0 | ✅ At most two Croatia or Balkans questions per subject, tiered for a mixed crowd | A home question is instant for locals and a coin toss for guests: a few are fun, many would tilt who looks like the cheater |
 | v0.29.0 | ✅ US-only questions replaced in place | Host saves remember used questions by their position in the pack, so a swap in place keeps a reloaded game's "already asked" list right |
+| v0.30.0 | ✅ The branches of government in general, not the U.S. ones | The idea (Montesquieu's separation of powers) is universal; only the framing was American |

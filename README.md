@@ -14,6 +14,8 @@ Built from the specs in `00-overview.md` … `07-ui-screens.md`.
 
 Newest first (details in `CHANGELOG.md`, decisions in `PRODUCT.md`):
 
+- **Study abroad, part two** (v0.30) — 112 more for Math, Science,
+  Mythology and Civics: the pack is now 810 questions.
 - **Study abroad** (v0.29) — 224 more questions, global and Europe-centric,
   and the game now asks its own fact-checked questions before the (mostly
   American) online ones.
